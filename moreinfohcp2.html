@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Meditrek Access for HCPs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="shortcut icon" href="assets/images/logo/fav_icon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+
+  <style>
+  .gradient-title {
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+
+  /* Gradient */
+  background: linear-gradient(
+    90deg,
+    #0E3A47 0%,
+    #0E7C86 35%,
+    #1CA6A6 65%,
+    #0E3A47 100%
+  );
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  /* Subtle tech polish */
+  text-rendering: optimizeLegibility;
+}
+
+    :root {
+      --ink: #0E3A47;
+      --muted: #4A5A60;
+      --soft: #F4F9FA;
+      --border: #E3EDF0;
+      --accent: #0E7C86;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #FCFEFF;
+      color: #1A1A1A;
+      padding-top: 90px;
+    }
+
+    h1, h2, h3 {
+      color: var(--ink);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    section {
+      padding: 110px 0;
+    }
+
+    /* HEADER */
+    .header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+    }
+
+    .header_logo {
+      max-width: 190px;
+    }
+
+    .nav-link {
+      font-weight: 500;
+      color: #003D4C !important;
+    }
+
+    /* HERO */
+    .hero {
+      background:
+        radial-gradient(600px at 85% 20%, #EAF6F8 0%, transparent 60%),
+        radial-gradient(600px at -10% 40%, #EAF6F8 0%, transparent 55%);
+    }
+
+    .hero h1 {
+      font-size: 44px;
+      max-width: 720px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      max-width: 640px;
+      margin-top: 24px;
+    }
+
+    .hero-visual {
+      border: 1px dashed var(--border);
+      border-radius: 28px;
+      height: 320px;
+      background: linear-gradient(135deg, #F4F9FA, #FFFFFF);
+    }
+
+    /* PANELS */
+    .panel {
+      background: white;
+      border-radius: 28px;
+      padding: 70px;
+      border: 1px solid var(--border);
+      height: 100%;
+    }
+
+    .soft {
+      background-color: var(--soft);
+    }
+
+    /* DATA GRID */
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 40px;
+      margin-top: 60px;
+    }
+
+    .data-card {
+      background: white;
+      border-radius: 24px;
+      padding: 50px;
+      border: 1px solid var(--border);
+    }
+
+    footer {
+      background-color: var(--ink);
+      color: #CFE5E8;
+      padding: 60px 15px;
+      text-align: center;
+    }
+
+    footer p {
+      color: #CFE5E8;
+      font-size: 14px;
+      max-width: 760px;
+      margin: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- MENU -->
+<header class="header">
+  <div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <a href="index.html">
+        <img src="assets/images/logo/thera_data_logo2.png" class="header_logo" alt="Meditrek">
+      </a>
+
+      <nav class="d-none d-lg-block">
+        <ul class="list-unstyled d-flex mb-0 align-items-center">
+          <li class="mx-3"><a class="nav-link" href="index.html#about">About</a></li>
+          <li class="mx-3"><a class="nav-link" href="index.html#solution">Solutions</a></li>
+          <li class="mx-3"><a class="nav-link" href="index.html#ethical">Ethics</a></li>
+          <li class="mx-3">
+            <a href="/register" class="btn" style="background-color: darkcyan; color: white;">
+              Request HCP Access
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+       <h1>
+  <span class="gradient-title">Analytics-driven insight
+  into how therapies perform in real life</span>
+  <br>
+</h1>
+
+        <p>
+          Meditrek Access provides healthcare professionals with a structured,
+          consent-based view of how patients experience and respond to medication
+          or therapy — at both the individual and therapy-wide level.
+        </p>
+      </div>
+      <div class="col-lg-6">
+        <div class="hero-visual"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THERAPY OVERVIEW -->
+<section>
+  <div class="container">
+    <div class="row g-5 align-items-center">
+      <div class="col-lg-7">
+        <div class="panel">
+          <h2>Understanding a therapy across patients</h2>
+          <p class="mt-4">
+            Meditrek Access enables clinicians and researchers to view aggregated,
+            real-world insights across patients using the same therapy.
+          </p>
+          <p>
+            This therapy-level overview supports understanding of general treatment
+            patterns, common challenges, reported outcomes, and overall patient experience
+            outside controlled clinical environments.
+          </p>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="panel soft"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PATIENT OUTCOMES -->
+<section class="soft">
+  <div class="container">
+    <div class="data-grid">
+      <div class="data-card">
+        <h3>Understanding patient outcomes on therapy</h3>
+        <p>
+          Meditrek Access helps clinicians better understand how individual
+          patients are responding to their medication or therapy over time.
+        </p>
+        <p>
+          Patient-reported outcomes provide insight into symptoms,
+          perceived benefit, side effects, and overall well-being,
+          complementing clinical assessments.
+        </p>
+      </div>
+
+      <div class="data-card">
+        <h3>Viewing the patient’s therapy journey</h3>
+        <p>
+          Clinicians can review how a patient follows their prescribed therapy,
+          including engagement and continuity over time.
+        </p>
+        <p>
+          This longitudinal view supports a more complete understanding
+          of treatment experience beyond episodic visits.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TREATMENT INTEGRATION -->
+<section>
+  <div class="container text-center">
+    <div class="panel mx-auto" style="max-width: 900px;">
+      <h2>Improving treatment integration and engagement</h2>
+      <p class="mt-4">
+        By understanding how therapy fits into patients’ daily lives,
+        healthcare professionals can better support treatment integration.
+      </p>
+      <p>
+        Improved understanding and engagement can help patients feel
+        more involved in their treatment, supporting adherence
+        and ultimately improving health outcomes.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- DATA, RWE & RESEARCH -->
+<section class="soft">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-12">
+        <div class="panel">
+          <h2>From clinical care to research and real-world evidence</h2>
+          <p class="mt-4">
+            Meditrek Access provides structured access to patient-consented data
+            for clinical documentation, case studies, and research use.
+          </p>
+          <p>
+            Data can be exported to support real-world evidence generation,
+            observational research, and therapy-focused studies,
+            while maintaining ethical and privacy standards.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Meditrek Access supports understanding of therapy performance,
+    patient outcomes, and responsible real-world research.
+  </p>
+</footer>
+
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/meditrek/admin/static/css/main.cc2c3a2a.css",
+    "main.js": "/meditrek/admin/static/js/main.ffffacd2.js",
+    "static/js/316.b609c07e.chunk.js": "/meditrek/admin/static/js/316.b609c07e.chunk.js",
+    "static/js/962.e15716f0.chunk.js": "/meditrek/admin/static/js/962.e15716f0.chunk.js",
+    "static/js/732.1f2f2264.chunk.js": "/meditrek/admin/static/js/732.1f2f2264.chunk.js",
+    "static/js/475.6b195581.chunk.js": "/meditrek/admin/static/js/475.6b195581.chunk.js",
+    "static/media/logo.png": "/meditrek/admin/static/media/logo.f578b4db8d23c8f2ad1a.png",
+    "index.html": "/meditrek/admin/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.cc2c3a2a.css",
+    "static/js/main.ffffacd2.js"
+  ]
+}

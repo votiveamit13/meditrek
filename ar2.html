@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ميديتريك • العلاجات الرقمية السريرية</title>
+  <meta name="description" content="يوفّر ميديتريك علاجات رقمية متوافقة سريريًا: مراقبة الالتزام، وتسجيل الأعراض، ومسارات متابعة النتائج للمرضى ومقدّمي الرعاية الصحية." />
+  <link rel="icon" href="/assets/images/logo/fav_icon.png" type="image/png" />
+  <meta name="theme-color" content="#0AA6A6" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="ميديتريك • العلاجات الرقمية السريرية"/>
+  <meta property="og:description" content="ذكاء سريري للعلاجات اليومية: الالتزام، والتحمّل، والنتائج — بدون تكامل مع السجل الطبي الإلكتروني."/>
+  <meta property="og:image" content="https://meditrekaccess.com/assets/images/og/meditrek_og.jpg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://meditrekaccess.com/"/>
+
+  <!-- Google tag (gtag.js) -->
+  <p></p>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-KVR95V489Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-KVR95V489Y');
+  </script>
+
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);} 
+    gtag('js', new Date()); 
+    gtag('config', 'G-KVR95V489Y');
+  </script>
+
+  <!-- Framework -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+
+  <style>
+    :root{
+      --primary:#0AA6A6;           /* Teal clinical */
+      --primary-600:#098c8c;       /* Hover */
+      --ink:#10323A;               /* Deep clinical text */
+      --muted:#6A7A80;             /* Secondary text */
+      --soft:#F4FEFF;              /* Paper-soft bg */
+      --card:#FFFFFF;              /* Card surface */
+      --line:#E9F2F3;              /* Dividers */
+    }
+
+    html,body{font-family:'Inter',sans-serif;color:var(--ink);background:#fff;}
+    .container{max-width:1120px;}
+
+    /* RTL helpers (minimal, non-breaking) */
+    [dir="rtl"] .ms-auto { margin-left: 0 !important; margin-right: auto !important; }
+    [dir="rtl"] .me-2 { margin-left: .5rem !important; margin-right: 0 !important; }
+    [dir="rtl"] .text-start { text-align: right !important; }
+    [dir="rtl"] .text-end { text-align: left !important; }
+
+    /* Accessibility */
+    .skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
+    .skip-link:focus{position:fixed;left:12px;top:12px;z-index:10000;padding:.5rem 1rem;background:#111;color:#fff;border-radius:8px;}
+
+    /* Navbar */
+    .navbar{padding:14px 0;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);} 
+    .navbar-brand img{max-width:180px;height:auto;}
+    .nav-link{color:var(--ink)!important;font-weight:500;margin:0 .5rem;}
+    .nav-link:hover,.nav-link:focus{color:var(--primary)!important;}
+    .btn-primary{background:var(--primary);border-color:var(--primary);border-radius:10px;font-weight:600;}
+    .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600);} 
+    .btn-outline{border:1px solid var(--line);}
+
+    /* Hero */
+    .hero{position:relative;background:linear-gradient(180deg,#ffffff 0%, var(--soft) 100%);} 
+    .hero .badge-pill{display:inline-flex;gap:.5rem;align-items:center;background:#E8FAFA;color:#066b6b;border-radius:999px;padding:.35rem .75rem;font-weight:600;font-size:.85rem;}
+    .hero h1{font-weight:700;letter-spacing:-.02em;}
+    .hero p{color:#2f4b52;}
+    .hero-figure{max-width:460px;}
+    .hero-divider{height:3px;background:linear-gradient(90deg,var(--primary),#6fe3e3);border-radius:3px;width:84px;margin:18px 0;}
+
+    /* Sections */
+    section{padding:72px 0;}
+    .section-head{margin-bottom:28px;}
+    .section-kicker{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+
+    /* Cards */
+    .card-clean{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 6px 24px rgba(16,50,58,0.06);} 
+    .card-clean h5{font-weight:600;}
+    .icon-40{width:40px;height:40px;object-fit:contain;}
+
+    /* Lists */
+    .list-check{list-style:none;padding-left:0;margin-bottom:0;}
+    .list-check li{padding-inline-start:28px;position:relative;margin:10px 0;color:#22464f;}
+    .list-check li:before{content:"\f26e"; /* bi-check2-circle */ font-family:"bootstrap-icons"; position:absolute;inset-inline-start:0;top:1px;color:var(--primary);}    
+
+    /* Band */
+    .band{background:var(--soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line);} 
+
+    /* Download */
+    .store-badge{height:48px;}
+
+    /* Footer */
+    footer{border-top:1px solid var(--line);} 
+
+    /* Motion (reduced aware) */
+    @media (prefers-reduced-motion:no-preference){
+      .fade-up{opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards;}
+      .fade-up.delay-1{animation-delay:.12s} .fade-up.delay-2{animation-delay:.24s} .fade-up.delay-3{animation-delay:.36s}
+      @keyframes fadeUp{to{opacity:1;transform:none}}
+    }
+
+    /* Responsive */
+    @media (max-width: 992px){
+      .hero-figure{max-width:340px;margin:20px auto 0;}
+      .container{padding:0 18px;}
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">الانتقال إلى المحتوى</a>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg fixed-top" role="navigation" aria-label="Primary">
+    <div class="container">
+      <a class="navbar-brand" href="/"><img src="/assets/images/logo/thera_data_logo2.png" alt="شعار ميديتريك"></a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="تبديل القائمة">
+        <span class="bi bi-list" aria-hidden="true"></span>
+      </button>
+      <div id="nav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link" href="#about">نبذة</a></li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               href="#"
+               id="learnMoreDropdown"
+               role="button"
+               data-bs-toggle="dropdown"
+               aria-expanded="false">
+              الحلول
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="learnMoreDropdown">
+              <li>
+                <a class="dropdown-item" href="https://meditrekaccess.com/moreinfohcp">
+                  أنا مقدّم رعاية صحية
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="https://meditrekaccess.com/moreinfoapp">
+                  أنا مريض
+                </a>
+              </li>
+            </ul>
+          </li>
+
+          <li class="nav-item"><a class="nav-link" href="#patients">المرضى</a></li>
+          <li class="nav-item"><a class="nav-link" href="#hcps">مقدّمو الرعاية</a></li>
+          <li class="nav-item"><a class="nav-link" href="/contact">اتّصل بنا</a></li>
+
+          <li class="nav-item ms-lg-2"><a class="btn btn-primary" href="/register">طلب وصول لمقدّمي الرعاية</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <!-- HERO -->
+    <section id="about" class="hero py-5" style="padding-top:120px;">
+      <div class="container">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-6 fade-up">
+            <p></p>
+            <span class="badge-pill" aria-label="ميديتريك يخدم الأطباء والمرضى"><i class="bi bi-hospital" aria-hidden="true"></i>لمقدّمي الرعاية والمرضى</span>
+            <div class="hero-divider" aria-hidden="true"></div>
+            <h1 class="display-5 mb-3">ذكاء سريري للعلاجات اليومية</h1>
+            <p class="lead mb-4">ميديتريك رفيق صحي رقمي يُنظّم العلاج، ويوثّق التجارب اليومية، ويوضح مسار العلاج مع تقديم رؤية أعمق لديناميكيات العلاج في الواقع.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="#download" class="btn btn-primary">تنزيل التطبيق</a>
+              <a href="/moreinfoapp" class="btn btn-light btn-outline">معرفة المزيد (المرضى)</a>
+              <a href="https://meditrekaccess.com/moreinfohcp" class="btn btn-light btn-outline">معرفة المزيد (مقدّمو الرعاية)</a>
+            </div>
+          </div>
+          <div class="col-lg-6 text-center fade-up delay-1">
+            <img src="/assets/images/slider/thera_main_img.png" class="hero-figure img-fluid" alt="واجهات ميديتريك على الهاتف والويب" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY / VALUE -->
+    <section aria-labelledby="why-title">
+      <div class="container">
+        <div class="row align-items-end section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">لماذا ميديتريك</div>
+            <h2 id="why-title" class="h2 fw-bold">مصمّم من قبل أطباء. ومبني للممارسة الواقعية.</h2>
+            <p class="text-secondary mb-0">في الممارسة السريرية، غالبًا ما تمر تحدّيات إدارة العلاج دون ملاحظة. يَسدّ ميديتريك هذه الفجوات عبر أدوات رقمية منظّمة طوّرها مختصّون لمقدّمي الرعاية.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4 mt-1">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <img src="/image/new/Adherence.png" class="icon-40" alt="أيقونة الالتزام" loading="lazy" />
+              <h5 class="mt-3 mb-1">وضوح الالتزام</h5>
+              <p class="mb-0">اكتشف الانقطاعات مبكرًا عبر جداول جرعات منظّمة وتذكيرات ذكية.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4 fade-up delay-1">
+            <div class="card-clean h-100">
+              <img src="/image/new/mild.png" class="icon-40" alt="أيقونة التحمّل" loading="lazy" />
+              <h5 class="mt-3 mb-1">رؤى التحمّل</h5>
+              <p class="mb-0">تسجيل الآثار الخفيفة التي غالبًا لا يُبلّغ عنها لدعم السياق السريري.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4 fade-up delay-2">
+            <div class="card-clean h-100">
+              <img src="/image/new/RWE.png" class="icon-40" alt="أيقونة الأدلة الواقعية" loading="lazy" />
+              <h5 class="mt-3 mb-1">نتائج من الواقع</h5>
+              <p class="mb-0">إنشاء بيانات منظّمة لتحسين الجودة ودعم مسارات البحث.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATIENTS -->
+    <section id="patients" aria-labelledby="patients-title">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">المرضى</div>
+            <h2 id="patients-title" class="h2 fw-bold">تطبيق ميديتريك</h2>
+            <p class="text-secondary mb-0">رفيق واضح ومنظّم لدعم العلاج اليومي. مجاني للمرضى.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">ما الذي يقدّمه للمرضى؟</h5>
+              <ul class="list-check">
+                <li>جداول جرعات مخصّصة</li>
+                <li>تذكيرات متكيفة وغير ملحوظة</li>
+                <li>تسجيل منظّم للأعراض</li>
+                <li>واجهة مراعية للمريض</li>
+                <li>مشاركة بيانات قائمة على الموافقة</li>
+              </ul>
+              <div class="mt-3 d-flex gap-2">
+                <a href="#download" class="btn btn-primary btn-sm">تنزيل</a>
+                <a href="/moreinfoapp" class="btn btn-light btn-sm btn-outline">المزيد</a>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-8 fade-up delay-1">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">مصمّم بعناية للمريض</h5>
+              <p class="mb-0">مرئيات نظيفة، لغة واضحة، وخطوات قليلة لتقليل الاحتكاك ودعم التفاعل المستمر.</p>
+              <img src="/assets/images/moreinfoapp/homeapp.png" class="img-fluid mt-3 rounded-3 border" alt="شاشات تطبيق المريض" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HCPs -->
+    <section id="hcps" aria-labelledby="hcps-title" class="band">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">مقدّمو الرعاية الصحية</div>
+            <h2 id="hcps-title" class="h2 fw-bold">منصّة Meditrek Access</h2>
+            <p class="text-secondary mb-0">رؤى منظّمة بدون تكامل مع السجلات الطبية الإلكترونية. ركّز على القرارات، لا على جمع البيانات.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">أدوات سريرية</h5>
+              <ul class="list-check">
+                <li>اتجاهات الالتزام والجرعات الفائتة</li>
+                <li>تنبيهات وإشارات للمتابعة</li>
+                <li>نتائج مُبلّغ عنها من المريض (PROs)</li>
+                <li>عروض ملخّصة قابلة للتصدير</li>
+                <li>تكامل مع علاج المريض</li>
+              </ul>
+              <div class="d-flex gap-2 mt-2">
+                <a href="/register" class="btn btn-primary btn-sm">طلب وصول</a>
+                <a href="https://meditrekaccess.com/moreinfohcp" class="btn btn-light btn-sm btn-outline">المزيد</a>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-8 fade-up delay-1">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">ملائم للممارسة</h5>
+              <p class="mb-0">يكمل ميديتريك سير العمل القائم عبر تقديم رؤى منظّمة لحظية حول تجربة المريض العلاجية.</p>
+              <img src="/image/Frame 1707482242.png" class="img-fluid mt-3 rounded-3 border" alt="معاينة لوحة معلومات مقدّم الرعاية" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ETHICS / PRIVACY -->
+    <section id="ethics" aria-labelledby="ethics-title">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">الأخلاقيات والخصوصية</div>
+            <h2 id="ethics-title" class="h2 fw-bold">أمان بالتصميم</h2>
+            <p class="text-secondary mb-0">تقليل البيانات، موافقة واضحة، وضوابط أمان مدمجة في الأساس.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-4 fade-up">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-shield-lock" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">ممارسات الأمان</h5>
+              <p class="mb-0">تشفير أثناء النقل والتخزين مع ضوابط وصول مبنية على الأدوار.</p>
+            </div>
+          </div>
+          <div class="col-md-4 fade-up delay-1">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-people" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">الموافقة أولًا</h5>
+              <p class="mb-0">مشاركة بيانات يتحكم بها المريض ولأغراض محدّدة فقط.</p>
+            </div>
+          </div>
+          <div class="col-md-4 fade-up delay-2">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-file-check" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">حوكمة البحث</h5>
+              <p class="mb-0">الوصول لأغراض البحث يستلزم موافقة صريحة وإشرافًا مناسبًا.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" aria-labelledby="download-title">
+      <div class="container text-center">
+        <h2 id="download-title" class="h2 fw-bold">تنزيل ميديتريك</h2>
+        <p class="text-secondary">متاح على أبرز متاجر التطبيقات.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+          <a href="#" aria-label="تنزيل من متجر App Store"><img src="/image/home5-app-store-logo.jpg" class="store-badge" alt="شارة متجر App Store" loading="lazy"></a>
+          <a href="#" aria-label="تنزيل من Google Play"><img src="/image/home5-google-paly.jpg" class="store-badge" alt="شارة Google Play" loading="lazy"></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-4" role="contentinfo">
+    <div class="container text-center">
+      <ul class="list-inline mb-2">
+        <li class="list-inline-item"><a href="/terms-condition.html" target="_blank" rel="noopener">الشروط والأحكام</a></li>
+        <li class="list-inline-item"><a href="/privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a></li>
+      </ul>
+      <p class="text-secondary mb-0">© 2026 مجموعة ميديتريك</p>
+    </div>

@@ -1,0 +1,3100 @@
+const connection = require("../connection/connection");
+const moment = require("moment");
+const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+const languageMessages = require("./languageMessages");
+const { hashPassword } = require("./function");
+dotenv.config();
+const SECRET_KEY = "SECRETKEYHERE";
+const {
+  sendMail
+} = require("../controller/mailer");
+const { resolve } = require("path");
+
+
+const subAdminLogin = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    if (!email) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "email", });
+    }
+    if (!password) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "password", });
+    }
+
+    const sqlCheckUser = "SELECT doctor_id, user_id, doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime FROM doctor_master WHERE delete_flag = 0 AND approve_status = 1 AND email = ? AND active_flag = 1";
+    connection.query(sqlCheckUser, [email], async (err, userResult) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (userResult.length <= 0) {
+        return res.status(200).json({ success: false, msg: languageMessages.emailNotRegistered, key: "email", });
+      }
+      if (userResult.length > 0) {
+        var adminPassword = userResult[0].password;
+        const hashedPass = await hashPassword(password);
+        if (adminPassword != hashedPass) {
+          return res.status(200).json({ success: false, msg: languageMessages.wrongPassword, });
+        } else {
+          const payload = { subject: userResult[0].doctor_id };
+          const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
+          return res.status(200).json({ success: true, msg: languageMessages.loginSuccessfully, key: "login_successfully", token: token, info: userResult });
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+};
+
+
+//--------------------------get prophile--------------
+const getProfile = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name,mobile,email,image FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, info: check[0] })
+    })
+
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+};
+
+//---------------------update password-------------
+const UpdateSubAdminPassword = async (req, res) => {
+  const { oldpassword, newPassword } = req.body;
+  const doctor_id = req.doctor_id;
+
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({
+        success: false,
+
+        msg: languageMessages.msg_empty_param,
+
+        key: "doctor_id",
+      });
+    }
+
+
+    if (!newPassword) {
+      return res.status(200).json({
+        success: false,
+
+        msg: languageMessages.msg_empty_param,
+
+        key: "newPassword",
+      });
+    }
+    if (!oldpassword) {
+      return res.status(200).json({
+        success: false,
+
+        msg: languageMessages.msg_empty_param,
+
+        key: "oldpassword",
+      });
+    }
+
+    var sql =
+      "SELECT doctor_id,password  FROM doctor_master WHERE doctor_id = ? and delete_flag = 0";
+
+    connection.query(sql, [doctor_id], async (err, info) => {
+      if (err) {
+        return res
+
+          .status(200)
+
+          .json({ success: false, msg: languageMessages.internalServerError });
+      }
+
+      if (info.length <= 0) {
+        return res
+
+          .status(200)
+
+          .json({ success: false, msg: languageMessages.msgUserNotFound });
+      }
+
+      if (info[0].active_flag === 0) {
+        return res.status(200).json({
+          success: false,
+
+          msg: languageMessages.accountDeactivate,
+
+          active_status: 0,
+        });
+      }
+
+      console.log(info[0].user_id);
+
+
+      var password = info[0].password;
+
+      console.log(password);
+
+      const old_password_hash = await hashPassword(oldpassword);
+      const new_pass = await hashPassword(newPassword);
+
+      if (password == old_password_hash) {
+
+
+        if (new_pass != old_password_hash) {
+          var updateSql =
+            "UPDATE doctor_master SET password=?, updatetime = NOW() WHERE doctor_id = ? AND delete_flag = 0";
+
+          connection.query(
+            updateSql,
+            [new_pass, doctor_id],
+            (err) => {
+              if (err) {
+                return res
+                  .status(200)
+                  .json({
+                    success: false,
+                    msg: languageMessages.internalServerError,
+                  });
+              } else {
+                return res
+                  .status(200)
+                  .json({
+                    success: true,
+                    msg: languageMessages.PasswordUpdatedSuccessfully,
+                    key: "success",
+                  });
+              }
+            }
+          );
+        } else {
+          return res.status(200).json({
+            success: true,
+
+            msg: languageMessages.newOldPassword,
+
+            key: "samePassword",
+          });
+        }
+      } else {
+        return res.status(200).json({
+          success: false,
+
+          msg: languageMessages.newOldPassword,
+
+          key: "failure",
+        });
+      }
+    });
+  } catch (error) {
+    return res
+
+      .status(200)
+
+      .json({ success: false, msg: languageMessages.internalServerError });
+  }
+};
+
+
+
+
+//-----------------------update sub admin profile-------------
+const UpdateSubAdminProfile = async (req, res) => {
+  const { name, email, doctor_id, mobile } = req.body;
+  // return response.json({ success: false, msg: languageMessages.msg_empty_param, res: req.body });
+  // const doctor_id = req.doctor_id;
+
+  try {
+    let image = req.file ? req.file.filename : null;
+    // return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "test" });
+
+    if (!name) {
+      return res
+
+        .status(200)
+
+        .json({ success: false, msg: languageMessages.msg_empty_param, key: "name" });
+    }
+    if (!doctor_id) {
+      return res
+
+        .status(200)
+
+        .json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
+    }
+    if (!email) {
+      return res
+
+        .status(200)
+
+        .json({ success: false, msg: languageMessages.msg_empty_param, key: "email" });
+    }
+
+    const checksql = "SELECT doctor_id ,user_id ,doctor_name,image,email FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      if (image == null) {
+        image = check[0].image
+      }
+      const updatesql = "UPDATE doctor_master SET doctor_name = ?,email= ?,image = ?, mobile = ?  WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(updatesql, [name, email, image, mobile, doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        return res.status(200).json({ success: true, msg: languageMessages.msgProfileUpdateSuccess })
+      })
+    })
+
+
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+
+      msg: languageMessages.internalServerError,
+
+      error: error.message,
+    });
+  }
+};
+
+function mailBodyForgotPasswordData(postData) {
+
+  const date = new Date().getFullYear();
+
+
+
+  const mailBody = `
+  
+          <!DOCTYPE html>
+  
+          <html>
+  
+          <head>
+  
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+              <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  
+              <title>Forgot Password</title>
+  
+          </head>
+  
+          <body style="margin: 0; padding: 0; background-color: #ffffff; font-size:13px; color:#444; font-family:Arial, Helvetica, sans-serif; padding-top:70px; padding-bottom:70px;">
+  
+              <table cellspacing="0" cellpadding="0" align="center" width="768" class="outer-tbl" style="margin:0 auto;">
+  
+                  <tr>
+  
+                      <td class="pad-l-r-b" style="background-color:#FFFFFF; padding:0 70px 40px;">
+  
+                          <table cellpadding="0" cellspacing="0" class="full-wid">
+  
+                          </table>
+  
+                          <table cellpadding="0" cellspacing="0" style="width:100%; background-color: #FFFFFF; border-radius:4px;box-shadow:0 0 20px #ccc;margin-top:40px">
+  
+                              <tr>
+  
+                                  <td>
+  
+                                      <table border="0" style="margin:0; width:100%" cellpadding="0" cellspacing="0">
+  
+                                          <tr>
+  
+                                              <td class="logo" style="padding:40px 0 30px 0; background-color: #ffffff; text-align:center; border-bottom:1px solid #E1E1E1">
+  
+                                                  <img src="https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png" alt="" style="width:20%; background-color: white; padding:5px">
+  
+                                                  <h1 style="color:black;">Forgot Your Password</h1>
+  
+                                              </td>
+  
+                                          </tr>
+  
+                                          <tr><td></td></tr>
+  
+                                          <tr>
+  
+                                              <td class="content" style="padding:40px 40px;">
+  
+                                                  <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">
+  
+                                                      Hello ${postData.doctor_name}
+  
+                                                  </p>
+  
+                                          <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">
+  
+                                          You have requested to reset your password. Below is the Reset Password button you can click to change your password.
+  
+                                      </p>
+  
+                                                  <p style="text-align: center;">
+  
+                                              <a href='https://meditrekaccess.com/meditrek/sub_admin/meditrek/sub_admin/reset-password?doctor_id=${postData.doctor_id}' target="_blank" style="display: inline-block; background-color: #1ddec4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+  
+                                                  Reset Password
+  
+                                              </a>
+  
+                                          </p>
+  
+                                                  <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">
+  
+                                                      Regards,
+  
+                                                  </p>
+  
+                                                  <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">
+  
+                                                  Meditrek Access
+  
+                                                  </p>
+  
+                                              </td>
+  
+                                          </tr>
+  
+                                          <tr>
+  
+                                              <td style="background: #1ddec4; padding-bottom:60px;">
+  
+                                                  <table style="width:100%" border="0" cellspacing="0" cellpadding="0" class="full-wid" align="center">
+  
+                                                      <tr>
+  
+                                                          <td>
+  
+                                                              <div style="margin:0 auto; text-align:center; padding:0 100px" class="foot-items">
+  
+                                                                  <p style="font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#fbfbfb; margin-top:40px; line-height:20px;">
+  
+                                                                      &#169; ${date} Meditrek Access | All right Reserved
+  
+                                                                  </p>
+  
+  
+                                                                  <p style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#fbfbfb; line-height:20px; margin-bottom:40px;">
+  
+                                                                      The content of this message is confidential. If you have received it by mistake, please inform us by an email reply and then delete the message. It is forbidden to copy, forward, or in any way reveal the contents of this message to anyone.
+  
+                                                                  </p>
+  
+                                                              </div>
+  
+                                                          </td>
+  
+                                                      </tr>
+  
+                                                  </table>
+  
+                                              </td>
+  
+                                          </tr>
+  
+                                      </table>
+  
+                                  </td>
+  
+                              </tr>
+  
+                          </table>
+  
+                      </td>
+  
+                  </tr>
+  
+              </table>
+  
+          </body>
+  
+          </html>    `;
+
+
+
+  return mailBody;
+
+}
+
+//--------------------------forgot password----------------
+const ForgotPassword = async (req, res) => {
+
+  const { email } = req.body;
+
+  try {
+
+    if (!email) {
+
+      return res.status(200).json({
+
+        success: false,
+
+        message: languageMessages.msg_empty_param,
+
+        key: "email",
+
+      });
+
+    }
+
+    //check user exist
+
+    const sql1 =
+
+      "SELECT doctor_id, doctor_name,mobile,email,image FROM doctor_master WHERE email = ? AND delete_flag = 0 AND approve_status = 1";
+
+    connection.query(sql1, [email], async (err, info) => {
+
+      if (err) {
+
+        return res.status(200).json({
+
+          success: false,
+
+          message: languageMessages.internalServerError,
+
+          error: err.message,
+
+        });
+
+      }
+
+      if (info.length <= 0) {
+
+        return res.status(200).json({
+
+          success: false,
+
+          message: languageMessages.emailNotRegistered,
+
+        });
+
+      }
+
+      let subject = "Forgot Password";
+
+      let text = mailBodyForgotPasswordData(info[0]);
+
+      const mailResponse = await sendMail(email, subject, text);
+
+      return res.status(200).json({
+
+        success: true,
+
+        message: languageMessages.resetPassword,
+        mailResponse:mailResponse
+      });
+
+    });
+
+  } catch (err) {
+
+    return res.status(200).json({
+
+      success: false,
+
+      message: languageMessages.internalServerError,
+
+      error: err.message,
+
+    });
+
+  }
+
+};
+
+const subAdminForgetNewPassword = async (request, response) => {
+  const { newPassword, doctor_id } = request.body;
+
+  if (!doctor_id) {
+    return response.status(200).json({
+      success: false,
+
+      msg: languageMessages.msg_empty_param,
+
+      key: "doctor_id",
+    });
+  }
+
+  if (!newPassword) {
+    return response.status(200).json({
+      success: false,
+
+      msg: languageMessages.msg_empty_param,
+
+      key: "newPassword",
+    });
+  }
+
+  try {
+
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+
+          msg: languageMessages.internalServerError,
+
+          error: err,
+        });
+      }
+      if (check.length <= 0) {
+        return response.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+
+
+
+      const hashedPass = await hashPassword(newPassword);
+
+      var updatepassword =
+        "UPDATE doctor_master SET password = ?, updatetime = NOW() WHERE doctor_id = ? AND delete_flag = 0";
+
+      connection.query(updatepassword, [hashedPass, doctor_id], async (err) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+
+            msg: languageMessages.internalServerError,
+
+            error: err,
+          });
+        } else {
+          return response.status(200).json({
+            success: true,
+
+            msg: languageMessages.CreateNewPassword,
+          });
+        }
+      });
+    })
+
+  } catch (err) {
+    return response.status(200).json({
+      success: false,
+
+      msg: languageMessages.internalServerError,
+
+      error: err,
+    });
+  }
+};
+
+//----------------------subAdmin Dashboard---------------
+const subAdminDashboard = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      const query = "SELECT patient_id ,doctor_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(query, [doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalPatients: result.length })
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+//medication dashboard function
+const medicationDashboard = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
+    }
+
+    const checksql = "SELECT doctor_id, doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
+      }
+
+      const query = `
+        SELECT COUNT(mm.medication_id) AS totalMedication
+        FROM patient_master AS pm
+        LEFT JOIN medication_master AS mm ON pm.user_id = mm.user_id AND mm.delete_flag = 0 AND pm.delete_flag = 0
+        WHERE pm.doctor_id = ?
+      `;
+
+      connection.query(query, [doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+        }
+
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          totalMedication: result[0].totalMedication
+        });
+      });
+    });
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
+  }
+};
+
+//adverse dashboard function
+const adverseDashboard = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      // const query = "SELECT adverse_reaction_id FROM adverse_reaction_master WHERE delete_flag = 0";
+      const query = "SELECT COUNT(asm.adverse_reaction_id) AS adverse_count FROM patient_master AS pm LEFT JOIN adverse_reaction_master AS asm ON pm.user_id = asm.user_id WHERE pm.doctor_id = ? AND asm.delete_flag = 0 AND pm.delete_flag =0";
+      connection.query(query, [doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalAdverseReaction: result[0].adverse_count })
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+//lab report dashboard function
+const labReportDashboard = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      // const query = "SELECT medical_report_id FROM medical_report_master WHERE delete_flag = 0";
+      const query = "SELECT COUNT(mrm.medical_report_id) AS report_count FROM patient_master AS pm LEFT JOIN medical_report_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0";
+      connection.query(query, [doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalLabReports: result[0].report_count })
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+//measurement dashboard function 
+const measurementDashboard = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+      // const query = "SELECT measurement_id FROM measurement_master WHERE delete_flag = 0";
+      const query = "SELECT COUNT(mrm.measurement_id) AS report_count FROM patient_master AS pm LEFT JOIN measurement_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0"; 
+      connection.query(query, [doctor_id], async (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalmeasurement: result[0].report_count })
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+
+//----------------------get all patients---------------
+const getAllPatients = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+    }
+    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+    connection.query(checksql, [doctor_id], async (err, check) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (check.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+      }
+
+      const patientsql = "SELECT p.patient_id ,p.doctor_id ,p.user_id,p.createtime,p.updatetime, u.user_unique_id, u.email,u.name,u.mobile,u.image FROM patient_master p JOIN user_master u ON u.user_id = p.user_id  WHERE p.doctor_id = ? AND p.delete_flag= 0 AND p.delete_flag =0 ORDER BY p.patient_id desc";
+      connection.query(patientsql, [doctor_id], async (err, patient) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        if (patient.length <= 0) {
+          return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patient: "NA" })
+        }
+        patient.map((item) => {
+          item.createtime = moment(item.createtime).format('DD-MM-YYYY hh:mm A');
+          item.updatetime = moment(item.updatetime).format('DD-MM-YYYY hh:mm A');
+        })
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, patient })
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+//---------------------------get patients details--------------
+// const getPatientsDetails = async (req, res) => {
+//   const doctor_id = req.doctor_id;
+//   const { user_id } = req.query;
+//   try {
+//     if (!doctor_id) {
+//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
+//     }
+//     if (!user_id) {
+//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
+//     }
+//     const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+//     connection.query(checksql, [doctor_id], async (err, check) => {
+//       if (err) {
+//         return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+//       }
+//       if (check.length <= 0) {
+//         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+//       }
+
+//       const patientsql = "SELECT user_id ,email,name,mobile,image,address,dob,createtime,updatetime,active_flag  FROM user_master WHERE user_id = ?";
+//       connection.query(patientsql, [user_id], async (err, patient) => {
+//         if (err) {
+//           return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+//         }
+//         if (patient.length <= 0) {
+//           return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patient: "NA" })
+//         }
+//         patient.map((item) => {
+//           item.createtime = moment(item.createtime).format('YYYY-MM-DD HH:mm:ss');
+//           item.updatetime = moment(item.updatetime).format('YYYY-MM-DD HH:mm:ss');
+//           item.dob = moment(item.updatetime).format('YYYY-MM-DD');
+//         })
+
+//         const reportsql = "SELECT 	mr.medical_report_id,mr.createtime,mr.file,rc.report_category_id ,rc.category_name FROM medical_report_master as mr JOIN report_share_master as rs on rs.medical_report_id=mr.medical_report_id JOIN report_category as rc on rc.report_category_id=mr.report_category_id  WHERE rs.doctor_id= ?  AND rs.user_id = ? AND mr.delete_flag = 0 ORDER BY mr.medical_report_id desc";
+//         connection.query(reportsql, [doctor_id, user_id], async (err, report) => {
+//           if (err) {
+//             return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+//           }
+//           if (report.length <= 0) {
+//             return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, patienDetails: patient[0], report: "NA" })
+//           }
+//           report.map((item) => {
+//             item.createtime = moment(item.createtime).format('YYYY-MM-DD HH:mm:ss');
+//           })
+//           return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, patienDetails: patient[0], report })
+//         })
+//       })
+//     })
+
+//   } catch (error) {
+//     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+//   }
+// }
+
+const getPatientsDetails = async (req, res) => {
+  const doctor_id = req.doctor_id;
+  const { user_id } = req.query;
+
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
+    }
+
+    if (!user_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
+    }
+
+    // Step 1: Validate doctor
+    const checksql = "SELECT doctor_id, doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+    connection.query(checksql, [doctor_id], async (err, doctorCheck) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+      }
+
+      if (doctorCheck.length === 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
+      }
+
+      // Step 2: Get patient details
+      const patientsql = `
+        SELECT 
+          um.user_id, um.email, um.user_unique_id, um.name, um.mobile, um.image, um.address, um.dob, um.weight, um.height, um.diseases,
+          um.createtime, um.updatetime, um.active_flag, rsm.information_type 
+        FROM user_master AS um LEFT JOIN report_share_master AS rsm ON um.user_id = rsm.user_id
+        WHERE um.user_id = ?
+      `;
+
+      connection.query(patientsql, [user_id], async (err, patientRes) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+        }
+
+        if (patientRes.length === 0) {
+          return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patienDetails: "NA" });
+        }
+
+        const data = patientRes[0];
+        const diseasesIds = data.diseases;
+
+        const patient = {
+          user_id: data.user_id,
+          email: data.email,
+          user_unique_id: data.user_unique_id,
+          name: data.name,
+          mobile: data.mobile,
+          image: data.image,
+          address: data.address,
+          dob: moment(data.dob).format("YYYY-MM-DD"),
+          age: moment().diff(moment(data.dob), 'years'),
+          weight: data.weight,
+          height: data.height,
+          information_type: data.information_type,
+          active_flag: data.active_flag,
+          diseaseName: data.diseases,
+          createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+          updatetime: moment(data.updatetime).format("DD-MM-YYYY hh:mm A"),
+          disease_names: ""
+        };
+
+        // Step 3: If diseases exist, fetch names
+        if (diseasesIds) {
+          const diseaseQuery = `
+            SELECT GROUP_CONCAT(disease_name SEPARATOR ', ') AS disease_names 
+            FROM disease_master 
+            WHERE FIND_IN_SET(disease_id, ?)
+          `;
+          connection.query(diseaseQuery, [diseasesIds], (err, diseaseRes) => {
+            if (!err && diseaseRes.length > 0) {
+              patient.disease_names = diseaseRes[0].disease_names || "";
+            }
+
+            // Step 4: Get reports
+            const reportsql = `
+              SELECT 
+                mr.medical_report_id, mr.createtime, mr.file,
+                rc.report_category_id, rc.category_name 
+              FROM medical_report_master mr
+              JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
+              JOIN report_category rc ON rc.report_category_id = mr.report_category_id
+              WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
+              ORDER BY mr.medical_report_id DESC
+            `;
+
+            connection.query(reportsql, [doctor_id, user_id], (err, report) => {
+              if (err) {
+                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+              }
+
+              report.forEach(r => {
+                r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
+              });
+
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.msgDataFound,
+                patienDetails: patient,
+                report: report.length > 0 ? report : "NA"
+              });
+            });
+          });
+        } else {
+          // No diseases, proceed to report
+          const reportsql = `
+            SELECT 
+              mr.medical_report_id, mr.createtime, mr.file,
+              rc.report_category_id, rc.category_name 
+            FROM medical_report_master mr
+            JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
+            JOIN report_category rc ON rc.report_category_id = mr.report_category_id
+            WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
+            ORDER BY mr.medical_report_id DESC
+          `;
+
+          connection.query(reportsql, [doctor_id, user_id], (err, report) => {
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+            }
+
+            report.forEach(r => {
+              r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
+            });
+
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              patienDetails: patient,
+              report: report.length > 0 ? report : "NA"
+            });
+          });
+        }
+      });
+    });
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
+  }
+};
+
+
+//get medications 
+const getAllMedications = async (req, res) => {
+  try {
+    const { user_id } = req.query
+    if (!user_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
+    }
+    const patientsql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(patientsql, [user_id], (err, patient) => {
+      if (err) {
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      }
+      if (patient.length <= 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patient: "NA" })
+      }
+
+      //get medication details 
+      const getquery = `SELECT 
+  m.medication_id, 
+  m.user_id, 
+  m.medicine_id, 
+  m.dosage, 
+  m.type, 
+  m.schedule, 
+  m.weekday, 
+  m.current_quantity, 
+  ts.time AS reminder_time, 
+  m.remainder_quantity, 
+  m.remaining_quantity, 
+  m.instruction, 
+  m.status, 
+  m.createtime, 
+  mm.medicine_name 
+FROM 
+  medication_master m
+JOIN 
+  medicine_master mm ON m.medicine_id = mm.medicine_id
+JOIN 
+  time_slots_master ts ON m.medication_id = ts.medication_id
+WHERE 
+  m.user_id = ? AND m.delete_flag = 0;
+`
+      connection.query(getquery, [user_id], (err, result) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        }
+        if (result.length <= 0) {
+          return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, med_array: [] })
+        }
+
+        const med_array = result.map(data => ({
+          medication_id: data.medication_id,
+          type: data.type,
+          user_id: data.user_id,
+          medicine_id: data.medicine_id,
+          dosage: data.dosage,
+          schedule: data.schedule,
+          weekday: data.weekday,
+          current_quantity: data.current_quantity,
+          reminder_time: data.reminder_time,
+          remind_quantity: data.remind_quantity,
+          remaining_quantity: data.remaining_quantity,
+          instruction: data.instruction,
+          status: data.status,
+          createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm:ss"),
+          medicine_name: data.medicine_name,
+        }))
+
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, med_array: med_array })
+
+      })
+    })
+
+  } catch (error) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+  }
+}
+
+
+const getAllMeasurements = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "user_id"
+      });
+    }
+
+    // First check if user exists
+    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: "NA"
+        });
+      }
+
+      // Get measurement details
+      const getQuery = `
+                SELECT 
+                    type, 
+                    user_id, 
+                    measurement_id, 
+                    systolic_bp, 
+                    diastolic_bp, 
+                    pulse, 
+                    weight, 
+                    createtime, 
+                    date, 
+                    fasting_glucose,
+                    temperature,
+                    ppbgs,
+                    symptom,
+                    symptom_range,
+                    time 
+                FROM 
+                    measurement_master
+                WHERE 
+                    user_id = ? 
+                    AND delete_flag = 0
+                ORDER BY createtime DESC
+            `;
+
+      connection.query(getQuery, [user_id], (err, results) => {
+        if (err) {
+          return res.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
+        }
+
+        if (results.length <= 0) {
+          return res.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataNotFound,
+            measurements: []
+          });
+        }
+
+        let format_time 
+
+        // Format the response data
+        const measurements = results.map((data, index) => {
+        const format_time = moment(data.createtime).add(5, 'hours').add(30, 'minutes');
+        
+        return {
+          // format_time: format_time.format("DD-MM-YYYY hh:mm:ss A"),
+          sr_no: index + 1,
+          type: data.type,
+          user_id: data.user_id,
+          measurement_id: data.measurement_id,
+          systolic_bp: data.systolic_bp,
+          diastolic_bp: data.diastolic_bp,
+          pulse: data.pulse,
+          weight: data.weight,
+          temperature: data.temperature,
+          ppbgs: data.ppbgs,
+          symptom_range: data.symptom_range,
+          symptom: data.symptom,
+          fasting_glucose: data.fasting_glucose,
+          createtime: format_time.format("DD-MM-YYYY HH:mm:ss"),
+          // date: format_time.format("DD-MM-YYYY"),
+          // time: format_time.format("hh:mm A")
+          date : moment(data.createtime).format("DD-MM-YYYY"),
+          time : moment(data.createtime).format("hh:mm A")
+        };
+      });
+
+
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          measurements: measurements
+        });
+      });
+    });
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+const getAllMedicalReports = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "user_id"
+      });
+    }
+
+    // First check if user exists
+    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: "NA"
+        });
+      }
+
+      // Get medical report details
+      const getQuery = `
+        SELECT 
+          mrm.medical_report_id, 
+          mrm.report_category_id, 
+          mrm.file, 
+          mrm.createtime, 
+          rc.category_name 
+        FROM 
+          medical_report_master mrm 
+        JOIN 
+          report_category rc 
+        ON 
+          mrm.report_category_id = rc.report_category_id
+        WHERE 
+          mrm.user_id = ? 
+          AND mrm.delete_flag = 0
+        ORDER BY mrm.createtime DESC
+      `;
+
+      connection.query(getQuery, [user_id], (err, results) => {
+        if (err) {
+          return res.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
+        }
+
+        if (results.length <= 0) {
+          return res.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataNotFound,
+            medical_reports: []
+          });
+        }
+
+        // Format the response data
+        const medicalReports = results.map(data => ({
+          medical_report_id: data.medical_report_id,
+          report_category_id: data.report_category_id,
+          file: data.file,
+          category_name: data.category_name,
+          createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm:ss")
+        }));
+
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          medical_reports: medicalReports
+        });
+      });
+    });
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+//add note 
+const addNote = async (req, res) => {
+  const { description, user_id } = req.body
+  try {
+    if (!user_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "user_id"
+      });
+    }
+    if (!description) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "description"
+      });
+    }
+
+    // First check if user exists
+    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: "NA"
+        });
+      }
+
+      const addquery = "INSERT INTO note_master(user_id, description, createtime, updatetime) VALUES (?,?,now(), now())"
+      connection.query(addquery, [user_id, description], (addError, addResult) => {
+        if (addError) {
+          return res.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: addError.message
+          })
+        }
+        if (addResult.affectedRows > 0) {
+          return res.status(200).json({
+            success: true,
+            msg: 'Note added successfully'
+          })
+        }
+      })
+
+    })
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+}
+
+//get note 
+const getNotes = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    if (!user_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "user_id"
+      });
+    }
+
+    // First check if user exists
+    const userSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(userSql, [user_id], (err, user) => {
+      if (err) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (user.length <= 0) {
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          user: "NA"
+        });
+      }
+
+      // Get note details
+      const getQuery = `
+        SELECT 
+          note_id,
+          user_id, 
+          description, 
+          createtime
+        FROM 
+          note_master 
+        WHERE 
+          user_id = ? 
+          AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+
+      connection.query(getQuery, [user_id], (err, results) => {
+        if (err) {
+          return res.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
+        }
+
+        if (results.length <= 0) {
+          return res.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataNotFound,
+            notes: []
+          });
+        }
+
+        const notes = results.map((data, index) => ({
+          sr_no: index + 1,
+          note_id: data.note_id,
+          user_id: data.user_id,
+          description: data.description,
+          createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A")
+        }));
+
+        // Format the response data
+        // const notes = results.map(data => ({
+        //   note_id: data.note_id,
+        //   user_id: data.user_id,
+        //   description: data.description,
+        //   createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm:ss")
+        // }));
+
+        return res.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          notes: notes
+        });
+      });
+    });
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+const medicineOntimeCount = (medicine_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT COUNT(medicine_average_id) AS medicine_ontime_count FROM medicine_average_master WHERE medicine_id = ? AND status = 0 AND delete_flag = 0`;
+    connection.query(sql, [medicine_id], (err, result) => {
+      if (err) return reject(err);
+      resolve(result[0].medicine_ontime_count);
+    });
+  });
+};
+
+const medicineLateCount = (medicine_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT COUNT(medicine_average_id) AS medicine_late_count FROM medicine_average_master WHERE medicine_id = ? AND status = 1 AND delete_flag = 0`;
+    connection.query(sql, [medicine_id], (err, result) => {
+      if (err) return reject(err);
+      resolve(result[0].medicine_late_count);
+    });
+  });
+};
+
+const medicineNottakenCount = (medicine_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT COUNT(medicine_average_id) AS medicine_nottaken_count FROM medicine_average_master WHERE medicine_id = ? AND status = 2 AND delete_flag = 0`;
+    connection.query(sql, [medicine_id], (err, result) => {
+      if (err) return reject(err);
+      resolve(result[0].medicine_nottaken_count);
+    });
+  });
+};
+
+
+const getMedicineCounts = (medicine_id) => {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT
+        SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS medicine_ontime_count,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS medicine_late_count,
+        SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS medicine_nottaken_count
+      FROM medicine_average_master
+      WHERE medicine_id = ? AND delete_flag = 0
+    `;
+    connection.query(sql, [medicine_id], (err, result) => {
+      if (err) return reject(err);
+      resolve(result[0] || {});
+    });
+  });
+};
+
+// API: Get tabular medication list   - old api upto - 20-11-2025
+const getTabularMedication = async (request, response) => {
+  const { from_date, to_date } = request.query;
+
+  try {
+    // Validate parameters
+    if (!from_date) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
+    }
+
+    if (!to_date) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
+    }
+
+    // Get medication data
+    const medication_array = await new Promise((resolve, reject) => {
+      const sqlSelect = `
+        SELECT 
+          m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, m.schedule, m.weekday,
+          m.current_quantity, DATE_FORMAT(CONVERT_TZ(tm.time, '+00:00', '+05:30'), '%h:%i %p') AS reminder_time,
+          m.remainder_quantity, tm.taken_status, m.pause_status, m.remaining_quantity,
+          m.instruction, m.status, m.updatetime, m.createtime,
+          a.medicine_name, a.description, um.name
+        FROM medication_master m
+        JOIN medicine_master a ON a.medicine_id = m.medicine_id
+        JOIN user_master um ON um.user_id = m.user_id
+        JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+        WHERE m.delete_flag = 0 AND tm.delete_flag = 0
+          AND DATE(m.createtime) BETWEEN ? AND ?
+        ORDER BY m.createtime DESC
+      `;
+      connection.query(sqlSelect, [from_date, to_date], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (!medication_array || medication_array.length === 0) {
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgNoDataFound || "No data found",
+        medication_arr: [],
+      });
+    }
+
+    // Prepare user array with counts
+    const user_arr = [];
+    let s_no = 0;
+
+    for (const data of medication_array) {
+      s_no++;
+
+      // Fetch ontime, late, and not taken counts
+      const counts = await getMedicineCounts(data.medicine_id);
+      const ontimeCount = counts.medicine_ontime_count || 0;
+      const lateCount = counts.medicine_late_count || 0;
+      const notTakenCount = counts.medicine_nottaken_count || 0;
+
+      // Map type label
+      const typeLabels = {
+        1: "Tablet", 2: "Capsule", 3: "Lozenge", 4: "Cream", 5: "Drops",
+        6: "Foam", 7: "Gel", 8: "Inhaler", 9: "Injection", 10: "Ointment",
+        11: "Patch", 12: "Powder", 13: "Spray", 14: "Suppository",
+        15: "Syrup", 16: "Granule", 17: "Lotion", 18: "Other",
+      };
+
+      // Push formatted data into array
+      user_arr.push({
+        s_no,
+        medication_id: data.medication_id,
+        user_id: data.user_id,
+        patient_name: data.name,
+        medicine_id: data.medicine_id,
+        medicine_name: data.medicine_name,
+        medicine_description: data.description,
+        dosage: data.dosage,
+        type: data.type,
+        type_label: typeLabels[data.type] || "Unknown",
+        schedule: data.schedule,
+        schedule_label:
+          data.schedule === 0
+            ? "Daily"
+            : data.schedule === 1
+            ? "Weekly"
+            : "Monthly",
+        weekday: data.weekday,
+        current_quantity: data.current_quantity,
+        reminder_time: data.reminder_time,
+        remind_quantity: data.remainder_quantity,
+        remaining_quantity: data.remaining_quantity,
+        instruction: data.instruction,
+        ontime_count: ontimeCount,
+        late_count: lateCount,
+        not_taken_count: notTakenCount,
+        status: data.status,
+        status_label: data.status === 1 ? "Active" : "Inactive",
+        pause_status: data.pause_status,
+        pause_status_label: data.pause_status === 1 ? "Paused" : "Running",
+        taken_status: data.taken_status,
+        taken_status_label: data.taken_status === 1 ? "Not Taken" : "Taken",
+        createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+        updatetime: data.updatetime
+          ? moment(data.updatetime).format("DD-MM-YYYY hh:mm A")
+          : "N/A",
+      });
+    }
+
+    // ✅ Send final response
+    return response.status(200).json({
+      success: true,
+      msg: languageMessages.msgDataFound || "Data found successfully",
+      medication_arr: user_arr,
+    });
+  } catch (error) {
+    console.error("Error in getTabularMedication:", error);
+    return response.status(500).json({
+      success: false,
+      msg: languageMessages.internalServerError || "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+// new api updated on 20-11-2025
+
+
+
+
+
+
+
+
+
+
+//get tabular adverse 
+// const getTabularAdverse = async (request, response) => {
+//   const { from_date, to_date } = request.query;
+
+//   try {
+//     if (!from_date) {
+//       return response.status(200).json({
+//         status: true,
+//         msg: languageMessages.msg_empty_param,
+//         key: "from_date",
+//       });
+//     }
+
+//     if (!to_date) {
+//       return response.status(200).json({
+//         status: true,
+//         msg: languageMessages.msg_empty_param,
+//         key: "to_date",
+//       });
+//     }
+
+//     const sqlSelect = `SELECT 
+//       a.adverse_reaction_id,
+//       a.user_id, 
+//       um.name AS patient_name,
+//       m.medicine_name,
+//       a.dosage,
+//       mm.category_name AS medicine_category,
+//       s.symptom_name,
+//       a.medication_start_date,
+//       a.reaction_date,
+//       a.createtime,
+//       a.updatetime,
+//     FROM adverse_reaction_master AS a 
+//     JOIN medicine_master AS m ON m.medicine_id = a.medicine_id 
+//     JOIN medicine_category_master AS mm ON mm.medicine_category_id = m.medicine_category_id 
+//     JOIN symptoms_master AS s ON s.symptom_id = a.symptom_id 
+//     JOIN user_master um ON um.user_id = a.user_id 
+//     WHERE a.delete_flag = 0
+//     AND DATE(a.createtime) BETWEEN ? AND ?  
+//     ORDER BY a.createtime DESC`;
+
+//     connection.query(sqlSelect, [from_date, to_date], (err, result) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           err: err.message,
+//         });
+//       }
+
+//       const adverse_arr = [];
+//       let s_no = 0;
+
+//       if (result.length > 0) {
+//         for (const data of result) {
+//           s_no++;
+
+//           adverse_arr.push({
+//             s_no: s_no,
+//             adverse_reaction_id: data.adverse_reaction_id,
+//             user_id: data.user_id,
+//             patient_name: data.patient_name,
+//             medicine_name: data.medicine_name,
+//             dosage: data.dosage,
+//             medicine_category: data.medicine_category,
+//             symptom_name: data.symptom_name,
+//             medication_start_date: data.medication_start_date
+//               ? moment(data.medication_start_date).format("DD-MM-YYYY")
+//               : "N/A",
+//             reaction_date: data.reaction_date
+//               ? moment(data.reaction_date).format("DD-MM-YYYY")
+//               : "N/A",
+//             createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm A"),
+//             updatetime: data.updatetime
+//               ? moment(data.updatetime).format("DD-MM-YYYY HH:mm A")
+//               : "N/A"
+//           });
+//         }
+//       }
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: result.length > 0 ? languageMessages.msgDataFound : languageMessages.msgDataNotFound,
+//         adverse_arr: adverse_arr.length > 0 ? adverse_arr : "NA",
+//         total_records: adverse_arr.length
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message,
+//     });
+//   }
+// };
+
+const getTabularAdverse = async (request, response) => {
+  const { from_date, to_date } = request.query;
+
+  try {
+    if (!from_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
+    }
+
+    if (!to_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
+    }
+
+    const sqlSelect = `
+      SELECT 
+        a.adverse_reaction_id,
+        a.type,
+        a.user_id, 
+        um.name AS patient_name,
+        m.medicine_name,
+        a.dosage,
+        mm.category_name AS medicine_category,
+        s.symptom_name,
+        a.details,
+        a.medication_start_date,
+        a.reaction_date,
+        a.createtime,
+        a.updatetime
+      FROM adverse_reaction_master AS a 
+      LEFT JOIN medicine_master AS m ON m.medicine_id = a.medicine_id 
+      LEFT JOIN medicine_category_master AS mm ON mm.medicine_category_id = a.medicine_category_id 
+      LEFT JOIN symptoms_master AS s ON s.symptom_id = a.symptom_id 
+      LEFT JOIN user_master AS um ON um.user_id = a.user_id 
+      WHERE a.delete_flag = 0
+      AND DATE(a.createtime) BETWEEN ? AND ?
+      ORDER BY a.createtime DESC
+    `;
+
+    connection.query(sqlSelect, [from_date, to_date], (err, rows) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (rows.length === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataNotFound,
+          adverse_arr: [],
+          total_records: 0,
+        });
+      }
+
+      let s_no = 0;
+      const adverse_arr = rows.map((data) => {
+        s_no++;
+        return {
+          s_no,
+          adverse_reaction_id: data.adverse_reaction_id,
+          user_id: data.user_id,
+          patient_name: data.patient_name,
+          medicine_name: data.medicine_name,
+          dosage: data.dosage,
+          medicine_category:
+            data.type == 1 ? "Tablet" :
+            data.type == 2 ? "Capsule" :
+            data.type == 3 ? "Lozenge" :
+            data.type == 4 ? "Cream" :
+            data.type == 5 ? "Drops" :
+            data.type == 6 ? "Foam" :
+            data.type == 7 ? "Gel" :
+            data.type == 8 ? "Inhaler" :
+            data.type == 9 ? "Injection" :
+            data.type == 10 ? "Ointment" :
+            data.type == 11 ? "Patch" :
+            data.type == 12 ? "Powder" :
+            data.type == 13 ? "Spray" :
+            data.type == 14 ? "Suppository" :
+            data.type == 15 ? "Syrup" :
+            data.type == 16 ? "Granule" :
+            data.type == 17 ? "Lotion" :
+            data.type == 18 ? "Other" :
+            "Unknown",
+          symptom_name: data.symptom_name,
+          medication_start_date: data.medication_start_date
+            ? moment(data.medication_start_date).tz("Europe/Paris").format("DD-MM-YYYY")
+            : "N/A",
+          reaction_date: data.reaction_date
+            ? moment(data.reaction_date).tz("Europe/Paris").format("DD-MM-YYYY")
+            : "N/A",
+          instruction: data.details || "N/A",
+          createtime: moment(data.createtime).tz("Europe/Paris").format("DD-MM-YYYY hh:mm A"),
+          updatetime: data.updatetime
+            ? moment(data.updatetime).tz("Europe/Paris").format("DD-MM-YYYY hh:mm A")
+            : "N/A",
+        };
+      });
+
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        adverse_arr,
+        total_records: adverse_arr.length,
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+//get measurement tabular 
+const getTabularMeasurement = async (request, response) => {
+  const { from_date, to_date } = request.query;
+
+  try {
+    if (!from_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
+    }
+
+    if (!to_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
+    }
+
+    const sqlSelect = `SELECT 
+                    mm.type, 
+                    mm.user_id, 
+                    mm.measurement_id, 
+                    mm.systolic_bp, 
+                    mm.diastolic_bp, 
+                    mm.pulse, 
+                    mm.weight, 
+                    mm.createtime, 
+                    mm.date, 
+                    mm.fasting_glucose,
+                    mm.temperature,
+                    mm.ppbgs,
+                    mm.symptom,
+                    mm.symptom_range,
+                    mm.time,
+                    um.name AS patient_name
+                FROM 
+                    measurement_master mm JOIN user_master um ON mm.user_id = um.user_id
+    WHERE mm.delete_flag = 0
+    AND DATE(mm.createtime) BETWEEN ? AND ?  
+    ORDER BY mm.createtime DESC`;
+
+    connection.query(sqlSelect, [from_date, to_date], (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      const measurement_arr = [];
+      let s_no = 0;
+
+      if (result.length > 0) {
+        for (const data of result) {
+          s_no++;
+
+          measurement_arr.push({
+            s_no: s_no,
+            measurement_id: data.measurement_id,
+            user_id: data.user_id,
+            patient_name: data.patient_name,
+            type: data.type,
+            systolic_bp: data.systolic_bp,
+            diastolic_bp: data.diastolic_bp,
+            pulse: data.pulse,
+            weight: data.weight,
+            fasting_glucose: data.fasting_glucose,
+            temperature: data.temperature,
+            ppbgs: data.ppbgs,
+            symptom_range: data.symptom_range,
+            symptom: data.symptom,
+            date: moment(data.createtime).format("DD-MM-YYYY"),
+            time: moment(data.createtime).format("hh:mm A"),
+            createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm A")
+
+          });
+        }
+      }
+
+      return response.status(200).json({
+        success: true,
+        msg: result.length > 0 ? languageMessages.msgDataFound : languageMessages.msgDataNotFound,
+        measurement_arr: measurement_arr.length > 0 ? measurement_arr : [],
+        total_records: measurement_arr.length
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+//get lab report tabular 
+const getTabularLabreport = async (request, response) => {
+  const { from_date, to_date } = request.query;
+
+  try {
+    if (!from_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
+    }
+
+    if (!to_date) {
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
+    }
+
+    const sqlSelect = `SELECT 
+                    mrm.medical_report_id, mrm.file, mrm.createtime, rcm.category_name, um.name AS patient_name FROM medical_report_master mrm JOIN report_category rcm ON rcm.report_category_id = mrm.report_category_id JOIN user_master um ON um.user_id = mrm.user_id WHERE mrm.delete_flag = 0
+    AND DATE(mrm.createtime) BETWEEN ? AND ?  
+    ORDER BY mrm.createtime DESC`;
+
+    connection.query(sqlSelect, [from_date, to_date], (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      const report_arr = [];
+      let s_no = 0;
+
+      if (result.length > 0) {
+        for (const data of result) {
+          s_no++;
+
+          report_arr.push({
+            s_no: s_no,
+            medical_report_id: data.medical_report_id,
+            file: data.file,
+            patient_name: data.patient_name,
+            category_name: data.category_name,
+
+            createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm A")
+
+          });
+        }
+      }
+
+      return response.status(200).json({
+        success: true,
+        msg: result.length > 0 ? languageMessages.msgDataFound : languageMessages.msgDataNotFound,
+        report_arr: report_arr.length > 0 ? report_arr : [],
+        total_records: report_arr.length
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+//get shared tabular 
+
+
+const getSharedTabular = async (req, res) => {
+  const { doctor_id, from_date, to_date } = req.query;
+
+  try {
+    // Validate required parameters
+    if (!from_date) {
+      return res.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
+    }
+
+    if (!to_date) {
+      return res.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
+    }
+
+    if (!doctor_id) {
+      return res.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
+    }
+
+    // Get all patients for the doctor
+    const fetchUserId = "SELECT user_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
+
+    connection.query(fetchUserId, [doctor_id], async (userError, userResult) => {
+      if (userError) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: userError.message
+        });
+      }
+
+      if (userResult.length <= 0) {
+        return res.status(200).json({
+          success: false,
+          msg: 'No patients found for this doctor'
+        });
+      }
+
+      // Extract user IDs to an array
+      const userIds = userResult.map(data => data.user_id);
+
+      // Create placeholders for multiple user IDs in queries
+      const userIdPlaceholders = userIds.map(() => '?').join(',');
+
+      // Initialize arrays to store results
+      let medicationData = [];
+      let adverseReactionData = [];
+      let labReportData = [];
+      let measurementData = [];
+      let complianceData = [];
+
+      const fetchMedication = `SELECT 
+  m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
+  m.schedule, m.weekday, m.current_quantity, m.remainder_quantity, 
+  m.pause_status, m.remaining_quantity, m.instruction, m.status, 
+  m.updatetime, m.createtime, a.medicine_name, a.description, 
+  um.name AS patient_name, um.dob,
+  DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time
+FROM 
+  medication_master m 
+JOIN 
+  medicine_master a ON a.medicine_id = m.medicine_id 
+JOIN 
+  time_slots_master tm ON tm.medication_id = m.medication_id AND tm.taken_status = 0 AND tm.delete_flag = 0
+JOIN 
+  user_master um ON um.user_id = m.user_id 
+WHERE 
+  m.user_id IN (${userIdPlaceholders}) 
+  AND
+   m.delete_flag = 0 
+  AND DATE(m.createtime) BETWEEN ? AND ?
+ORDER BY 
+  m.medication_id DESC
+`
+
+      // SQL queries for each data type
+      // const fetchMedication = `SELECT 
+      //     m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
+      //     m.schedule, m.weekday, m.current_quantity, um.dob, m.remainder_quantity, m.pause_status, m.remaining_quantity, m.instruction, m.status, 
+      //     m.updatetime, m.createtime, a.medicine_name, a.description, 
+      //     um.name AS patient_name 
+      //   FROM 
+      //     medication_master m 
+      //   LEFT JOIN 
+      //     medicine_master a ON a.medicine_id = m.medicine_id 
+      //   LEFT JOIN 
+      //     user_master um ON um.user_id = m.user_id 
+
+      //   WHERE 
+      //     m.user_id IN (${userIdPlaceholders}) 
+      //     AND m.delete_flag = 0 
+      //     AND DATE(m.createtime) BETWEEN ? AND ? 
+      //   ORDER BY 
+      //     m.medication_id DESC`;
+
+
+
+
+
+      const fetchAdverse = `
+        SELECT 
+          a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+          mm.category_name, s.symptom_name, a.medication_start_date, 
+          a.reaction_date, a.createtime, 
+          um.name AS patient_name 
+        FROM 
+          adverse_reaction_master AS a 
+        JOIN 
+          medicine_master as m ON m.medicine_id = a.medicine_id
+        JOIN 
+          medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+        JOIN 
+          symptoms_master as s ON s.symptom_id = a.symptom_id 
+        JOIN 
+          user_master um ON um.user_id = a.user_id 
+        WHERE 
+          a.user_id IN (${userIdPlaceholders})
+          AND DATE(a.createtime) BETWEEN ? AND ?`;
+
+      const fetchLabReport = `
+        SELECT 
+          mrm.medical_report_id, mrm.file, mrm.createtime, mrm.user_id,
+          rcm.category_name, um.name AS patient_name 
+        FROM 
+          medical_report_master mrm 
+        JOIN 
+          report_category rcm ON rcm.report_category_id = mrm.report_category_id 
+        JOIN 
+          user_master um ON um.user_id = mrm.user_id 
+        WHERE 
+          mrm.user_id IN (${userIdPlaceholders})
+          AND mrm.delete_flag = 0
+          AND DATE(mrm.createtime) BETWEEN ? AND ?  
+        ORDER BY 
+          mrm.createtime DESC`;
+
+      const fetchMeasurement = `
+        SELECT 
+          mm.type, mm.user_id, mm.measurement_id, mm.systolic_bp, 
+          mm.diastolic_bp, mm.pulse, mm.weight, mm.createtime, mm.symptom, mm.symptom_range,
+          DATE_FORMAT(mm.createtime, '%Y-%m-%d') AS date,
+          DATE_FORMAT(CONVERT_TZ(mm.createtime, '+00:00', '+05:30'), '%h:%i %p') AS time,
+         mm.fasting_glucose, mm.temperature, mm.ppbgs, 
+         um.name AS patient_name
+        FROM 
+          measurement_master mm 
+        JOIN 
+          user_master um ON mm.user_id = um.user_id
+        WHERE 
+          mm.user_id IN (${userIdPlaceholders})
+          AND mm.delete_flag = 0
+          AND DATE(mm.createtime) BETWEEN ? AND ?  
+        ORDER BY 
+          mm.createtime DESC`;
+
+      const fetchCompliance = `SELECT m.medication_id,m.user_id,m.medicine_id,m.dosage,m.type,m.schedule, m.schedule_date, m.pause_status, m.number_of_times, tm.taken_status, um.name, m.weekday,m.current_quantity, DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time,m.remainder_quantity,m.remaining_quantity,m.instruction,m.status,m.updatetime,a.medicine_name,a.description FROM medication_master m JOIN medicine_master a ON a.medicine_id = m.medicine_id JOIN user_master um ON um.user_id = m.user_id JOIN time_slots_master tm ON tm.medication_id = m.medication_id WHERE m.delete_flag = 0 AND m.user_id IN (${userIdPlaceholders}) AND DATE(m.createtime) BETWEEN ? AND ? ORDER BY m.medication_id desc`
+
+      // Execute all queries using promises
+      try {
+        // Helper function to query database with a promise
+        const queryPromise = (sql, params) => {
+          return new Promise((resolve, reject) => {
+            connection.query(sql, params, (error, results) => {
+              if (error) reject(error);
+              else resolve(results);
+            });
+          });
+        };
+
+        // Query params for each query (user IDs + date range)
+        const queryParams = [...userIds, from_date, to_date];
+
+        // Execute all queries in parallel
+        const [medicationResults, adverseResults, labResults, measurementResults, complianceResults] = await Promise.all([
+          queryPromise(fetchMedication, queryParams),
+          queryPromise(fetchAdverse, queryParams),
+          queryPromise(fetchLabReport, queryParams),
+          queryPromise(fetchMeasurement, queryParams),
+          queryPromise(fetchCompliance, queryParams)
+        ]);
+
+        // Return all data in structured format
+        return res.status(200).json({
+          success: true,
+          userIdPlaceholders: userIdPlaceholders,
+          medication: medicationResults || [],
+          adverseReaction: adverseResults || [],
+          labReport: labResults || [],
+          measurement: measurementResults || [],
+          compliance: complianceResults || [],
+          msg: "Data fetched successfully"
+        });
+
+      } catch (queryError) {
+        return res.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: queryError.message
+        });
+      }
+    });
+
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+
+
+const deleteNote = async (req, res) => {
+
+  const { note_id } = req.body;
+
+  try {
+    if (!note_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "note_id" });
+    }
+
+    const checkNote = await new Promise((resolve, reject) => {
+      const check = "SELECT note_id FROM note_master WHERE note_id = ? AND delete_flag = 0";
+      connection.query(check, [note_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (checkNote.length <= 0) {
+      return res.status(200).json({ success: false, msg: languageMessages.msgDataNotFound, });
+    }
+
+    const deleteNoteQuery = await new Promise((resolve, reject) => {
+      const deleteQuery = "UPDATE note_master SET delete_flag = 1, updatetime = now() WHERE note_id = ?";
+      connection.query(deleteQuery, [note_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (deleteNoteQuery.affectedRows > 0) {
+      return res.status(200).json({ success: true, msg: "Note deleted Successfully" });
+    }
+
+
+  } catch (err) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+  }
+}
+
+const updateNote = async (req, res) => {
+
+  const { note_id, description } = req.body;
+
+  try {
+    if (!note_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "note_id" });
+    }
+
+    if (!description) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "description" });
+    }
+
+    const checkNote = await new Promise((resolve, reject) => {
+      const check = "SELECT note_id FROM note_master WHERE note_id = ? AND delete_flag = 0";
+      connection.query(check, [note_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (checkNote.length <= 0) {
+      return res.status(200).json({ success: false, msg: languageMessages.msgDataNotFound, });
+    }
+
+    const updateNoteQuery = await new Promise((resolve, reject) => {
+      const updateQuery = "UPDATE note_master SET description = ?, updatetime = now() WHERE note_id = ?";
+      connection.query(updateQuery, [description, note_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (updateNoteQuery.affectedRows > 0) {
+      return res.status(200).json({ success: true, msg: "Note updated Successfully" });
+    }
+  } catch (err) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+  }
+}
+
+//delete image 
+const deleteImage = async (req, res) => {
+  const { doctor_id } = req.body;
+
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id"
+      });
+    }
+
+    // Check if the doctor exists and is not deleted
+    const checkUser = await new Promise((resolve, reject) => {
+      const query = "SELECT doctor_id FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(query, [doctor_id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (checkUser.length === 0) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msgDataNotFound
+      });
+    }
+
+    // Set image field to NULL
+    const deleteImageQuery = await new Promise((resolve, reject) => {
+      const query = "UPDATE doctor_master SET image = NULL WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(query, [doctor_id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (deleteImageQuery.affectedRows > 0) {
+      return res.status(200).json({
+        success: true,
+        msg: "Image deleted successfully"
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        msg: "Image not found or already deleted"
+      });
+    }
+
+  } catch (err) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: err.message
+    });
+  }
+};
+
+
+
+const deleteDoctorAccount = async (req, res) => {
+  const{ doctor_id,delete_reason} = req.body;
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" })
+    }
+      if (!delete_reason) {
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "delete_reason" })
+    }
+
+    const checkUser = await new Promise((resolve, reject) => {
+      const check = "SELECT doctor_id FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(check, [doctor_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (checkUser.length <= 0) {
+      return res.status(200).json({ success: false, msg: languageMessages.msgDataNotFound })
+    }
+
+    const deletedoctotQuery = await new Promise((resolve, reject) => {
+      const deleteQuery = "UPDATE doctor_master SET delete_flag = 1,delete_reason = ? WHERE doctor_id = ? AND delete_flag = 0";
+      connection.query(deleteQuery, [delete_reason,doctor_id], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      })
+    })
+
+    if (deletedoctotQuery.affectedRows > 0 ) {
+      return res.status(200).json({ success: true, msg: "Account deleted successfully" })
+    } else {
+      return res.status(200).json({ success: false, msg: "Account Not Fount" })
+    }
+
+  } catch (err) {
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+  }
+}
+
+// get shared measurements
+const getPatientMeasurements = async (req, res) => {
+  try {
+    const { user_id, doctor_id } = req.query;
+
+    if (!user_id || !doctor_id) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param
+      });
+    }
+
+    const shareSql = `
+      SELECT createtime
+      FROM report_share_master
+      WHERE user_id = ?
+        AND doctor_id = ?
+        AND share_type = 0
+        AND delete_flag = 0
+        AND FIND_IN_SET('3', information_type)
+      ORDER BY createtime DESC
+    `;
+
+    connection.query(shareSql, [user_id, doctor_id], (err, shares) => {
+      if (err || shares.length === 0) {
+        return res.status(200).json({
+          success: true,
+          msg: "Measurements not shared",
+          measurements: []
+        });
+      }
+
+      const result = [];
+      let completed = 0;
+
+      shares.forEach((share, index) => {
+        const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+        const endTime = share.createtime;
+
+        const measurementSql = `
+          SELECT *
+          FROM measurement_master
+          WHERE user_id = ?
+            AND delete_flag = 0
+            AND createtime > ?
+            AND createtime <= ?
+          ORDER BY createtime DESC
+        `;
+
+        connection.query(
+          measurementSql,
+          [user_id, startTime, endTime],
+          (err2, rows) => {
+            completed++;
+
+            if (!err2 && rows.length > 0) {
+              rows.forEach(r => {
+                const mTime = moment
+                  .utc(r.createtime)
+                  .tz("Europe/Paris");
+
+                result.push({
+                    sr_no: result.length + 1,
+                  date: mTime.format("DD-MM-YYYY"),
+                  time: mTime.format("hh:mm A"),
+
+                  type: r.type,
+                  systolic_bp: r.systolic_bp,
+                  diastolic_bp: r.diastolic_bp,
+                  pulse: r.pulse,
+                  fasting_glucose: r.fasting_glucose,
+                  ppbgs: r.ppbgs,
+                  weight: r.weight,
+                  temperature: r.temperature,
+                  symptom: r.symptom,
+                  symptom_range: r.symptom_range
+                });
+              });
+            }
+
+            if (completed === shares.length) {
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.msgDataFound,
+                measurements: result
+              });
+            }
+          }
+        );
+      });
+    });
+
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message
+    });
+  }
+};
+
+
+
+
+
+
+
+
+// get shared medication list
+const getPatientMedicationList = async (request, response) => {
+  const { user_id, doctor_id } = request.query;
+
+  if (!user_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.msg_empty_param,
+      key: "user_id",
+    });
+  }
+
+  if (!doctor_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.msg_empty_param,
+      key: "doctor_id",
+    });
+  }
+
+  try {
+    //    Check if user exists
+    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ?";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: [],
+        });
+      }
+
+      //    Check report sharing info
+      const checkShare = `
+        SELECT report_share_id, information_type, createtime 
+        FROM report_share_master 
+        WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+      connection.query(checkShare, [user_id, doctor_id], (err1, shareList) => {
+        if (err1) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err1.message,
+          });
+        }
+
+        if (shareList.length === 0) {
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataNotFound,
+            list: [],
+          });
+        }
+
+        //    Find latest share entry that contains "1" (medications)
+        const latestShare = shareList.find(r =>
+          r.information_type.split(",").includes("1")
+        );
+
+        if (!latestShare) {
+          return response.status(200).json({
+            success: true,
+            msg: "Medications not shared",
+            list: [],
+          });
+        }
+
+        const shareTime = latestShare.createtime;
+
+        //    Medication query (respecting share createtime)
+        const checksql = `
+          SELECT 
+              m.medication_id,
+              m.user_id,
+              m.medicine_id,
+              m.dosage,
+              m.type,
+              m.schedule,
+              m.schedule_date,
+              m.pause_status,
+              m.number_of_times,
+              tm.taken_status,
+              m.weekday,
+              m.current_quantity,
+            
+              DATE_FORMAT(tm.time, '%h:%i %p') AS reminder_time,
+            
+              m.remainder_quantity,
+              m.remaining_quantity,
+              m.instruction,
+              m.status,
+              m.updatetime,
+              a.added_by,
+              a.medicine_name,
+              a.description
+            
+            FROM medication_master m
+            JOIN medicine_master a 
+              ON a.medicine_id = m.medicine_id
+            JOIN time_slots_master tm 
+              ON tm.medication_id = m.medication_id
+            
+            WHERE m.user_id = ?
+              AND m.delete_flag = 0
+              AND tm.delete_flag = 0
+              AND m.createtime <= ?
+            
+            ORDER BY m.medication_id DESC, tm.time DESC;
+
+        `;
+
+        connection.query(checksql, [user_id, shareTime], async (err2, check) => {
+          if (err2) {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err2.message,
+            });
+          }
+
+          if (check.length <= 0) {
+            return response.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataNotFound,
+              list: [],
+            });
+          }
+          
+          //    Format medication list
+          check.forEach((item, index) => {
+              item.sr_no = index + 1;
+              item.schedule = item.schedule == 0 ? "Daily" : item.schedule == 1 ? "Weekly" : "Monthly";
+              item.taken_status = item.taken_status == 1; // true/false
+              item.type = item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection";
+              const mTime = moment
+                  .utc(item.updatetime)
+                  .tz("Europe/Paris");
+                
+                item.updatetime = mTime.format("DD-MM-YYYY hh:mm A");
+
+              item.schedule_date = item.schedule_date ? moment(item.schedule_date).format("DD-MM-YYYY") : "NA";
+              item.added_by = item.added_by == 0 ? "Admin" : item.added_by == 1 ? "User" : "NA";
+              item.reminder_time = item.reminder_time || "";
+
+            });
+
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataFound,
+            list: check,
+          });
+        });
+      });
+    });
+  } catch (err) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: err.message,
+    });
+  }
+};
+
+ 
+
+
+// get patient report
+const getPatientReport = async (request, response) => {
+  const { user_id, doctor_id } = request.query;
+
+  if (!user_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.msg_empty_param,
+      key: "user_id",
+    });
+  }
+
+  try {
+    // Check if user exists
+    const patientSql =
+      "SELECT user_id, email FROM user_master WHERE user_id = ? ";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: [],
+        });
+      }
+
+      // First, check info-level sharing (share_type = 0)
+      const checkShare = `
+        SELECT report_share_id, information_type, createtime 
+        FROM report_share_master 
+        WHERE user_id = ? AND doctor_id =? AND share_type = 0 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+      connection.query(checkShare, [user_id, doctor_id], (err1, shareList) => {
+        if (err1) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err1.message,
+          });
+        }
+
+        // Get latest lab-report share (information_type = 2)
+        const latestShare = shareList.find((r) =>
+          r.information_type.split(",").includes("2")
+        );
+        const shareTime = latestShare ? latestShare.createtime : null;
+
+        // Build both queries
+        const generalReportSql = `
+          SELECT 
+            m.medical_report_id,
+            m.user_id,
+            m.report_category_id,
+            m.file,
+            m.file_size,
+            m.createtime,
+            m.updatetime,
+            a.category_name 
+          FROM medical_report_master m 
+          JOIN report_category a ON a.report_category_id = m.report_category_id 
+          WHERE m.user_id = ? 
+            AND m.delete_flag = 0
+            ${shareTime ? "AND m.createtime <= ?" : ""}
+        `;
+
+        const specificReportSql = `
+          SELECT 
+            m.medical_report_id,
+            m.user_id,
+            m.report_category_id,
+            m.file,
+            m.file_size,
+            m.createtime,
+            m.updatetime,
+            a.category_name
+          FROM medical_report_master m
+          JOIN report_category a ON a.report_category_id = m.report_category_id
+          JOIN report_share_master r ON r.medical_report_id = m.medical_report_id
+          WHERE r.user_id = ? AND r.doctor_id = ? AND r.share_type = 1 AND r.delete_flag = 0
+        `;
+
+        // Execute both queries in parallel
+        const tasks = [];
+
+        if (shareTime) {
+          tasks.push(
+            new Promise((resolve, reject) => {
+              connection.query(generalReportSql, [user_id, shareTime], (err2, rows) => {
+                if (err2) reject(err2);
+                else resolve(rows);
+              });
+            })
+          );
+        }
+
+        if (doctor_id) {
+          tasks.push(
+            new Promise((resolve, reject) => {
+              connection.query(specificReportSql, [user_id, doctor_id], (err3, rows) => {
+                if (err3) reject(err3);
+                else resolve(rows);
+              });
+            })
+          );
+        }
+
+        Promise.all(tasks)
+          .then((results) => {
+            // Merge results
+            const merged = [].concat(...results);
+
+           
+          // Deduplicate by medical_report_id
+const uniqueReports = Object.values(
+  merged.reduce((acc, item) => {
+    acc[item.medical_report_id] = item;
+    return acc;
+  }, {})
+);
+
+// Sort by createtime DESC (latest first)
+uniqueReports.sort((a, b) => new Date(b.createtime) - new Date(a.createtime));
+
+if (uniqueReports.length === 0) {
+  return response.status(200).json({
+    success: true,
+    msg: languageMessages.msgDataNotFound,
+    list: [],
+  });
+}
+
+// Format dates AFTER sorting
+uniqueReports.forEach((item) => {
+  const updateTime = moment
+    .utc(item.updatetime)
+    .tz("Europe/Paris");
+
+  const createTime = moment
+    .utc(item.createtime)
+    .tz("Europe/Paris");
+
+  item.updatetime = updateTime.format("DD-MM-YYYY hh:mm A");
+  item.createtime = createTime.format("DD-MM-YYYY hh:mm A");
+});
+
+
+return response.status(200).json({
+  success: true,
+  msg: languageMessages.msgDataFound,
+  list: uniqueReports,
+});
+
+          })
+          .catch((errX) => {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: errX.message,
+            });
+          });
+      });
+    });
+  } catch (err) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: err.message,
+    });
+  }
+};
+
+
+//  get adverse of patient 
+const getAdverseofPatient = async (request, response) => {
+  const { user_id, doctor_id } = request.query;
+
+  if (!user_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.msg_empty_param,
+      key: "user_id",
+    });
+  }
+
+
+  if (!doctor_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.msg_empty_param,
+      key: "doctor_id",
+    });
+  }
+
+
+  try {
+    //      Check if user exists
+    const patientSql =
+      "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    connection.query(patientSql, [user_id], (err, patient) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (patient.length <= 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          patient: [],
+        });
+      }
+
+      //      Check report sharing info
+      const checkShare = `
+        SELECT report_share_id, information_type, createtime 
+        FROM report_share_master 
+        WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+      connection.query(checkShare, [user_id, doctor_id], (err1, shareList) => {
+        if (err1) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err1.message,
+          });
+        }
+
+        if (shareList.length === 0) {
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataNotFound,
+            adverse_arr: [],
+          });
+        }
+
+        //      Find latest share entry that contains "4" (adverse reactions)
+        const latestShare = shareList.find((r) =>
+          r.information_type.split(",").includes("4")
+        );
+
+        if (!latestShare) {
+          return response.status(200).json({
+            success: true,
+            msg: "Adverse reactions not shared",
+            adverse_arr: [],
+          });
+        }
+
+        const shareTime = latestShare.createtime;
+
+        //      Fetch adverse reactions up to share createtime
+        const getadverse = `
+          SELECT 
+            a.adverse_reaction_id,
+            a.type,
+            a.user_id,
+            m.medicine_name,
+            a.dosage,
+            mm.category_name,
+            a.details,
+            s.symptom_name,
+            a.medication_start_date,
+            a.reaction_date, 
+            a.createtime 
+          FROM adverse_reaction_master AS a 
+          LEFT JOIN medicine_master as m ON m.medicine_id=a.medicine_id 
+          LEFT JOIN medicine_category_master as mm ON mm.medicine_category_id=a.medicine_category_id 
+          LEFT JOIN symptoms_master as s ON s.symptom_id=a.symptom_id 
+          WHERE a.user_id=? AND a.delete_flag=0 AND a.createtime <= ?
+          ORDER BY a.adverse_reaction_id DESC
+        `;
+
+        connection.query(getadverse, [user_id, shareTime], async (err2, rows) => {
+          if (err2) {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              err: err2.message,
+            });
+          }
+
+          const adverse_arr = [];
+          if (rows.length <= 0) {
+            return response.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataNotFound,
+              adverse_arr,
+            });
+          }
+
+          let s_no = 0;
+          rows.forEach((element) => {
+            s_no++;
+            
+            const mTime = moment
+            .utc(element.createtime)
+            .tz("Europe/Paris");
+            
+            adverse_arr.push({
+              sr_no: s_no,
+              adverse_reaction_id: element.adverse_reaction_id,
+              user_id: element.user_id,
+              medicine_name: element.medicine_name,
+              dosage: element.dosage,
+              category_name:
+                element.type === 1
+                  ? "Pill"
+                  : element.type === 2
+                  ? "Syrup"
+                  : element.type === 3
+                  ? "Injection"
+                  : "Others",
+              symptom_name: element.symptom_name,
+              medication_start_date: moment(element.medication_start_date).format("DD-MM-YYYY"),
+              reaction_date: moment(element.reaction_date).format("DD-MM-YYYY"),
+              instruction: element.details,
+              createtime: mTime.format("DD-MM-YYYY hh:mm A"),
+            });
+          });
+
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataFound,
+            adverse_arr,
+          });
+        });
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+
+module.exports = {
+  subAdminLogin, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient
+}

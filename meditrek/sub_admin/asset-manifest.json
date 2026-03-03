@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "/meditrek/sub_admin/static/css/main.18353346.css",
+    "main.js": "/meditrek/sub_admin/static/js/main.ebb7e4a3.js",
+    "static/js/316.58a5b125.chunk.js": "/meditrek/sub_admin/static/js/316.58a5b125.chunk.js",
+    "static/js/543.2b9b4b50.chunk.js": "/meditrek/sub_admin/static/js/543.2b9b4b50.chunk.js",
+    "static/media/login_bg.png": "/meditrek/sub_admin/static/media/login_bg.8b9b09f1428a9c37fb31.png",
+    "static/media/logo1.png": "/meditrek/sub_admin/static/media/logo1.f578b4db8d23c8f2ad1a.png",
+    "static/media/logo.png": "/meditrek/sub_admin/static/media/logo.e8205bac01ccab077a75.png",
+    "static/media/avatar-4.jpg": "/meditrek/sub_admin/static/media/avatar-4.0c5e72a31bf01ef9eb4d.jpg",
+    "static/media/logo-dark.svg": "/meditrek/sub_admin/static/media/logo-dark.646fbd8cac49e87e97303ac48d9310c5.svg",
+    "static/media/social-google.svg": "/meditrek/sub_admin/static/media/social-google.9887eb8eb43729cb99f402cfa0de3c44.svg",
+    "index.html": "/meditrek/sub_admin/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.18353346.css",
+    "static/js/main.ebb7e4a3.js"
+  ]
+}

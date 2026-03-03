@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meditrek – Your Therapy Companion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/logo/fav_icon.png" type="image/png" />
+
+  <!-- Fonts (same as your site) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Bootstrap + Icons (same versions) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+
+  <style>
+    :root{
+      --ink:#0E3A47;
+      --ink-2:#274954;
+      --muted:#51646B;
+      --bg:#FCFEFF;
+      --soft:#F5FAFB;
+      --border:#E6EEF1;
+      --line:#EDF4F6;
+      --teal:#0E7C86;
+      --teal-2:#1CA6A6;
+      --ok:#11A37F;
+      --radius-xxl:30px;
+      --radius-xl:24px;
+      --radius-lg:18px;
+      --shadow-sm:0 1px 2px rgba(16,24,40,.04);
+      --shadow-md:0 6px 24px rgba(16,24,40,.06);
+      --shadow-lg:0 14px 54px rgba(16,24,40,.09);
+    }
+
+    html,body{height:100%}
+    body{
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding-top:86px; /* fixed navbar offset */
+      line-height:1.78;
+    }
+
+    .container{max-width:1120px}
+
+    /* Navbar — consistent with HCP page */
+    .navbar{
+      padding:14px 0;
+      background:rgba(255,255,255,.92);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .navbar-brand img{max-width:180px;height:auto}
+    .navbar .nav-link{color:var(--ink)!important;font-weight:500;margin:0 .5rem}
+    .navbar .nav-link:hover,.navbar .nav-link:focus{color:var(--teal)!important}
+    .navbar .btn.btn-primary{
+      background:var(--teal);border-color:var(--teal);
+      border-radius:12px;font-weight:600;padding:10px 16px;
+    }
+    .navbar .btn.btn-primary:hover{background:#0b6c74;border-color:#0b6c74}
+
+    /* Accessibility skip link */
+    .skip-link{
+      position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;
+    }
+    .skip-link:focus{
+      position:fixed;left:12px;top:12px;z-index:10000;
+      padding:.5rem 1rem;background:#10323A;color:#fff;border-radius:10px;
+      box-shadow:var(--shadow-md);
+    }
+
+    section{padding:72px 0}
+    .section-soft{
+      background:var(--soft);
+      border-top:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+
+    /* Hero — same gradient language; inspirational visuals, no box around the phone */
+    .hero{
+      position:relative;overflow:hidden;
+      background:
+        radial-gradient(1150px 380px at 95% -10%, rgba(28,166,166,.08) 0%, rgba(28,166,166,0) 60%),
+        radial-gradient(950px 330px at -10% 0%, rgba(14,124,134,.08) 0%, rgba(14,124,134,0) 55%),
+        linear-gradient(180deg,#FFFFFF 0%,#FCFEFF 100%);
+    }
+    .eyebrow{
+      text-transform:uppercase;letter-spacing:.14em;font-size:12px;
+      color:var(--teal);font-weight:700;
+    }
+    .hero h1{
+      font-size:clamp(36px,5.0vw,56px);
+      line-height:1.12;margin:12px 0 14px;letter-spacing:-.02em;font-weight:700;
+    }
+    .gradient-text{
+      background:linear-gradient(90deg,var(--ink) 0%, var(--teal) 42%, var(--teal-2) 66%, var(--ink) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .hero p{
+      color:var(--ink-2);font-size:clamp(16px,1.7vw,19px);max-width:800px;opacity:.96;
+    }
+
+    /* Right hero: transparent phone, free-floating, no border/box */
+    .hero-visual{
+      position:relative;
+      min-height:420px;
+      display:flex;align-items:center;justify-content:center;
+      padding:8px;
+      border:0;
+      background:
+        radial-gradient(480px 220px at 60% 20%, rgba(28,166,166,.10), rgba(28,166,166,0) 60%),
+        radial-gradient(540px 260px at 30% 100%, rgba(14,124,134,.08), rgba(14,124,134,0) 62%);
+    }
+
+    /* IMPORTANT FIX: remove rotation/tilt so MIAPP shows upright */
+    .hero-phone{
+      max-width:92%;
+      height:auto;
+      object-fit:contain;
+      display:block;
+      filter:none;         /* no visual edits */
+      transform:none;      /* <<< this removes the rotation */
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .hero-phone{transform:none}
+    }
+
+    /* Cards */
+    .card-clean{
+      background:#fff;border:1px solid var(--border);
+      border-radius:24px;box-shadow:var(--shadow-md);
+      padding:24px;height:100%;
+    }
+    .shot img{
+      width:100%;height:auto;;
+    }
+    .shot h3{font-size:18px;margin-bottom:10px}
+
+    /* Feature text blocks */
+    .feature h3{font-size:22px}
+    .feature p{color:var(--muted);margin-bottom:.8rem}
+
+    /* Privacy / Consent */
+    .privacy-box{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg,#FFFFFF 0%, #F8FCFC 100%);
+      border-radius:28px;
+      box-shadow:var(--shadow-lg);
+      padding:42px;
+      text-align:center;
+    }
+
+    /* Download badges */
+    .store-logos img{
+      height:48px;width:auto;
+      border-radius:12px;border:1px solid var(--border);
+      box-shadow:var(--shadow-sm);
+    }
+    .app-badge{display:inline-block;margin:6px}
+
+    /* Motion */
+    @media (prefers-reduced-motion:no-preference){
+      .fade-up{opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards}
+      .delay-1{animation-delay:.12s}.delay-2{animation-delay:.24s}.delay-3{animation-delay:.36s}
+      @keyframes fadeUp{to{opacity:1;transform:none}}
+    }
+
+    /* Responsive */
+    @media (max-width:991.98px){
+      .hero-visual{margin-top:10px; min-height:340px}
+      .hero-phone{max-width:100%}
+      section{padding:72px 0}
+      .container{padding:0 18px}
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ===== NAVBAR (same structure as your site) ===== -->
+  <nav class="navbar navbar-expand-lg fixed-top" role="navigation" aria-label="Primary">
+    <div class="container">
+      <a class="navbar-brand" href="/"><img src="/assets/images/logo/thera_data_logo2.png" alt="Meditrek logo"></a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="bi bi-list" aria-hidden="true"></span>
+      </button>
+      <div id="nav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link" href="/index.html">About</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="learnMoreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Solutions</a>
+            <ul class="dropdown-menu" aria-labelledby="learnMoreDropdown">
+              <li><a class="dropdown-item" href="https://meditrekaccess.com/moreinfohcp">I’m an HCP</a></li>
+              <li><a class="dropdown-item" href="https://meditrekaccess.com/moreinfoapp">I’m a Patient</a></li>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="/index.html/#patients">Patients</a></li>
+          <li class="nav-item"><a class="nav-link" href="/index.html/#hcps">HCPs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+          <li class="nav-item ms-lg-2"><a class="btn btn-primary" href="/register">Request HCP Access</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <!-- HERO (transparent phone — no box) -->
+    <section class="hero fade-up" id="about">
+      <div class="container">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-6">
+            <div class="eyebrow">For Patients</div>
+            <h1><span class="gradient-text">Your therapy, supported every day</span></h1>
+            <p>
+                Managing therapy, tracking doses, and noticing changes can feel overwhelming. Meditrek brings clarity and structure, helping you stay organized, monitor your progress, and feel more in control. With Meditrek, your therapy becomes simpler and less stressful.
+              </p>
+          </div>
+          <div class="col-lg-6">
+            <div class="hero-visual" role="img" aria-label="Meditrek app phone preview">
+              <img
+                src="/assets/images/moreinfoapp/MIAPP.png"
+                alt="Meditrek phone preview"
+                class="hero-phone"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSIDE THE APP (Screenshots) -->
+    <section class="fade-up delay-1">
+      <div class="container text-center">
+        <h2>Inside the Meditrek app</h2>
+        <p class="mb-1">
+          Meditrek is designed to feel calm, intuitive, and supportive. Every feature is built to help you focus on your health not on learning new technology.
+        </p>
+
+        <div class="row g-4 mt-2">
+          <!-- Measurments -->
+          <div class="col-md-4">
+            <div class="card-clean h-100 text-start shot">
+              <h3 class="h6"><b>Measurments</b></h3>
+              <img src="assets/images/moreinfoapp/measurements.png" alt="Measurments – keep track and share with your healthcare provider">
+              <p class="mb-0 mt-2">Keep track of your health measurments &amp; share it with your healthcare provider</p>
+            </div>
+          </div>
+          <!-- Medication Reminders -->
+          <div class="col-md-4">
+            <div class="card-clean h-100 text-start shot">
+              <h3 class="h6"><b>Medication Reminders</b></h3>
+              <img src="assets/images/moreinfoapp/Medicationreminders.png" alt="Medication Reminders">
+              <p class="mb-0 mt-2">Medication reminders</p>
+              <p class="mb-0 mt-1">Set reminders in accordance with your therapy</p>
+            </div>
+          </div>
+          <!-- Report Health / Symptom logging -->
+          <div class="col-md-4">
+            <div class="card-clean h-100 text-start shot">
+              <h3 class="h6"><b>Report Health</b></h3>
+              <img src="assets/images/moreinfoapp/reporthealth.png" alt="Report Health – symptom logging">
+              <p class="mb-0 mt-2"><b>Symptom logging</b></p>
+              <p class="mb-0 mt-1">Get more involoved in your therapy and track your reactions</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES (exact content) -->
+    <section class="section-soft fade-up delay-2">
+      <div class="container">
+        <div class="row g-5 feature">
+          <div class="col-md-6">
+            <h3>Therapy tracking tailored to your prescribed regimen</h3>
+            <p>
+              Meditrek supports your therapy exactly as prescribed by your healthcare provider. Your treatment plan is clearly structured and always available when you need it.
+            </p>
+            <p>
+              This reduces uncertainty, supports consistent adherence, and helps you feel confident that you are following your therapy correctly.
+            </p>
+          </div>
+          <div class="col-md-6">
+            <h3>Flexible, personalized reminders</h3>
+            <p>
+              Daily routines vary and they change. Meditrek allows you to set reminders that adapt to your life.
+            </p>
+            <p>
+              Reminders can be adjusted over time so they remain helpful and supportive, rather than intrusive or stressful.
+            </p>
+          </div>
+        </div>
+
+        <div class="row g-5 feature mt-1">
+          <div class="col-md-6">
+            <h3>Structured symptom logging</h3>
+            <p>
+              Changes in how you feel, even subtle ones, can be important. Meditrek makes it easy to record symptoms, side effects, and overall well-being in a structured way.
+            </p>
+            <p>
+              Over time, this creates a clearer picture of your therapy experience and supports more meaningful conversations with your healthcare team.
+            </p>
+          </div>
+          <div class="col-md-6">
+            <h3>Designed for ease of use</h3>
+            <p>
+              Meditrek is designed for patients of all ages and technical backgrounds. The interface is calm, clear, and intuitive.
+            </p>
+            <p>
+              You don’t need to be tech-savvy. The app supports you quietly in the background, letting you focus on what matters most: your health.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRIVACY (exact content) -->
+    <section class="fade-up delay-3">
+      <div class="container">
+        <div class="privacy-box">
+          <h2>Secure, consent-based data sharing</h2>
+          <p>
+            Your health data belongs to you. Meditrek only shares information when you explicitly choose to do so.
+          </p>
+          <p>
+            Any shared data is handled securely and responsibly, supporting better care conversations and — with consent — outcomes-driven research that may help improve future treatments.
+          </p>
+          <p class="mb-0">
+            Transparency, privacy, and trust are core principles in everything we build.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING (exact content) -->
+    <section class="section-soft fade-up">
+      <div class="container text-center">
+        <h2>Supporting you beyond the prescription</h2>
+        <p>
+          Meditrek is more than a tracking tool. It is designed to support real people navigating real therapy journeys — with empathy, clarity, and respect.
+        </p>
+        <p class="mb-0">
+          Our goal is to help you feel informed, supported, and confident every day of your treatment.
+        </p>
+      </div>
+    </section>
+
+    <!-- APP DOWNLOAD (exact heading + badges once) -->
+    <section class="fade-up">
+      <div class="container">
+        <div class="text-center mb-2">
+          <img src="assets/images/logo/fav_icon.png" width="60" height="60" alt="Meditrek icon"/>
+        </div>
+
+        <h2 class="text-center h4">Download Meditrek App</h2>
+
+        <div class="text-center mt-2 store-logos">
+          <a href="https://apps.apple.com/us/app/meditrek/id6756292720" 
+   target="_blank" 
+   rel="noopener noreferrer"
+   aria-label="Download on the App Store">
+  <img src="/image/home5-app-store-logo.jpg" class="store-badge" alt="App Store badge" loading="lazy">
+</a>
+          <a class="app-badge" href="#" aria-label="Get it on Google Play">
+            <img src="image/home5-google-paly.jpg" alt="Get it on Google Play">
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer role="contentinfo">
+    <div class="container text-center">
+      <p class="small mb-0">This information is not a substitute for professional medical advice and does not replace clinical judgment.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+</body>

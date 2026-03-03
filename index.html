@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meditrek • Clinical Digital Therapeutics</title>
+  <meta name="description" content="Meditrek delivers clinically‑aligned digital therapeutics: adherence monitoring, symptom capture, and outcomes workflows for patients and healthcare professionals." />
+  <link rel="icon" href="/assets/images/logo/fav_icon.png" type="image/png" />
+  <meta name="theme-color" content="#0AA6A6" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Meditrek • Clinical Digital Therapeutics"/>
+  <meta property="og:description" content="Clinical intelligence for everyday therapeutics: adherence, tolerability, and outcomes—without EMR integration."/>
+  <meta property="og:image" content="https://meditrekaccess.com/assets/images/og/meditrek_og.jpg"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://meditrekaccess.com/"/>
+
+  <!-- Google tag (gtag.js) -->
+  <p> 
+  
+  
+  
+  </p>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KVR95V489Y"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KVR95V489Y');
+</script>
+
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);} 
+    gtag('js', new Date()); 
+    gtag('config', 'G-KVR95V489Y');
+  </script>
+
+  <!-- Framework -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+
+  <style>
+    :root{
+      --primary:#0AA6A6;           /* Teal clinical */
+      --primary-600:#098c8c;       /* Hover */
+      --ink:#10323A;               /* Deep clinical text */
+      --muted:#6A7A80;             /* Secondary text */
+      --soft:#F4FEFF;              /* Paper-soft bg */
+      --card:#FFFFFF;              /* Card surface */
+      --line:#E9F2F3;              /* Dividers */
+    }
+
+    html,body{font-family:'Inter',sans-serif;color:var(--ink);background:#fff;}
+    .container{max-width:1120px;}
+
+    /* Accessibility */
+    .skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;}
+    .skip-link:focus{position:fixed;left:12px;top:12px;z-index:10000;padding:.5rem 1rem;background:#111;color:#fff;border-radius:8px;}
+
+    /* Navbar */
+    .navbar{padding:14px 0;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);} 
+    .navbar-brand img{max-width:180px;height:auto;}
+    .nav-link{color:var(--ink)!important;font-weight:500;margin:0 .5rem;}
+    .nav-link:hover,.nav-link:focus{color:var(--primary)!important;}
+    .btn-primary{background:var(--primary);border-color:var(--primary);border-radius:10px;font-weight:600;}
+    .btn-primary:hover{background:var(--primary-600);border-color:var(--primary-600);} 
+    .btn-outline{border:1px solid var(--line);}
+
+    /* Hero */
+    .hero{position:relative;background:linear-gradient(180deg,#ffffff 0%, var(--soft) 100%);} 
+    .hero .badge-pill{display:inline-flex;gap:.5rem;align-items:center;background:#E8FAFA;color:#066b6b;border-radius:999px;padding:.35rem .75rem;font-weight:600;font-size:.85rem;}
+    .hero h1{font-weight:700;letter-spacing:-.02em;}
+    .hero p{color:#2f4b52;}
+    .hero-figure{max-width:460px;}
+    .hero-divider{height:3px;background:linear-gradient(90deg,var(--primary),#6fe3e3);border-radius:3px;width:84px;margin:18px 0;}
+
+    /* Sections */
+    section{padding:72px 0;}
+    .section-head{margin-bottom:28px;}
+    .section-kicker{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+
+    /* Cards */
+    .card-clean{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:0 6px 24px rgba(16,50,58,0.06);} 
+    .card-clean h5{font-weight:600;}
+    .icon-40{width:40px;height:40px;object-fit:contain;}
+
+    /* Lists */
+    .list-check{list-style:none;padding-left:0;margin-bottom:0;}
+    .list-check li{padding-left:28px;position:relative;margin:10px 0;color:#22464f;}
+    .list-check li:before{content:"\f26e"; /* bi-check2-circle */ font-family:"bootstrap-icons"; position:absolute;left:0;top:1px;color:var(--primary);}    
+
+    /* Band */
+    .band{background:var(--soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line);} 
+
+    /* Download */
+    .store-badge{height:48px;}
+
+    /* Footer */
+    footer{border-top:1px solid var(--line);} 
+
+    /* Motion (reduced aware) */
+    @media (prefers-reduced-motion:no-preference){
+      .fade-up{opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards;}
+      .fade-up.delay-1{animation-delay:.12s} .fade-up.delay-2{animation-delay:.24s} .fade-up.delay-3{animation-delay:.36s}
+      @keyframes fadeUp{to{opacity:1;transform:none}}
+    }
+
+    /* Responsive */
+    @media (max-width: 992px){
+      .hero-figure{max-width:340px;margin:20px auto 0;}
+      .container{padding:0 18px;}
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg fixed-top" role="navigation" aria-label="Primary">
+    <div class="container">
+      <a class="navbar-brand" href="/"><img src="/assets/images/logo/thera_data_logo2.png" alt="Meditrek logo"></a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="bi bi-list" aria-hidden="true"></span>
+      </button>
+      <div id="nav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+          <li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle"
+     href="#"
+     id="learnMoreDropdown"
+     role="button"
+     data-bs-toggle="dropdown"
+     aria-expanded="false">
+    Solutions
+  </a>
+  <ul class="dropdown-menu" aria-labelledby="learnMoreDropdown">
+    <li>
+      <a class="dropdown-item" href="https://meditrekaccess.com/moreinfohcp">
+        I’m an HCP
+      </a>
+    </li>
+    <li>
+      <a class="dropdown-item" href="https://meditrekaccess.com/moreinfoapp">
+        I’m a Patient
+      </a>
+    </li>
+  </ul>
+</li>
+          <li class="nav-item"><a class="nav-link" href="#patients">Patients</a></li>
+          <li class="nav-item"><a class="nav-link" href="#hcps">HCPs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+          <!-- Ensure Bootstrap 5 CSS + JS are loaded in your page -->
+
+
+          <li class="nav-item ms-lg-2"><a class="btn btn-primary" href="/register">Request HCP Access</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <!-- HERO -->
+    <section id="about" class="hero py-5" style="padding-top:120px;">
+      <div class="container">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-6 fade-up">
+              <p>
+                  
+              </p>
+            <span class="badge-pill" aria-label="Meditrek serves clinicians and patients"><i class="bi bi-hospital" aria-hidden="true"></i>For HCPs & Patients</span>
+            <div class="hero-divider" aria-hidden="true"></div>
+            <h1 class="display-5 mb-3">Clinical intelligence for everyday therapeutics</h1>
+            <p class="lead mb-4">Meditrek is a personal digital health companion that systematizes therapy, documents daily experiences, and illuminates the treatment journey while delivering richer insight into real‑world treatment dynamics.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="#download" class="btn btn-primary">Download App</a>
+              <a href="/moreinfoapp" class="btn btn-light btn-outline">Learn More (Patients)</a>
+              <a href="https://meditrekaccess.com/moreinfohcp" class="btn btn-light btn-outline">Learn More (HCP)</a>
+            </div>
+          </div>
+          <div class="col-lg-6 text-center fade-up delay-1">
+            <img src="/assets/images/slider/thera_main_img.png" class="hero-figure img-fluid" alt="Meditrek mobile and web interfaces" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY / VALUE -->
+    <section aria-labelledby="why-title">
+      <div class="container">
+        <div class="row align-items-end section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">Why Meditrek</div>
+            <h2 id="why-title" class="h2 fw-bold">Designed by clinicians. Built for real practice.</h2>
+            <p class="text-secondary mb-0">In clinical practice, challenges in treatment management frequently go unrecognized. Meditrek closes these gaps through structured digital tools developed by healthcare professionals for healthcare professionals</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4 mt-1">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <img src="/image/new/Adherence.png" class="icon-40" alt="Adherence icon" loading="lazy" />
+              <h5 class="mt-3 mb-1">Adherence visibility</h5>
+              <p class="mb-0">Detect lapses early with structured dosing timelines and intelligent reminders.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4 fade-up delay-1">
+            <div class="card-clean h-100">
+              <img src="/image/new/mild.png" class="icon-40" alt="Adverse reactions icon" loading="lazy" />
+              <h5 class="mt-3 mb-1">Tolerability insights</h5>
+              <p class="mb-0">Capture mild reactions that typically go unreported to inform clinical decisions.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4 fade-up delay-2">
+            <div class="card-clean h-100">
+              <img src="/image/new/RWE.png" class="icon-40" alt="Real‑world evidence icon" loading="lazy" />
+              <h5 class="mt-3 mb-1">Real‑world outcomes</h5>
+              <p class="mb-0">Generate structured datasets for quality improvement and research workflows.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATIENTS -->
+    <section id="patients" aria-labelledby="patients-title">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">Patients</div>
+            <h2 id="patients-title" class="h2 fw-bold">Meditrek App</h2>
+            <p class="text-secondary mb-0">A clear, structured companion to support daily therapy. Unlike competitors, free for patients.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">What patients get</h5>
+              <ul class="list-check">
+                <li>Personalized dosing schedules</li>
+                <li>Adaptive, discreet reminders</li>
+                <li>Structured symptom logging</li>
+                <li>Patient‑centric interface</li>
+                <li>Consent‑based data sharing</li>
+                
+              </ul>
+              <div class="mt-3 d-flex gap-2">
+                <a href="#download" class="btn btn-primary btn-sm">Download</a>
+                <a href="/moreinfoapp" class="btn btn-light btn-sm btn-outline">Learn more</a>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-8 fade-up delay-1">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">Designed with patient in mind</h5>
+              <p class="mb-0">Clean visuals, clear language, and minimal steps reduce friction and support continuous engagement.</p>
+              <img src="/assets/images/moreinfoapp/homeapp.png" class="img-fluid mt-3 rounded-3 border: transparent" alt="Patient app screens" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HCPs -->
+    <section id="hcps" aria-labelledby="hcps-title" class="band">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">Healthcare Professionals</div>
+            <h2 id="hcps-title" class="h2 fw-bold">Meditrek Access</h2>
+            <p class="text-secondary mb-0">Structured insights without EMR integration. Focus on decisions, not data wrangling.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-6 col-lg-4 fade-up">
+            <div class="card-clean h-100">
+              <h5 class="mb-2">Clinical tools</h5>
+              <ul class="list-check">
+                <li>Adherence trends & missed doses</li>
+                <li>Red‑flag and follow‑up cues</li>
+                <li>Patient‑reported outcomes (PROs)</li>
+                <li>Exportable summary views</li>
+                <li>Patient treatment integration</li>
+              </ul>
+              <div class="d-flex gap-2 mt-2">
+                <a href="/register" class="btn btn-primary btn-sm">Request access</a>
+                <a href="https://meditrekaccess.com/moreinfohcp" class="btn btn-light btn-sm btn-outline">Learn more</a>
+              </div>
+            </div>
+          </div>
+        <div class="col-md-6 col-lg-8 fade-up delay-1">
+  <div class="card-clean h-100">
+    <h5 class="mb-2">Fit for practice</h5>
+    <p class="mb-0">
+      Meditrek complements existing workflows by providing structured, real-time insights into the patient's therapeutic experience.
+    </p>
+
+    <!-- Inner content that should fit in the box -->
+    <div class="mt-3">
+      <div class="card-clean border rounded-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-circle"><i class="bi bi-person"></i></div>
+            <div>
+              <div class="fw-semibold">Patient view</div>
+              <div class="text-muted small">Illustrative timeline</div>
+            </div>
+          </div>
+          <span class="badge text-bg-light border">Timeline</span>
+        </div>
+
+        <hr class="my-3" />
+
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="p-3 border rounded-3">
+              <div class="text-muted small">Trend</div>
+              <div class="fw-semibold">Reported well‑being over time</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 border rounded-3">
+              <div class="text-muted small">Notes</div>
+              <div class="fw-semibold">Session‑ready summary</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-3 border rounded-3">
+              <div class="text-muted small">Export</div>
+              <div class="fw-semibold">Share permitted data</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-muted small mt-3">
+          Availability may depend on consent and organizational policy.
+        </div>
+      </div>
+    </div>
+    <!-- /Inner content -->
+  </div>
+</div>
+       
+    </section>
+
+    <!-- ETHICS / PRIVACY -->
+    <section id="ethics" aria-labelledby="ethics-title">
+      <div class="container">
+        <div class="row section-head">
+          <div class="col-lg-8">
+            <div class="section-kicker">Ethics & Privacy</div>
+            <h2 id="ethics-title" class="h2 fw-bold">Safe by design</h2>
+            <p class="text-secondary mb-0">Data minimization, clear consent, and security controls are built into the foundation.</p>
+          </div>
+        </div>
+
+        <div class="row g-3 g-md-4">
+          <div class="col-md-4 fade-up">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-shield-lock" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">Security practices</h5>
+              <p class="mb-0">Encryption in transit and at rest with role‑based controls.</p>
+            </div>
+          </div>
+          <div class="col-md-4 fade-up delay-1">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-people" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">Consent first</h5>
+              <p class="mb-0">Patient‑controlled, purpose‑limited data sharing.</p>
+            </div>
+          </div>
+          <div class="col-md-4 fade-up delay-2">
+            <div class="card-clean h-100 text-center">
+              <i class="bi bi-file-check" style="font-size:40px;color:var(--primary)" aria-hidden="true"></i>
+              <h5 class="mt-2">Research governance</h5>
+              <p class="mb-0">Access for research requires explicit approval and oversight.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" aria-labelledby="download-title">
+      <div class="container text-center">
+        <h2 id="download-title" class="h2 fw-bold">Download Meditrek</h2>
+        <p class="text-secondary">Available on major app stores.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+          
+<a href="https://apps.apple.com/us/app/meditrek/id6756292720" 
+   target="_blank" 
+   rel="noopener noreferrer"
+   aria-label="Download on the App Store">
+  <img src="/image/home5-app-store-logo.jpg" class="store-badge" alt="App Store badge" loading="lazy">
+</a>
+
+          <a href="#" aria-label="Get it on Google Play"><img src="/image/home5-google-paly.jpg" class="store-badge" alt="Google Play badge" loading="lazy"></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-4" role="contentinfo">
+    <div class="container text-center">
+      <ul class="list-inline mb-2">
+        <li class="list-inline-item"><a href="/terms-condition.html" target="_blank" rel="noopener">Terms & Conditions</a></li>
+        <li class="list-inline-item"><a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a></li>
+        
+      </ul>
+      <p class="text-secondary mb-0">© 2026 Meditrek Group</p>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+</body>
+</html>

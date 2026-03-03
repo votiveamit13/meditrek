@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KVR95V489Y"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KVR95V489Y');
+</script>
+    <meta charset="UTF-8">
+    <title>Meditrek – Your Therapy Companion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+ <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="assets/images/logo/fav_icon.png">
+
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FCFEFF;
+            color: #1A1A1A;
+            padding-top: 100px;
+        }
+
+        h1, h2, h3 {
+            color: #0E3A47;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4A5A60;
+        }
+
+        /* ===== HEADER ===== */
+        .header-sticky {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1030;
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(8px);
+        }
+
+        .header_logo {
+            max-width: 200px;
+        }
+
+        .main-navigation ul li a {
+            font-size: 15px;
+            font-weight: 500;
+            color: #003D4C !important;
+        }
+
+        /* ===== HERO ===== */
+        .hero-image {
+            position: relative;
+            height: 85vh;
+            background-image: url('assets/images/moreinfoapp/heroimage.png');
+            /* ↑ REPLACE WITH YOUR IMAGE PATH */
+            background-size: cover;
+            background-position: center;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-text {
+            max-width: 750px;
+            color: white;
+        }
+
+        .hero-text h1 {
+            font-size: 3rem;
+            color: white;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            color: #EAF6F8;
+        }
+
+        section {
+            padding: 90px 15px;
+        }
+
+        .section-light {
+            background-color: #F4F9FA;
+        }
+
+        /* ===== SCREENSHOTS ===== */
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .screenshot-card {
+            background: transparent;
+            border-radius: 18px;
+            padding: 14px;
+            
+        }
+
+        .screenshot-card img {
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        /* ===== FEATURES ===== */
+        .feature-block {
+            margin-bottom: 60px;
+        }
+
+        /* ===== PRIVACY ===== */
+        .privacy-box {
+            background: linear-gradient(135deg, #E8F4F6, #F7FBFC);
+            border-radius: 22px;
+            padding: 60px;
+        }
+
+        footer {
+            background-color: #0E3A47;
+            color: #CFE5E8;
+            padding: 50px 15px;
+            text-align: center;
+        }
+
+        footer p {
+            color: #CFE5E8;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .hero-text h1 { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ===== HEADER / MENU ===== -->
+<header class="header-sticky">
+    <div id="main-menu" class="header-top inner-header" style="background-color: #FCFEFF;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-2">
+
+                <div class="logo">
+                    <a href="index.html">
+                        <img src="assets/images/logo/thera_data_logo2.png"
+                             class="header_logo"
+                             alt="Meditrek Logo">
+                    </a>
+                </div>
+
+                <div class="d-none d-lg-block">
+                    <nav class="main-navigation">
+                        <ul class="list-unstyled d-flex mb-0 align-items-center">
+                            <li class="mx-2"><a href="index.html#about">About</a></li>
+                            <li class="mx-2"><a href="index.html#solution">Solutions</a></li>
+                            <li class="mx-2"><a href="index.html#meditrek">Why Meditrek</a></li>
+                            <li class="mx-2"><a href="index.html#ethical">Ethics</a></li>
+                            <li class="mx-2"><a href="index.html#screnshot">Contact</a></li>
+                            <li class="mx-2">
+                               <a href="/register"
+   class="btn w-100"
+   style="background-color: darkcyan; color: white !important;">
+    Request HCP Access
+</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+                <div class="d-lg-none">
+                    <button class="btn"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#mobile-menu"
+                            style="background-color: darkcyan; color: white;">
+                        ☰
+                    </button>
+                </div>
+            </div>
+
+            <div id="mobile-menu" class="collapse mt-2 d-lg-none">
+                <ul class="list-unstyled">
+                    <li><a href="index.html#about">About</a></li>
+                    <li><a href="index.html#solution">Solutions</a></li>
+                    <li><a href="index.html#meditrek">Why Meditrek</a></li>
+                    <li><a href="index.html#ethical">Ethics</a></li>
+                    <li><a href="index.html#screnshot">Contact</a></li>
+                    <li class="mt-2">
+                        <a href="/register"
+                           class="btn w-100"
+                           style="background-color: darkcyan; color: white;">
+                            Request HCP Access
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero-image">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <div class="hero-text">
+            <h1>Your therapy, supported every day</h1>
+            <p>
+                Managing therapy, remembering doses, noticing changes, and fitting treatment into daily life can be overwhelming. Meditrek supports you with clarity, structure, and reassurance throughout your therapy journey. It helps you stay organized, track your progress, and feel more in control of your treatment. With Meditrek, every step of your therapy is easier to manage and less stressful.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== SCREENSHOTS ===== -->
+<section>
+    <div class="container text-center">
+        <h2>Inside the Meditrek app</h2>
+        <p>
+            Meditrek is designed to feel calm, intuitive, and supportive.
+            Every feature is built to help you focus on your health <b>not on learning new technology.</b>
+        </p>
+
+        <div class="screenshots-grid">
+            <div class="screenshot-card">
+                 <p style="font-size: 18px;"><b>Measurments</b></p>
+                <img src="assets/images/moreinfoapp/measurements.png" alt="Therapy tracking">
+               <p>   </p>
+                <p>Keep track of your health measurments & share it with your healthcare provider</p>
+            </div>
+            <div class="screenshot-card">
+                 <p style="font-size: 18px;"><b>Medication Reminders</b></p>
+                <img src="assets/images/moreinfoapp/Medicationreminders.png" alt="Medication reminders">
+                <p>   </p>
+                <p>Set reminders in accordance with your therapy</p>
+            </div>
+            <div class="screenshot-card">
+                 <p style="font-size: 18px;"><b>Report Health</b></p>
+                <img src="assets/images/moreinfoapp/reporthealth.png"  alt="Symptom logging">
+                <p>   </p>
+                <p>Get more involoved in your therapy and track your reactions </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="section-light">
+    <div class="container">
+
+        <div class="row feature-block">
+            <div class="col-md-6">
+                <h3>Therapy tracking tailored to your prescribed regimen</h3>
+                <p>
+                    Meditrek supports your therapy exactly as prescribed by your healthcare provider.
+                    Your treatment plan is clearly structured and always available when you need it.
+                </p>
+                <p>
+                    This reduces uncertainty, supports consistent adherence,
+                    and helps you feel confident that you are following your therapy correctly.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h3>Flexible, personalized reminders</h3>
+                <p>
+                    Daily routines vary and they change.
+                    Meditrek allows you to set reminders that adapt to your life.
+                </p>
+                <p>
+                    Reminders can be adjusted over time so they remain helpful and supportive,
+                    rather than intrusive or stressful.
+                </p>
+            </div>
+        </div>
+
+        <div class="row feature-block">
+            <div class="col-md-6">
+                <h3>Structured symptom logging</h3>
+                <p>
+                    Changes in how you feel, even subtle ones, can be important.
+                    Meditrek makes it easy to record symptoms, side effects,
+                    and overall well-being in a structured way.
+                </p>
+                <p>
+                    Over time, this creates a clearer picture of your therapy experience
+                    and supports more meaningful conversations with your healthcare team.
+                </p>
+            </div>
+            <div class="col-md-6">
+                <h3>Designed for ease of use</h3>
+                <p>
+                    Meditrek is designed for patients of all ages and technical backgrounds.
+                    The interface is calm, clear, and intuitive.
+                </p>
+                <p>
+                    You don’t need to be tech-savvy. The app supports you quietly in the background,
+                    letting you focus on what matters most: your health.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ===== PRIVACY ===== -->
+<section>
+    <div class="container">
+        <div class="privacy-box text-center">
+            <h2>Secure, consent-based data sharing</h2>
+            <p>
+                Your health data belongs to you.
+                Meditrek only shares information when you explicitly choose to do so.
+            </p>
+            <p>
+                Any shared data is handled securely and responsibly,
+                supporting better care conversations and — with consent —
+                outcomes-driven research that may help improve future treatments.
+            </p>
+            <p>
+                Transparency, privacy, and trust are core principles in everything we build.
+            </p>
+        </div>
+    </div>
+</section>
+
+                
+
+         
+
+<!-- ===== CLOSING ===== -->
+<section class="section-light">
+    <div class="container text-center">
+        <h2>Supporting you beyond the prescription</h2>
+        <p>
+            Meditrek is more than a tracking tool.
+            It is designed to support real people navigating real therapy journeys —
+            with empathy, clarity, and respect.
+        </p>
+        <p>
+            Our goal is to help you feel informed, supported, and confident every day of your treatment.
+        </p>
+    </div>
+</section>
+<section class="section-light">
+<div style="text-align: center;">
+    <img src="assets/images/logo/fav_icon.png" width="60"/>
+</div>
+
+                <div class="footer-logo py-2">
+                    <h2 class="text-center">Download Meditrek App</h2>
+                </div>
+
+                <div class="row ">
+                    <div class="col-lg-12 ">
+                        <div class="download-buttons text-center">
+                            <div class="download-logo">
+                                <a href="blog-details.html" class="d-inline-block hero_anchor" data-aos="fade-up"
+                                    data-aos-duration="1000" data-aos-delay="30">
+                                    <img src="image/home5-app-store-logo.jpg" alt="App Store">
+                                </a>
+                                <a href="blog-details.html" class="d-inline-block hero_anchor" data-aos="fade-up"
+                                    data-aos-duration="1500" data-aos-delay="200">
+                                    <img src="image/home5-google-paly.jpg" alt="Google Play">
+                                </a>
+                                <p></p>
+                               
+                            </div><!-- /download-logo -->
+                        </div>
+                    </div>
+                </div>
+</section>
+<footer>
+    <p>
+        Meditrek supports patients through structured therapy engagement
+        and responsible healthcare innovation.
+    </p>
+</footer>
+
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

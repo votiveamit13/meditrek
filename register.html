@@ -1,0 +1,360 @@
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KVR95V489Y"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KVR95V489Y');
+</script>
+    <meta charset="UTF-8">
+    <title>Meditrek Access Registration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Meditrek Access Registration for Healthcare Professionals">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" type="image/x-icon" href="assets/images/logo/fav_icon.png">
+
+    <!-- Inter Font (Digital Health Standard) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/plugins.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Modernizer JS -->
+    <script src="assets/js/vendor/modernizr-2.8.3.min.js"></script>
+
+    <!-- Axios & SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Global Font */
+        html, body {
+            font-family: 'Inter', sans-serif !important;
+            background-color: #FCFEFF;
+            color: #1A1A1A;
+            font-weight: 400;
+            letter-spacing: 0.1px;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600;
+            color: #0E3A47;
+        }
+
+        p, label, input, select, button, a, li {
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        p { font-size: 15.5px; line-height: 1.55; }
+
+        /* Buttons */
+        .btn {
+            font-weight: 500 !important;
+            border-radius: 6px !important;
+            letter-spacing: 0.2px;
+        }
+
+        /* Navigation */
+        .main-navigation ul li a {
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            color: #003D4C !important;
+        }
+
+        /* Force CTA button text to be white */
+        .main-navigation ul li a.btn {
+            color: white !important;
+        }
+
+        /* Header & Footer logos */
+        .header_logo { width: 100%; max-width: 200px; height: auto; }
+        .footer_logo { width: 100%; max-width: 120px; height: auto; }
+
+        /* Sticky header */
+        .header-sticky {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1030;
+            background-color: rgba(255,255,255,0.97);
+            backdrop-filter: blur(8px);
+        }
+
+        body { padding-top: 100px; }
+        @media (max-width: 767.98px) { body { padding-top: 80px; } }
+        @media (max-width: 575.98px) { body { padding-top: 90px; } }
+
+        /* Page wrapper */
+        .page-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        @media (max-width: 992px) { .page-wrapper { max-width: 90%; } }
+        @media (max-width: 576px) { .page-wrapper { max-width: 100%; padding: 0 10px; } }
+
+        /* Form Fields */
+        .form-control, .form-select {
+            font-size: 15px;
+            padding: 10px 12px;
+            border-radius: 6px;
+        }
+
+        /* Registration Card */
+        .bg-light {
+            background-color: #F5F9FA !important;
+        }
+
+        /* Footer */
+        footer a, footer p {
+            font-size: 14px;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        /* Checkbox alignment and spacing */
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-left: 14px;
+            margin: 0;
+        }
+
+        .form-check-input {
+            margin: 0 !important;
+        }
+
+        .form-check-label {
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        /* Space above submit button */
+        .btn-container {
+            margin-top: 1.5rem; /* adds space between checkbox and button */
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Header -->
+<header class="header-sticky">
+    <div id="main-menu" class="header-top inner-header" style="background-color: #FCFEFF;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center py-2">
+
+                <!-- Logo -->
+                <div class="logo">
+                    <a href="index.html">
+                        <img src="assets/images/logo/thera_data_logo2.png" class="header_logo" alt="Meditrek Logo">
+                    </a>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="d-none d-lg-block">
+                    <nav class="main-navigation">
+                        <ul class="list-unstyled d-flex mb-0 align-items-center">
+                            <li class="mx-2"><a href="index.html#about">About</a></li>
+                            <li class="mx-2"><a href="index.html#solution">Solutions</a></li>
+                            <li class="mx-2"><a href="index.html#meditrek">Why Meditrek</a></li>
+                           
+                            <li class="mx-2"><a href="index.html#screnshot">Contact</a></li>
+                            <li class="mx-2">
+                                <a href="/register" class="btn" style="background-color: darkcyan; padding: 6px 12px;">
+                                   Request HCP Access
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+                <!-- Mobile Toggle -->
+                <div class="d-lg-none">
+                    <button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#mobile-menu"
+                            style="background-color: darkcyan; color: white;">
+                        ☰
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="collapse mt-2 d-lg-none">
+                <nav>
+                    <ul class="list-unstyled mb-0">
+                        <li><a href="index.html#about">About</a></li>
+                        <li><a href="index.html#solution">Solutions</a></li>
+                        <li><a href="index.html#meditrek">Why Meditrek</a></li>
+                       
+                        <li><a href="index.html#screnshot">Contact</a></li>
+                        <li class="mt-2">
+                            <a href="/register" class="btn w-100" style="background-color: darkcyan; color: white;">
+                                Request HCP Access
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="page-wrapper py-5">
+    <div class="row">
+
+        <!-- Left column -->
+        <div class="col-lg-6 col-md-12 mb-4 order-2 order-lg-1">
+            <h2>Meditrek Access for Healthcare Professionals</h2>
+            <p>Meditrek Access gives healthcare professionals a secure platform to view structured patient insights, track adherence, and access research-ready clinical data. Our tools support evidence-based decision making and improve patient outcomes.</p>
+            <p><strong>To ensure ethical use and security, all access requests are reviewed before approval.</strong></p>
+
+            <img src="assets/images/Access/request_access.png" alt="Meditrek Access" class="img-fluid mt-4">
+        </div>
+
+        <!-- Right column -->
+        <div class="col-lg-6 col-md-12 mb-4 order-1 order-lg-2">
+            <div class="bg-light rounded p-3 p-md-4">
+                <form id="contact-form">
+
+                    <div class="mb-3">
+                        <label class="form-label">Full Name*</label>
+                        <input name="name" class="form-control" placeholder="Name" type="text" id="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email*</label>
+                        <input name="email" class="form-control" placeholder="Email" type="email" id="email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Number*</label>
+                        <input name="number" class="form-control" placeholder="Number" type="text" id="number" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Specialization*</label>
+                        <select class="form-select" name="specialization" id="specialization" required>
+                            <option value="" disabled selected>Select</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload Picture</label>
+                        <input name="picture" class="form-control" type="file" id="picture">
+                    </div>
+
+                   <div class="mb-3 form-check ps-2">
+    <input type="checkbox" class="form-check-input" id="terms" required>
+    <label class="form-check-label" for="terms">
+      Accept   <a href="terms-condition.html" target="_blank">Terms & Conditions</a> <a> and </a> <a href="privacy.html" target="_blank">Privacy Policy</a>*
+    </label>
+</div>
+
+                    <div class="text-center mt-5"> <!-- Added mt-5 for top margin -->
+    <button type="button" class="btn btn-primary w-100" onclick="successForm()">
+        Request Access
+    </button>
+</div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer-area py-4" style="background-color:#f8f9fa; width:100%;">
+    <div class="text-center">
+        <ul class="list-unstyled d-flex justify-content-center mb-2 flex-wrap">
+            <li class="mx-2"><a href="terms-condition.html" target="_blank">Terms & Conditions</a></li>
+            <li class="mx-2"><a href="privacy.html" target="_blank">Privacy Policy</a></li>
+        </ul>
+        <p>Meditrek Group 2026</p>
+    </div>
+</footer>
+
+<!-- Axios / Form Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    axios.get('https://meditrekaccess.com/meditrek/server/adminAPI/get_doctor_specialization')
+        .then(function (response) {
+            const specializationSelect = document.getElementById('specialization');
+            if (response.data.success && Array.isArray(response.data.DoctorSpecialization_arr)) {
+                response.data.DoctorSpecialization_arr.forEach(item => {
+                    if (item.delete_flag === 0) {
+                        const option = document.createElement('option');
+                        option.value = item.doctor_specialization_id;
+                        option.text = item.doctor_specialization_name.trim();
+                        specializationSelect.appendChild(option);
+                    }
+                });
+            }
+        })
+        .catch(error => console.error('Error fetching specializations:', error));
+});
+
+function successForm() {
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const number = document.getElementById("number").value.trim();
+    const specializationId = document.getElementById("specialization").value;
+    const picture = document.getElementById("picture").files[0];
+    const termsChecked = document.getElementById("terms").checked; // check terms
+
+    if (!name || !email || !number || !specializationId) {
+        Swal.fire("Error", "Please fill all required fields", "error");
+        return;
+    }
+
+    if (!termsChecked) { // enforce checkbox
+        Swal.fire("Error", "You must accept the terms & conditions", "error");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("doctor_name", name);
+    formData.append("mobile", number);
+    formData.append("email", email);
+    formData.append("doctor_category_id", specializationId);
+    formData.append("image", picture);
+
+    Swal.fire({
+        title: "Registering...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+    });
+
+    axios.post("https://meditrekaccess.com/meditrek/server/adminAPI/add_doctor_from_website", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    .then(response => {
+        if (response.data.success) {
+            Swal.fire("Success", response.data.msg || "Doctor registered!", "success");
+            document.getElementById("contact-form").reset();
+        } else {
+            Swal.fire("Error", response.data.msg || "Registration failed", "error");
+        }
+    })
+    .catch(error => {
+        Swal.fire("Error", error.response?.data?.msg || "Server error. Please try later.", "error");
+    });
+}
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
+

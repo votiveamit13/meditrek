@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meditrek Access for HCPs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/images/logo/fav_icon.png" type="image/png" />
+
+  <!-- Fonts (preconnect for performance) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Bootstrap + Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+
+  <style>
+    :root{
+      --ink:#0E3A47;
+      --ink-2:#274954;
+      --muted:#51646B;
+      --bg:#FCFEFF;
+      --soft:#F5FAFB;
+      --border:#E6EEF1;
+      --line:#EDF4F6;
+      --teal:#0E7C86;
+      --teal-2:#1CA6A6;
+      --ok:#11A37F;
+      --radius-xxl:30px;
+      --radius-xl:24px;
+      --radius-lg:18px;
+      --shadow-sm:0 1px 2px rgba(16,24,40,.04);
+      --shadow-md:0 6px 24px rgba(16,24,40,.06);
+      --shadow-lg:0 14px 54px rgba(16,24,40,.09);
+    }
+
+    html,body{height:100%}
+    body{
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding-top:86px; /* extra room for fixed navbar */
+      line-height:1.78;
+    }
+
+    /* Wider container for airy layout */
+    .container{max-width:1120px} /* CHANGED from 1200px to 1120px to match reference */
+
+    /* ===== Navbar — we only style; your HTML is kept EXACTLY ===== */
+    .navbar{
+      padding:14px 0;
+      background:rgba(255,255,255,.92);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .navbar-brand img{max-width:180px;height:auto}
+    .navbar .nav-link{color:var(--ink)!important;font-weight:500;margin:0 .5rem}
+    .navbar .nav-link:hover,.navbar .nav-link:focus{color:var(--teal)!important}
+    .navbar .btn.btn-primary{
+      background:var(--teal);border-color:var(--teal);
+      border-radius:12px;font-weight:600;padding:10px 16px;
+    }
+    .navbar .btn.btn-primary:hover{background:#0b6c74;border-color:#0b6c74}
+
+    /* Skip link (accessibility) */
+    .skip-link{
+      position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;
+    }
+    .skip-link:focus{
+      position:fixed;left:12px;top:12px;z-index:10000;
+      padding:.5rem 1rem;background:#10323A;color:#fff;border-radius:10px;
+      box-shadow:var(--shadow-md);
+    }
+
+    /* Sections — more space */
+    section{padding:72px 0} /* CHANGED from 112px to 72px to match reference vertical rhythm */
+
+    .section-soft{
+      background:var(--soft);
+      border-top:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+
+    /* Hero */
+    .hero{
+      position:relative;overflow:hidden;
+      background:
+        radial-gradient(1150px 380px at 95% -10%, rgba(28,166,166,.08) 0%, rgba(28,166,166,0) 60%),
+        radial-gradient(950px 330px at -10% 0%, rgba(14,124,134,.08) 0%, rgba(14,124,134,0) 55%),
+        linear-gradient(180deg,#FFFFFF 0%,#FCFEFF 100%);
+    }
+    .eyebrow{
+      text-transform:uppercase;letter-spacing:.14em;font-size:12px;
+      color:var(--teal);font-weight:700;
+    }
+    .hero h1{
+      font-size:clamp(36px,5.0vw,60px);
+      line-height:1.12;margin:12px 0 14px;letter-spacing:-.02em;font-weight:700;
+    }
+    .gradient-text{
+      background:linear-gradient(90deg,var(--ink) 0%, var(--teal) 42%, var(--teal-2) 66%, var(--ink) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .hero p{
+      color:var(--ink-2);font-size:clamp(16px,1.7vw,19px);max-width:800px;opacity:.96;
+    }
+    .hero-visual{
+      background:linear-gradient(135deg,#F7FBFC 0%, #FFFFFF 80%);
+      border:1px solid var(--border);
+      border-radius:var(--radius-xxl);
+      box-shadow:var(--shadow-lg);
+      padding:42px;
+      min-height:460px;
+      position:relative;
+      
+      .kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;   /* same style, more breathing room */
+  white-space: nowrap; /* pill expands horizontally */
+}
+
+/* 1) Reserve space below the chart so KPIs never overlap it */
+.chart {
+  margin-bottom: 80px; /* adjust 64–96px if your pills are 2–3 lines */
+}
+
+/* 2) Make the pill content fit comfortably (no visual style change) */
+.kpi {
+  padding: 8px 16px;   /* a touch more room inside the pill */
+  white-space: normal; /* allow wrapping inside the pill */
+  line-height: 1.2;    /* avoids cramped text */
+}
+
+/* 3) Add a bit more distance between the pills themselves */
+.kpis {
+  row-gap: 12px;       /* was 8px; keeps vertical stacking as-is */
+}
+
+
+/* Create a safe area at the bottom for the KPIs */
+.hero-visual {
+  padding-bottom: 92px; /* enough room for 2–3 KPI pills */
+}
+
+/* Keep text fitting inside pills (no style change) */
+.kpi {
+  padding: 8px 16px;
+  white-space: normal; /* or nowrap if you want pills to expand horizontally */
+  line-height: 1.2;
+}
+
+
+    }
+    .device{
+      background:#fff;border:1px solid var(--border);
+      border-radius:22px;height:280px;box-shadow:var(--shadow-lg);
+      margin-bottom:22px;
+    }
+    .kpis{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:18px;margin-top:6px;
+    }
+    .kpi{
+      background:#fff;border:1px solid var(--border);
+      border-radius:16px;padding:16px 18px;
+      display:flex;align-items:center;gap:10px;
+    }
+    .kpi i{color:var(--teal)}
+    .kpi strong{font-weight:600;color:var(--ink-2);font-size:14px}
+
+    /* Chips */
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      background:#ECF7F8;color:var(--teal);
+      border:1px solid #D7EEF0;border-radius:999px;
+      padding:8px 12px;font-weight:600;font-size:13px;
+    }
+
+    /* Cards — padding + radius */
+    .card-clean{
+      background:#fff;border:1px solid var(--border);
+      border-radius:24px;box-shadow:var(--shadow-md);
+      padding:36px;height:100%;
+    }
+    .icon-circle{
+      width:44px;height:44px;border-radius:50%;
+      display:grid;place-items:center;
+      background:#ECF7F8;border:1px solid #D7EEF0;color:var(--teal);
+      font-size:18px;
+    }
+
+    /* Lists */
+    .check-list{list-style:none;padding-left:0;margin:0}
+    .check-list li{
+      display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;color:var(--muted)
+    }
+    .check-list i{color:var(--ok);margin-top:2px}
+
+    /* CTA */
+    .cta{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg,#FFFFFF 0%, #F8FCFC 100%);
+      border-radius:28px;
+      box-shadow:var(--shadow-lg);
+      padding:38px;
+    }
+
+    /* Footer */
+    footer{
+      background:var(--ink);color:#CFE5E8;
+      padding:74px 0 50px;border-top:1px solid #0A2D38;text-align:center;
+    }
+    footer p{color:#CFE5E8;margin:.35rem 0;font-size:14px}
+
+    /* Motion (reduced‑motion aware) */
+    @media (prefers-reduced-motion:no-preference){
+      .fade-up{opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards}
+      .delay-1{animation-delay:.12s}.delay-2{animation-delay:.24s}.delay-3{animation-delay:.36s}
+      @keyframes fadeUp{to{opacity:1;transform:none}}
+    }
+
+    /* Responsive tweaks */
+    @media (max-width:991.98px){
+      .kpis{grid-template-columns:1fr}
+      .hero-visual{margin-top:28px}
+      section{padding:72px 0} /* keep the same reduced rhythm on mobile */
+      .container{padding:0 18px}
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ===== NAVBAR (copied EXACTLY from your page) ===== -->
+  <nav class="navbar navbar-expand-lg fixed-top" role="navigation" aria-label="Primary">
+    <div class="container">
+      <a class="navbar-brand" href="/"><img src="/assets/images/logo/thera_data_logo2.png" alt="Meditrek logo"></a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="bi bi-list" aria-hidden="true"></span>
+      </button>
+      <div id="nav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto align-items-lg-center">
+          <li class="nav-item"><a class="nav-link" href="/index.html">About</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               href="#"
+               id="learnMoreDropdown"
+               role="button"
+               data-bs-toggle="dropdown"
+               aria-expanded="false">
+              Solutions
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="learnMoreDropdown">
+              <li>
+                <a class="dropdown-item" href="https://meditrekaccess.com/moreinfohcp">
+                  I’m an HCP
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="https://meditrekaccess.com/moreinfoapp">
+                  I’m a Patient
+                </a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="/index.html/#patients">Patients</a></li>
+          <li class="nav-item"><a class="nav-link" href="/index.html/#hcps">HCPs</a></li>
+          <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
+          <!-- Ensure Bootstrap 5 CSS + JS are loaded in your page -->
+          <li class="nav-item ms-lg-2"><a class="btn btn-primary" href="/register">Request HCP Access</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <!-- ===================================================== -->
+
+  <main id="main" tabindex="-1">
+    <!-- HERO -->
+    <section class="hero fade-up" id="about">
+      <div class="container">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-6">
+            <div class="eyebrow">For Healthcare Professionals</div>
+            <h1><span class="gradient-text">Real‑world therapy insight</span> to complement clinical practice</h1>
+            <p>
+              Meditrek Access offers a structured, consent‑based view of how patients experience and respond to therapies over time. Meditrek supports documentation, care conversations, and research workflows.
+            </p>
+            <div class="d-flex gap-2 flex-wrap mt-4">
+              <span class="chip"><i class="bi bi-shield-check"></i> Consent‑first</span>
+              <span class="chip"><i class="bi bi-graph-up"></i> Longitudinal view</span>
+              <span class="chip"><i class="bi bi-box-arrow-down"></i> Data export</span>
+            </div>
+            <div class="d-flex gap-2 mt-4">
+            </div>
+          </div>
+          <!-- Right column -->
+<div class="col-lg-6">
+  <div class="hero-visual" role="img" aria-label="Therapy-level trends over time with reported outcomes KPIs">
+    <!-- Inline SVG graph (no external libs) -->
+    <figure class="chart m-0">
+      <svg viewBox="0 0 600 320" preserveAspectRatio="xMidYMid meet" class="w-100 h-auto">
+        <!-- Background -->
+        <rect x="0" y="0" width="600" height="320" fill="#0b1220"/>
+        <!-- Grid -->
+        <g stroke="#1e2a44" stroke-width="1">
+          <line x1="40" y1="270" x2="580" y2="270"/>
+          <line x1="40" y1="220" x2="580" y2="220"/>
+          <line x1="40" y1="170" x2="580" y2="170"/>
+          <line x1="40" y1="120" x2="580" y2="120"/>
+          <line x1="40" y1="70"  x2="580" y2="70"/>
+          <line x1="40" y1="20"  x2="580" y2="20"/>
+        </g>
+
+        <!-- Axes -->
+        <g stroke="#334a7d" stroke-width="2">
+          <line x1="40" y1="300" x2="580" y2="300"/>
+          <line x1="40" y1="20"  x2="40"  y2="300"/>
+        </g>
+
+        <!-- Area under line -->
+        <path d="M40,260 L120,210 L200,230 L280,160 L360,140 L440,180 L520,120 L580,150 L580,300 L40,300 Z"
+              fill="url(#grad)" opacity="0.5"/>
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#5cc8ff" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#5cc8ff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Trend line -->
+        <polyline fill="none" stroke="#5cc8ff" stroke-width="3"
+                  points="40,260 120,210 200,230 280,160 360,140 440,180 520,120 580,150"/>
+
+        <!-- Data points -->
+        <g fill="#5cc8ff" stroke="#091427" stroke-width="2">
+          <circle cx="40"  cy="260" r="4"/>
+          <circle cx="120" cy="210" r="4"/>
+          <circle cx="200" cy="230" r="4"/>
+          <circle cx="280" cy="160" r="4"/>
+          <circle cx="360" cy="140" r="4"/>
+          <circle cx="440" cy="180" r="4"/>
+          <circle cx="520" cy="120" r="4"/>
+          <circle cx="580" cy="150" r="4"/>
+        </g>
+
+        <!-- Labels -->
+        <g fill="#9fb4d9" font-size="12" font-family="system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial">
+          <!-- Y labels -->
+          <text x="8" y="305">0</text>
+          <text x="8" y="270">20</text>
+          <text x="8" y="220">40</text>
+          <text x="8" y="170">60</text>
+          <text x="8" y="120">80</text>
+          <text x="2" y="70">100</text>
+          <!-- X labels -->
+          <text x="40"  y="316">Jan</text>
+          <text x="120" y="316">Feb</text>
+          <text x="200" y="316">Mar</text>
+          <text x="280" y="316">Apr</text>
+          <text x="360" y="316">May</text>
+          <text x="440" y="316">Jun</text>
+          <text x="520" y="316">Jul</text>
+          <text x="570" y="316">Aug</text>
+        </g>
+
+        <!-- Title -->
+        <text x="40" y="40" fill="#e7f1ff" font-size="16" font-weight="600"
+              font-family="system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial">
+          Time‑series view — Therapy‑level trends
+        </text>
+      </svg>
+      <figcaption class="visually-hidden">
+        Line chart showing an upward trend with month labels from Jan to Aug and values scaled from 0 to 100.
+      </figcaption>
+    </figure>
+
+    <!-- KPIs -->
+    
+
+    <p></p>
+    <div class="kpis">
+       
+      <div class="kpi"><i class="bi bi-heart-pulse" aria-hidden="true"></i> <strong>Reported outcomes</strong></div>
+      <div class="kpi"><i class="bi bi-bar-chart-line" aria-hidden="true"></i> <strong>Therapy‑level trends</strong></div>
+      <div class="kpi"><i class="bi bi-calendar3" aria-hidden="true"></i> <strong>Time‑series view</strong></div>
+    </div>
+  </div>
+</div>
+    </section>
+
+    <!-- THREE BENEFIT CARDS -->
+    <section class="fade-up delay-1">
+      <div class="container">
+        <div class="row g-4">
+          <div class="col-md-6 col-lg-4">
+            <div class="card-clean h-100">
+              <div class="icon-circle"><i class="bi bi-lock"></i></div>
+              <h3 class="h5 mt-3">Consent‑based &amp; structured</h3>
+              <p class="mb-0">Access is grounded in patient consent and structured inputs to keep information organized for notes, case reviews, and documentation.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="card-clean h-100">
+              <div class="icon-circle"><i class="bi bi-activity"></i></div>
+              <h3 class="h5 mt-3">Longitudinal understanding</h3>
+              <p class="mb-0">Follow therapy engagement and patient‑reported experience over time to add context between episodic visits.</p>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="card-clean h-100">
+              <div class="icon-circle"><i class="bi bi-clipboard2-data"></i></div>
+              <h3 class="h5 mt-3">Export for analysis</h3>
+              <p class="mb-0">Export permitted data to support observational work, quality reviews, and research—within ethical and privacy constraints.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THERAPY-LEVEL OVERVIEW -->
+    <section class="section-soft fade-up delay-2">
+      <div class="container">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-6">
+            <span class="eyebrow">Therapy‑level</span>
+            <h2>Understanding a therapy across patients</h2>
+            <p>
+              View aggregated, real‑world patterns reported by patients on the same therapy. Identify common challenges and experience signals to inform care conversations and service design.
+            </p>
+            <ul class="check-list mt-2">
+              <li><i class="bi bi-check-circle-fill"></i> Reported outcomes &amp; experience indicators</li>
+              <li><i class="bi bi-check-circle-fill"></i> Engagement and continuity over time</li>
+              <li><i class="bi bi-check-circle-fill"></i> Exportable summaries for permitted analysis</li>
+            </ul>
+            <div class="d-flex gap-2 mt-3">
+              <a class="btn btn-primary" href="/register">Request Access</a>
+              <a class="btn btn-light btn-outline border" href="/contact">Talk to us</a>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card-clean">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="icon-circle"><i class="bi bi-people"></i></div>
+                  <div>
+                    <div class="fw-semibold">Therapy group</div>
+                    <div class="text-muted small">Illustrative cohort view</div>
+                  </div>
+                </div>
+                <span class="badge text-bg-light border">Summary</span>
+              </div>
+              <hr class="my-3" />
+              <div class="row g-3">
+                <div class="col-6">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Experience</div>
+                    <div class="fw-semibold">Commonly reported</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Engagement</div>
+                    <div class="fw-semibold">Continuity signals</div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Notes</div>
+                    <div class="fw-semibold">Aggregated, de‑identified data</div>
+                  </div>
+                </div>
+              </div>
+              <div class="alert alert-info d-flex align-items-center gap-2 mt-3 mb-0" role="note"> 
+                <i class="bi bi-info-circle"></i> Hold a better view of your patients
+                
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATIENT-LEVEL VIEW -->
+    <section class="fade-up delay-3">
+      <div class="container">
+        <div class="row align-items-center g-5">
+          <div class="col-lg-6 order-lg-2">
+            <span class="eyebrow">Patient‑level</span>
+            <h2>A longitudinal view of a patient’s therapy journey</h2>
+            <p>
+              Combine patient‑reported outcomes with time‑series context to complement clinical assessment and support session‑ready summaries.
+            </p>
+            <ul class="check-list mt-2">
+              <li><i class="bi bi-check-circle-fill"></i> Symptoms, perceived benefit, side effects</li>
+              <li><i class="bi bi-check-circle-fill"></i> Engagement patterns and continuity</li>
+              <li><i class="bi bi-check-circle-fill"></i> Structured notes for documentation</li>
+            </ul>
+          </div>
+          <div class="col-lg-6 order-lg-1">
+            <div class="card-clean">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="icon-circle"><i class="bi bi-person"></i></div>
+                  <div>
+                    <div class="fw-semibold">Patient view</div>
+                    <div class="text-muted small">Illustrative timeline</div>
+                  </div>
+                </div>
+                <span class="badge text-bg-light border">Timeline</span>
+              </div>
+              <hr class="my-3" />
+              <div class="row g-3">
+                <div class="col-12">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Trend</div>
+                    <div class="fw-semibold">Reported well‑being over time</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Notes</div>
+                    <div class="fw-semibold">Session‑ready summary</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 border rounded-3">
+                    <div class="text-muted small">Export</div>
+                    <div class="fw-semibold">Share permitted data</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-muted small mt-3">Availability may depend on consent and organizational policy.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="fade-up">
+      <div class="container">
+        <div class="cta">
+          <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+              <h2 class="h4 mb-2">Ready to explore Meditrek Access?</h2>
+              <p class="mb-0">Request access to see how a structured, consent‑first view can support clinical and research workflows.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+              <a class="btn btn-primary" href="/register">Request HCP Access</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer role="contentinfo">
+    <div class="container text-center">
+      <p>Meditrek Access helps clinicians view consent‑based, patient‑reported experience to complement care and research workflows.</p>
+      <p class="small">This information is not a substitute for professional medical advice and does not replace clinical judgment.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+</body>
+</html>
