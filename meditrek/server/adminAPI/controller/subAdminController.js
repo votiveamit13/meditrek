@@ -1,4 +1,5 @@
 const connection = require("../connection/connection");
+const db = require("../connection/connection");
 const moment = require("moment");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
@@ -12,43 +13,259 @@ const {
 } = require("../controller/mailer");
 const { resolve } = require("path");
 
+let otpStore = {};
+// const subAdminLogin = async (req, res) => {
+//   const { email, password } = req.body;
+//   try {
+//     if (!email) {
+//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "email", });
+//     }
+//     if (!password) {
+//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "password", });
+//     }
 
+//     const sqlCheckUser = "SELECT doctor_id, user_id, doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime FROM doctor_master WHERE delete_flag = 0 AND approve_status = 1 AND email = ? AND active_flag = 1";
+//     connection.query(sqlCheckUser, [email], async (err, userResult) => {
+//       if (err) {
+//         return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+//       }
+//       if (userResult.length <= 0) {
+//         return res.status(200).json({ success: false, msg: languageMessages.emailNotRegistered, key: "email", });
+//       }
+//       if (userResult.length > 0) {
+//         var adminPassword = userResult[0].password;
+//         const hashedPass = await hashPassword(password);
+//         if (adminPassword != hashedPass) {
+//           return res.status(200).json({ success: false, msg: languageMessages.wrongPassword, });
+//         } else {
+//           const payload = { subject: userResult[0].doctor_id };
+//           const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
+//           return res.status(200).json({ success: true, msg: languageMessages.loginSuccessfully, key: "login_successfully", token: token, info: userResult });
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+//   }
+// };
+
+// const subAdminLogin = async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+
+//     if (!email) {
+//       return res.status(200).json({ success: false, msg: "Email required" });
+//     }
+
+//     if (!password) {
+//       return res.status(200).json({ success: false, msg: "Password required" });
+//     }
+
+//     const sqlCheckUser = `
+//     SELECT doctor_id, doctor_name, email, password 
+//     FROM doctor_master 
+//     WHERE delete_flag = 0 
+//     AND approve_status = 1 
+//     AND email = ? 
+//     AND active_flag = 1
+//     `;
+
+//     connection.query(sqlCheckUser, [email], async (err, userResult) => {
+
+//       if (userResult.length <= 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Email not registered"
+//         });
+//       }
+
+//       var adminPassword = userResult[0].password;
+//       const hashedPass = await hashPassword(password);
+
+//       if (adminPassword != hashedPass) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Wrong password"
+//         });
+//       }
+
+//       // OTP generate
+//       const otp = Math.floor(100000 + Math.random() * 900000);
+//       console.log("Login OTP:", otp);
+
+//       const insertOtp = `
+//       INSERT INTO otp_verification (email, otp)
+//       VALUES (?,?)
+//       `;
+
+//       connection.query(insertOtp, [email, otp]);
+
+//       await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+
+//       return res.status(200).json({
+//         success: true,
+//         msg: "OTP sent to email",
+//         email: email
+//       });
+
+//     });
+
+//   } catch (error) {
+
+//     return res.status(200).json({
+//       success: false,
+//       msg: error.message
+//     });
+
+//   }
+// };
 const subAdminLogin = async (req, res) => {
   const { email, password } = req.body;
-  try {
-    if (!email) {
-      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "email", });
-    }
-    if (!password) {
-      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "password", });
-    }
 
-    const sqlCheckUser = "SELECT doctor_id, user_id, doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime FROM doctor_master WHERE delete_flag = 0 AND approve_status = 1 AND email = ? AND active_flag = 1";
+  try {
+
+    const sqlCheckUser = `
+    SELECT doctor_id, doctor_name, email, password 
+    FROM doctor_master 
+    WHERE delete_flag = 0 
+    AND approve_status = 1 
+    AND email = ? 
+    AND active_flag = 1
+    `;
+
     connection.query(sqlCheckUser, [email], async (err, userResult) => {
-      if (err) {
-        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
-      }
+
       if (userResult.length <= 0) {
-        return res.status(200).json({ success: false, msg: languageMessages.emailNotRegistered, key: "email", });
+        return res.status(200).json({
+          success: false,
+          msg: "Email not registered"
+        });
       }
-      if (userResult.length > 0) {
-        var adminPassword = userResult[0].password;
-        const hashedPass = await hashPassword(password);
-        if (adminPassword != hashedPass) {
-          return res.status(200).json({ success: false, msg: languageMessages.wrongPassword, });
-        } else {
-          const payload = { subject: userResult[0].doctor_id };
-          const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
-          return res.status(200).json({ success: true, msg: languageMessages.loginSuccessfully, key: "login_successfully", token: token, info: userResult });
-        }
+
+      var adminPassword = userResult[0].password;
+      const hashedPass = await hashPassword(password);
+
+      if (adminPassword != hashedPass) {
+        return res.status(200).json({
+          success: false,
+          msg: "Wrong password"
+        });
       }
+
+      // OTP generate
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      console.log("Login OTP:", otp);
+
+      otpStore[email] = otp;
+
+      await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+
+      return res.status(200).json({
+        success: true,
+        msg: "OTP sent to email",
+        email: email,
+        doctor_id: userResult[0].doctor_id,
+         otp: otp
+      });
+
     });
+
   } catch (error) {
-    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+
+    return res.status(200).json({
+      success: false,
+      msg: error.message
+    });
+
   }
 };
 
+// const verifyLoginOtp = async (req, res) => {
 
+//   const { email, otp } = req.body;
+
+//   try {
+
+//     const checkOtp = `
+//     SELECT * FROM otp_verification
+//     WHERE email = ? AND otp = ?
+//     ORDER BY id DESC LIMIT 1
+//     `;
+
+//     connection.query(checkOtp, [email, otp], (err, result) => {
+
+//       if (result.length <= 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Invalid OTP"
+//         });
+//       }
+
+//       const getUser = `
+//       SELECT doctor_id FROM doctor_master
+//       WHERE email = ?
+//       `;
+
+//       connection.query(getUser, [email], (err, user) => {
+
+//         const payload = { subject: user[0].doctor_id };
+
+//         const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
+
+//         return res.status(200).json({
+//           success: true,
+//           msg: "Login successful",
+//           token: token
+//         });
+
+//       });
+
+//     });
+
+//   } catch (error) {
+
+//     return res.status(200).json({
+//       success: false,
+//       msg: error.message
+//     });
+
+//   }
+
+// };
+const verifyLoginOtp = async (req, res) => {
+
+  const { email, otp } = req.body;
+
+  if (otpStore[email] != otp) {
+    return res.status(200).json({
+      success: false,
+      msg: "Invalid OTP"
+    });
+  }
+
+  const sql = `
+  SELECT doctor_id FROM doctor_master
+  WHERE email = ?
+  `;
+
+  connection.query(sql, [email], (err, result) => {
+
+    const payload = { subject: result[0].doctor_id };
+
+    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
+
+    delete otpStore[email];
+
+    return res.status(200).json({
+      success: true,
+      msg: "Login successful",
+      token: token
+    });
+
+  });
+
+};
 //--------------------------get prophile--------------
 const getProfile = async (req, res) => {
   const doctor_id = req.doctor_id;
@@ -3088,13 +3305,90 @@ const getAdverseofPatient = async (request, response) => {
   }
 };
 
+// API grpa
+const dashboardGraphs = async (req,res)=>{
+  // exports.dashboardGraphs = async (req, res) => {
+  try {
 
+    const monthlyQuery = `
+      SELECT 
+        DATE_FORMAT(createtime,'%b') as month,
+        COUNT(*) as total 
+      FROM patient_master
+      WHERE delete_flag = 0
+      GROUP BY MONTH(createtime)
+      ORDER BY MONTH(createtime)
+    `;
+
+    const genderQuery = `
+     SELECT 
+        CASE
+          WHEN gender = 1 THEN 'Male'
+          WHEN gender = 2 THEN 'Female'
+          WHEN gender = 3 THEN 'Other'
+          ELSE 'Unknown'
+        END as gender,
+        COUNT(*) as total
+      FROM user_master
+      WHERE delete_flag = 0
+      GROUP BY gender
+    `;
+
+    const ageQuery = `
+      SELECT 
+        CASE
+          WHEN age BETWEEN 0 AND 10 THEN '0-10'
+          WHEN age BETWEEN 11 AND 20 THEN '11-20'
+          WHEN age BETWEEN 21 AND 30 THEN '21-30'
+          WHEN age BETWEEN 31 AND 40 THEN '31-40'
+          ELSE '40+'
+        END as age_group,
+        COUNT(*) as total
+      FROM user_master
+      WHERE delete_flag = 0
+      GROUP BY age_group
+    `;
+
+    connection.query(monthlyQuery, (err, monthly) => {
+
+      if (err) return res.json({ status:false, error: err });
+
+      connection.query(genderQuery, (err, gender) => {
+
+        if (err) return res.json({ status:false, error: err });
+
+        connection.query(ageQuery, (err, age) => {
+
+          if (err) return res.json({ status:false, error: err });
+
+          res.json({
+            status: true,
+            message: "Dashboard data fetched",
+            monthlyPatients: monthly,
+            genderPercentage: gender,
+            ageGroups: age
+          });
+
+        });
+
+      });
+
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status:false,
+      message:"Server error"
+    });
+  }
+};
 
 
 
 
 
 module.exports = {
-  subAdminLogin, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
+  subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
   getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient
 }

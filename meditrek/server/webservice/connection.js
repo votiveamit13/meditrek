@@ -4,7 +4,7 @@ require('dotenv').config();
 
 // Create a MySQL connection
 const connection = mysql.createConnection({
-   host: "localhost",
+   host: "198.38.92.6",
    user: "meditrek_thera_data",
    password: "T3NZD8S.lX[W)qa,",
    database: "meditrek_thera_data",

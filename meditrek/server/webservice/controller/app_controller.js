@@ -3156,12 +3156,22 @@ const cronJobFunction = async (request, response) => {
             WHERE delete_flag = 0
         `;
     connection.query(updateQuery, [], (err, updateResult) => {
-        if (err) {
-            return response.status(200).json({
-                success: false,
-                msg: languageMessage.internalServerError,
-                key: err.message
-            });
+        // if (err) {
+        //     return response.status(200).json({
+        //         success: false,
+        //         msg: languageMessage.internalServerError,
+        //         key: err.message
+        //     });
+        // }
+         if (err) {
+            if(response){
+                return response.status(200).json({
+                    success:false,
+                    msg: err.message
+                });
+            } else {
+                console.log(err.message);
+            }
         }
 
         if (updateResult.affectedRows === 0) {
