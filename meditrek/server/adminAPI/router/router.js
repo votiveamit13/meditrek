@@ -3,7 +3,7 @@ const upload = require("../controller/multer");
 const uploadImage = require("../controller/multerimage");
 const connection = require("../connection/connection");
 const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor} = require("../controller/admin_controller");
-const { subAdminLogin, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient} = require("../controller/subAdminController.js")
+const { subAdminLogin,verifyLoginOtp, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient,dashboardGraphs } = require("../controller/subAdminController.js")
 const { verifyToken } = require("../controller/VerifyToken");
 const router = express.Router();
 
@@ -89,12 +89,14 @@ router.get("/doctors_analytical_report", getDoctorAnalyticalReports);
 
 //---------------------------------sub admin-----------------
 router.post("/sub_login", upload.none(), subAdminLogin);
+router.post("/verify_login_otp", upload.none(), verifyLoginOtp);
 router.get("/get_profile", verifyToken, getProfile);
 router.post("/update_sub_password", verifyToken, upload.none(), UpdateSubAdminPassword);
 router.post("/edit_sub_admin_profile", verifyToken, uploadImage.single("image"), UpdateSubAdminProfile);
 router.post("/forgot_sub_password", upload.none(), ForgotPassword);
 router.post("/reset_sub_password", upload.none(), subAdminForgetNewPassword);
 router.get("/sub_dashboard", verifyToken, subAdminDashboard);
+router.get("/dashboard_graphs", verifyToken, dashboardGraphs);
 router.get("/medication_dashboard", verifyToken, medicationDashboard)
 router.get("/adverse_dashboard", verifyToken, adverseDashboard)
 router.get("/lab_report_dashboard", verifyToken, labReportDashboard)
