@@ -3,7 +3,7 @@ const upload = require('../middleware/multer');
 const connection = require('../connection');
 const { getAllContent, getAllContentUrl, getMyMedications, getTodayMedicationNew, getMyMedicationsHistory, getMedicine, getDocumentType, getReports, getResentReports, getBPData, getFastingGlucose, getPPBGS, getWeightMeasurement, getTemperature, getCustomMeasurement, getBPDataStats, getFastingGlucoseDataStats, getPPBGSDataStats, getWeightMeasurementDataStats, getTemperatureDataStats, getSymtoms, getAdverseReaction, getAdverseReactionById, getDoctors, getMyDoctors, ShareInformation, getDisease, getDateMedication,getFaq , getDocumentsByReportCategory, getBPDataStatus, deleteDoctor, getFastingGlucoseDataStatus, getPPBGSDataStatus, getWeightMeasurementDataStatus, getTemperatureDataStatus, shareInfoToDoctor, getMedicines, getMedicineHistory, deleteMeasurement} = require('../controller/get_controller');
 
-const { signUp, userOtpVerify, userResendOtp, deleteAccount, editProfile, forgotPassword, forgotPasswordResendOtp, forgotPasswordVerifyOtp, resetPassword, changePassword, signIn, getUserNotification,getReminderData, getReminderDataMonthly, refillReminder,
+const { signUp, userOtpVerify,verifyUserLoginOtp, userResendOtp, deleteAccount, editProfile, forgotPassword, forgotPasswordResendOtp, forgotPasswordVerifyOtp, resetPassword, changePassword, signIn, getUserNotification,getReminderData, getReminderDataMonthly, refillReminder,
     getReminderDataWeekly , getHomePageStatus, updateTimezone} = require('../controller/user_controller');
 
 const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1} = require('../controller/app_controller');
@@ -67,6 +67,7 @@ router.post('/reset_password', upload.none(), resetPassword);
 router.post('/change_password', upload.none(), changePassword);
 
 router.post('/sign_in', upload.none(), signIn);
+router.post('/verify_user_login_otp', upload.none(), verifyUserLoginOtp);
 router.post('/help_and_support', upload.none(), sendContactUs);
 router.post('/paused_medication', upload.none(), pauseMedication);
 router.post('/mark_as_taken', upload.none(), MedicationMarkASTaken);

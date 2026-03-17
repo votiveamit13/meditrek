@@ -15,7 +15,6 @@ const { DeviceTokenStore_1_Signal, getUserDetails, hashPassword, getNotification
 const SECRET_KEY = "TOKEN-KEY"; // Change to your secure secret
 
 function generate6DigitCode(user_id) {
-
     const timestamp = Date.now(); // Current timestamp in ms
 
     const base = parseInt(`${user_id}${timestamp}`); // Combine user_id and timestamp
@@ -2028,397 +2027,577 @@ const changePassword = async (request, response) => {
 
 //Sign In
 
-const signIn = async (request, response) => {
+// const signIn = async (request, response) => {
 
-    const { email, password, player_id, device_type, login_type } = request.body;
+//     const { email, password, player_id, device_type, login_type } = request.body;
 
-    // Check for missing parameters
+//     // Check for missing parameters
 
-    if (!email || !password) {
+//     if (!email || !password) {
 
-        return response
+//         return response
 
-            .status(200)
+//             .status(200)
 
-            .json({ success: false, msg: languageMessage.msg_empty_param, key: "email", });
+//             .json({ success: false, msg: languageMessage.msg_empty_param, key: "email", });
 
-    }
+//     }
 
-    if (!player_id) {
+//     if (!player_id) {
 
-        return response.status(200).json({
+//         return response.status(200).json({
 
-            success: false,
+//             success: false,
 
-            msg: languageMessage.msg_empty_param,
+//             msg: languageMessage.msg_empty_param,
 
-            key: "player_id",
+//             key: "player_id",
 
+//         });
+
+//     }
+
+//     if (!device_type) {
+
+//         return response.status(200).json({
+
+//             success: false,
+
+//             msg: languageMessage.msg_empty_param,
+
+//             key: "device_type",
+
+//         });
+
+//     }
+
+//     try {
+
+//         // Query to fetch user details
+
+//         const userQuery = `
+
+//           SELECT user_id, name, password, active_flag, profile_complete, login_type,delete_flag
+
+//           FROM user_master 
+
+//           WHERE email = ? 
+
+// ORDER BY user_id DESC
+
+//         `;
+
+//         connection.query(userQuery, [email], async (err, results) => {
+
+//             if (err) {
+
+//                 return response.status(200).json({
+
+//                     success: false,
+
+//                     msg: languageMessage.internalServerError,
+
+//                     key: err.message,
+
+//                 });
+
+//             }
+
+//             // Check if user exists
+
+//             if (results.length === 0) {
+
+//                 return response
+
+//                     .status(200)
+
+//                     .json({ success: false, msg: languageMessage.userNotFound });
+
+//             }
+
+//             if (results[0]?.delete_flag == 1) {
+
+//                 return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+
+//             }
+
+//             if (results[0].otp_verifiy === 0) {
+
+//                 const userDetails = await getUserDetails(results[0].user_id);
+
+//                 return response.status(200).json({
+
+//                     success: true,
+
+//                     msg: languageMessage.signInSuccess,
+
+//                     userDataArray: userDetails,
+
+//                 });
+
+//             }
+
+//             if (results[0].profile_completed === 0) {
+
+//                 const userDetails = await getUserDetails(results[0].user_id);
+
+//                 return response.status(200).json({
+
+//                     success: true,
+
+//                     msg: languageMessage.signInSuccess,
+
+//                     userDataArray: userDetails,
+
+//                 });
+
+//             }
+
+//             const user = results[0];
+
+//             var logInType;
+
+//             if (login_type) {
+
+//                 logInType = login_type
+
+//             } else {
+
+//                 logInType = results[0].login_type;
+
+//             }
+
+//             // Check if the user is deactivated
+
+//             if (user.active_flag === 0) {
+
+//                 return response.status(200).json({
+
+//                     success: false,
+
+//                     msg: languageMessage.accountdeactivated,
+
+//                     active_flag: user.active_flag,
+
+//                 });
+
+//             }
+
+//             // Verify password
+
+//             const hashedPassword = await hashPassword(password);
+
+//             if (hashedPassword !== user.password) {
+
+//                 return response
+
+//                     .status(200)
+
+//                     .json({ success: false, msg: languageMessage.IncorrectPassword });
+
+//             }
+
+//             // Generate JWT token
+
+//             let token;
+
+//             try {
+
+//                 token = await jwt.sign(
+
+//                     { user_id: user.user_id },
+
+//                     process.env.SECRET_KEY,
+
+//                     { expiresIn: "24h", algorithm: "HS256" }
+
+//                 );
+
+//             } catch (err) {
+
+//                 return response.status(200).json({
+
+//                     success: false,
+
+//                     msg: languageMessage.internalServerError,
+
+//                     key: err.message,
+
+//                 });
+
+//             }
+
+//             const checkQuery = `SELECT user_id FROM user_notification WHERE user_id = ?`;
+
+//             connection.query(
+
+//                 checkQuery,
+
+//                 [user.user_id],
+
+//                 (err, Notificationresults) => {
+
+//                     if (err) {
+
+//                         return response.status(200).json({
+
+//                             success: false,
+
+//                             msg: languageMessage.internalServerError,
+
+//                             error: err.message,
+
+//                         });
+
+//                     }
+
+//                     if (Notificationresults.length > 0) {
+
+//                         // Record exists, update it
+
+//                         const updateQuery = `UPDATE user_notification SET device_type = ?, player_id = ?, inserttime = ?, updatetime = ? WHERE user_id = ? `;
+
+//                         connection.query(
+
+//                             updateQuery,
+
+//                             [device_type, player_id, formattedDate, formattedDate, user.user_id],
+
+//                             async (err) => {
+
+//                                 if (err) {
+
+//                                     return response.status(200).json({
+
+//                                         success: false,
+
+//                                         msg: languageMessage.internalServerError,
+
+//                                         error: err.message,
+
+//                                     });
+
+//                                 }
+
+//                                 const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
+
+//                                 connection.query(
+
+//                                     updateLogType,
+
+//                                     [logInType, formattedDate, user.user_id],
+
+//                                     async (err) => {
+
+//                                         if (err) {
+
+//                                             return response.status(200).json({
+
+//                                                 success: false,
+
+//                                                 msg: languageMessage.internalServerError,
+
+//                                                 error: err.message,
+
+//                                             });
+
+//                                         }
+
+//                                         const userDetails = await getUserDetails(user.user_id);
+
+//                                         return response.status(200).json({
+
+//                                             success: true,
+
+//                                             msg: languageMessage.signInSuccess,
+
+//                                             userDataArray: userDetails,
+
+//                                             token,
+
+//                                         });
+
+//                                     })
+
+//                             }
+
+//                         );
+
+//                     } else {
+
+//                         const insertQuery = `INSERT INTO user_notification (user_id, device_type, player_id, inserttime, createtime) VALUES (?, ?, ?, ?,?)`;
+
+//                         connection.query(
+
+//                             insertQuery,
+
+//                             [user.user_id, device_type, player_id, formattedDate, formattedDate],
+
+//                             async (err) => {
+
+//                                 if (err) {
+
+//                                     return response.status(200).json({
+
+//                                         success: false,
+
+//                                         msg: languageMessage.internalServerError,
+
+//                                         error: err.message,
+
+//                                     });
+
+//                                 }
+
+//                                 const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
+
+//                                 connection.query(
+
+//                                     updateLogType,
+
+//                                     [logInType, formattedDate, user.user_id],
+
+//                                     async (err) => {
+
+//                                         if (err) {
+
+//                                             return response.status(200).json({
+
+//                                                 success: false,
+
+//                                                 msg: languageMessage.internalServerError,
+
+//                                                 error: err.message,
+
+//                                             });
+
+//                                         }
+
+//                                         const userDetails = await getUserDetails(user.user_id);
+
+//                                         return response.status(200).json({
+
+//                                             success: true,
+
+//                                             msg: languageMessage.signInSuccess,
+
+//                                             userDataArray: userDetails,
+
+//                                             token,
+
+//                                         });
+
+//                                     })
+
+//                             }
+
+//                         );
+
+//                     }
+
+//                 }
+
+//             );
+
+//         });
+
+//     } catch (err) {
+
+//         return response.status(200).json({
+
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+
+//         });
+
+//     }
+
+// };
+// const otpStore = {};
+const otpStore = require('../../otpStore');
+const signIn = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(200).json({
+      success: false,
+      msg: "Email and password required"
+    });
+  }
+
+  try {
+
+    const sql = `
+      SELECT user_id, name, password, active_flag, delete_flag
+      FROM user_master
+      WHERE email = ?
+      ORDER BY user_id DESC
+    `;
+
+    connection.query(sql, [email], async (err, result) => {
+
+      if (err) {
+        return res.status(200).json({
+          success: false,
+          msg: err.message
         });
+      }
 
-    }
-
-    if (!device_type) {
-
-        return response.status(200).json({
-
-            success: false,
-
-            msg: languageMessage.msg_empty_param,
-
-            key: "device_type",
-
+      if (result.length === 0) {
+        return res.status(200).json({
+          success: false,
+          msg: "User not found"
         });
+      }
 
-    }
+      const user = result[0];
 
-    try {
-
-        // Query to fetch user details
-
-        const userQuery = `
-
-          SELECT user_id, name, password, active_flag, profile_complete, login_type,delete_flag
-
-          FROM user_master 
-
-          WHERE email = ? 
-
-ORDER BY user_id DESC
-
-        `;
-
-        connection.query(userQuery, [email], async (err, results) => {
-
-            if (err) {
-
-                return response.status(200).json({
-
-                    success: false,
-
-                    msg: languageMessage.internalServerError,
-
-                    key: err.message,
-
-                });
-
-            }
-
-            // Check if user exists
-
-            if (results.length === 0) {
-
-                return response
-
-                    .status(200)
-
-                    .json({ success: false, msg: languageMessage.userNotFound });
-
-            }
-
-            if (results[0]?.delete_flag == 1) {
-
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
-
-            }
-
-            if (results[0].otp_verifiy === 0) {
-
-                const userDetails = await getUserDetails(results[0].user_id);
-
-                return response.status(200).json({
-
-                    success: true,
-
-                    msg: languageMessage.signInSuccess,
-
-                    userDataArray: userDetails,
-
-                });
-
-            }
-
-            if (results[0].profile_completed === 0) {
-
-                const userDetails = await getUserDetails(results[0].user_id);
-
-                return response.status(200).json({
-
-                    success: true,
-
-                    msg: languageMessage.signInSuccess,
-
-                    userDataArray: userDetails,
-
-                });
-
-            }
-
-            const user = results[0];
-
-            var logInType;
-
-            if (login_type) {
-
-                logInType = login_type
-
-            } else {
-
-                logInType = results[0].login_type;
-
-            }
-
-            // Check if the user is deactivated
-
-            if (user.active_flag === 0) {
-
-                return response.status(200).json({
-
-                    success: false,
-
-                    msg: languageMessage.accountdeactivated,
-
-                    active_flag: user.active_flag,
-
-                });
-
-            }
-
-            // Verify password
-
-            const hashedPassword = await hashPassword(password);
-
-            if (hashedPassword !== user.password) {
-
-                return response
-
-                    .status(200)
-
-                    .json({ success: false, msg: languageMessage.IncorrectPassword });
-
-            }
-
-            // Generate JWT token
-
-            let token;
-
-            try {
-
-                token = await jwt.sign(
-
-                    { user_id: user.user_id },
-
-                    process.env.SECRET_KEY,
-
-                    { expiresIn: "24h", algorithm: "HS256" }
-
-                );
-
-            } catch (err) {
-
-                return response.status(200).json({
-
-                    success: false,
-
-                    msg: languageMessage.internalServerError,
-
-                    key: err.message,
-
-                });
-
-            }
-
-            const checkQuery = `SELECT user_id FROM user_notification WHERE user_id = ?`;
-
-            connection.query(
-
-                checkQuery,
-
-                [user.user_id],
-
-                (err, Notificationresults) => {
-
-                    if (err) {
-
-                        return response.status(200).json({
-
-                            success: false,
-
-                            msg: languageMessage.internalServerError,
-
-                            error: err.message,
-
-                        });
-
-                    }
-
-                    if (Notificationresults.length > 0) {
-
-                        // Record exists, update it
-
-                        const updateQuery = `UPDATE user_notification SET device_type = ?, player_id = ?, inserttime = ?, updatetime = ? WHERE user_id = ? `;
-
-                        connection.query(
-
-                            updateQuery,
-
-                            [device_type, player_id, formattedDate, formattedDate, user.user_id],
-
-                            async (err) => {
-
-                                if (err) {
-
-                                    return response.status(200).json({
-
-                                        success: false,
-
-                                        msg: languageMessage.internalServerError,
-
-                                        error: err.message,
-
-                                    });
-
-                                }
-
-                                const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
-
-                                connection.query(
-
-                                    updateLogType,
-
-                                    [logInType, formattedDate, user.user_id],
-
-                                    async (err) => {
-
-                                        if (err) {
-
-                                            return response.status(200).json({
-
-                                                success: false,
-
-                                                msg: languageMessage.internalServerError,
-
-                                                error: err.message,
-
-                                            });
-
-                                        }
-
-                                        const userDetails = await getUserDetails(user.user_id);
-
-                                        return response.status(200).json({
-
-                                            success: true,
-
-                                            msg: languageMessage.signInSuccess,
-
-                                            userDataArray: userDetails,
-
-                                            token,
-
-                                        });
-
-                                    })
-
-                            }
-
-                        );
-
-                    } else {
-
-                        const insertQuery = `INSERT INTO user_notification (user_id, device_type, player_id, inserttime, createtime) VALUES (?, ?, ?, ?,?)`;
-
-                        connection.query(
-
-                            insertQuery,
-
-                            [user.user_id, device_type, player_id, formattedDate, formattedDate],
-
-                            async (err) => {
-
-                                if (err) {
-
-                                    return response.status(200).json({
-
-                                        success: false,
-
-                                        msg: languageMessage.internalServerError,
-
-                                        error: err.message,
-
-                                    });
-
-                                }
-
-                                const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
-
-                                connection.query(
-
-                                    updateLogType,
-
-                                    [logInType, formattedDate, user.user_id],
-
-                                    async (err) => {
-
-                                        if (err) {
-
-                                            return response.status(200).json({
-
-                                                success: false,
-
-                                                msg: languageMessage.internalServerError,
-
-                                                error: err.message,
-
-                                            });
-
-                                        }
-
-                                        const userDetails = await getUserDetails(user.user_id);
-
-                                        return response.status(200).json({
-
-                                            success: true,
-
-                                            msg: languageMessage.signInSuccess,
-
-                                            userDataArray: userDetails,
-
-                                            token,
-
-                                        });
-
-                                    })
-
-                            }
-
-                        );
-
-                    }
-
-                }
-
-            );
-
+      if (user.delete_flag == 1) {
+        return res.status(200).json({
+          success: false,
+          msg: "User deleted"
         });
+      }
 
-    } catch (err) {
-
-        return response.status(200).json({
-
-            success: false,
-
-            msg: languageMessage.internalServerError,
-
-            key: err.message,
-
+      if (user.active_flag == 0) {
+        return res.status(200).json({
+          success: false,
+          msg: "Account deactivated"
         });
+      }
 
-    }
+      const hashedPass = await hashPassword(password);
 
+      if (hashedPass !== user.password) {
+        return res.status(200).json({
+          success: false,
+          msg: "Wrong password"
+        });
+      }
+
+      //  OTP generate
+      const otp = Math.floor(100000 + Math.random() * 900000);
+
+      console.log("User Login OTP:", otp);
+
+      otpStore[email] = otp;
+
+      //  send mail
+    //   await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+    await mailer(email, "Login OTP", `Your OTP is ${otp}`);
+
+      return res.status(200).json({
+        success: true,
+        msg: "OTP sent to email",
+        email: email,
+        user_id: user.user_id,
+        otp: otp // testing ke liye (production me hata dena)
+      });
+
+    });
+
+  } catch (error) {
+    return res.status(200).json({
+      success: false,
+      msg: error.message
+    });
+  }
 };
-
 //end
+const verifyUserLoginOtp = async (req, res) => {
+
+  console.log("========== VERIFY API HIT ==========");
+
+  try {
+
+    console.log("Request Body:", req.body);
+
+    const emailNormalized = req.body.email
+      ? req.body.email.trim().toLowerCase()
+      : "";
+
+    const { otp } = req.body;
+
+    console.log("Normalized Email:", emailNormalized);
+    console.log("Entered OTP:", otp);
+    console.log("Stored OTP Before Check:", otpStore[emailNormalized]);
+
+    if (!otpStore[emailNormalized]) {
+      console.log("OTP NOT FOUND IN STORE");
+      return res.status(200).json({
+        success: false,
+        msg: "Invalid OTP"
+      });
+    }
+
+    if (String(otpStore[emailNormalized]) !== String(otp)) {
+      console.log("OTP MISMATCH");
+      return res.status(200).json({
+        success: false,
+        msg: "Invalid OTP"
+      });
+    }
+
+    console.log("OTP MATCH SUCCESS");
+
+    const sql = `SELECT user_id FROM user_master WHERE email = ?`;
+
+    connection.query(sql, [emailNormalized], async (err, result) => {
+
+      console.log("Database Result:", result);
+
+      if (err) {
+        console.log("DB ERROR:", err.message);
+        return res.status(200).json({
+          success: false,
+          msg: err.message
+        });
+      }
+
+      if (!result || result.length === 0) {
+        console.log("USER NOT FOUND IN DB");
+        return res.status(200).json({
+          success: false,
+          msg: "User not found"
+        });
+      }
+
+      const user_id = result[0].user_id;
+
+      console.log("User ID Found:", user_id);
+
+      const token = jwt.sign(
+        { user_id },
+        process.env.SECRET_KEY,
+        { expiresIn: "7d" }
+      );
+
+      delete otpStore[emailNormalized];
+
+      const userDetails = await getUserDetails(user_id);
+
+      console.log("LOGIN SUCCESS");
+
+      return res.status(200).json({
+        success: true,
+        msg: "Login successful",
+        token,
+        userDataArray: userDetails
+      });
+
+    });
+
+  } catch (error) {
+    console.log("CATCH ERROR:", error.message);
+    return res.status(200).json({
+      success: false,
+      msg: error.message
+    });
+  }
+};
 
 const getUserNotification = async (request, response) => {
 
@@ -3665,7 +3844,7 @@ module.exports = {
     signUp,
 
     userOtpVerify,
-
+    verifyUserLoginOtp,
     userResendOtp,
 
     deleteAccount,
