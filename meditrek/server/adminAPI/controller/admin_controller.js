@@ -618,6 +618,34 @@ const getAllusersData = async (request, response) => {
   }
 };
 
+const deleteUser = (req, res) => {
+
+  const { user_id } = req.body;
+
+  const sql = `
+    UPDATE user_master
+    SET delete_flag = 1
+    WHERE user_id = ?
+  `;
+
+  connection.query(sql, [user_id], (err, result) => {
+
+    if (err) {
+      return res.json({
+        success: false,
+        msg: "Database error"
+      });
+    }
+
+    return res.json({
+      success: true,
+      msg: "User deleted successfully"
+    });
+
+  });
+
+};
+
 // const ViewUserDetails = async (request, response) => {
 //   const { user_id } = request.params;
 
@@ -1705,8 +1733,11 @@ const deleteDoctor = async (request, response) => {
 
 const getAllMedicine = async (request, response) => {
   try {
+    // const sql =
+    //   "SELECT medicine_id,medicine_name,description,createtime,updatetime FROM medicine_master WHERE delete_flag=0 ORDER BY medicine_id desc";
+
     const sql =
-      "SELECT medicine_id,medicine_name,description,createtime,updatetime FROM medicine_master WHERE delete_flag=0 ORDER BY medicine_id desc";
+      "SELECT m.medicine_id, m.medicine_name, m.description, m.createtime, m.updatetime, CONCAT(u.f_name,' ',u.l_name) AS patient_name FROM medicine_master m LEFT JOIN medication_master mm ON mm.medicine_id = m.medicine_id LEFT JOIN user_master u ON u.user_id = mm.user_id WHERE m.delete_flag = 0 ORDER BY m.medicine_id DESC;";
 
     connection.query(sql, (err, results) => {
       if (err) {
@@ -1730,7 +1761,7 @@ const getAllMedicine = async (request, response) => {
           s_no: s_no,
 
           medicine_id: medicine.medicine_id,
-
+          patient_name: medicine.patient_name, 
           medicine_name: medicine.medicine_name,
 
           medicine_description: medicine.description,
@@ -6312,4 +6343,5 @@ module.exports = {
   getUserMedicine,
   sendMessageByDoctorToAdmin, getAllDeletedDoctor,
   rejectDoctor,
+  deleteUser,
 };
