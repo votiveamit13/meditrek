@@ -2418,8 +2418,13 @@ const changePassword = async (request, response) => {
 // };
 // const otpStore = {};
 const otpStore = require('../../otpStore');
+
 const signIn = async (req, res) => {
-  const { email, password } = req.body;
+
+  console.log(" ===== SIGNIN API HIT =====");
+  console.log(" Request Body:", req.body);
+
+  const { email, password, player_id, device_type } = req.body;
 
   if (!email || !password) {
     return res.status(200).json({
@@ -2434,22 +2439,19 @@ const signIn = async (req, res) => {
       SELECT user_id, name, password, active_flag, delete_flag
       FROM user_master
       WHERE email = ?
-      ORDER BY user_id DESC
     `;
 
     connection.query(sql, [email], async (err, result) => {
 
       if (err) {
-        return res.status(200).json({
-          success: false,
-          msg: err.message
-        });
+        console.log(" DB ERROR:", err.message);
+        return res.status(200).json({ success: false, msg: err.message });
       }
 
-      if (result.length === 0) {
+      if (!result || result.length === 0) {
         return res.status(200).json({
           success: false,
-          msg: "User not found"
+          msg: "Email not registered"
         });
       }
 
@@ -2469,6 +2471,7 @@ const signIn = async (req, res) => {
         });
       }
 
+      // Password check
       const hashedPass = await hashPassword(password);
 
       if (hashedPass !== user.password) {
@@ -2478,34 +2481,55 @@ const signIn = async (req, res) => {
         });
       }
 
-      //  OTP generate
+      // ================= OTP SECTION =================
+
       const otp = Math.floor(100000 + Math.random() * 900000);
 
-      console.log("User Login OTP:", otp);
+      const emailNormalized = email.trim().toLowerCase();
+      const userName = user.name || "User";
 
-      otpStore[email] = otp;
+      console.log(" Email:", emailNormalized);
+      console.log(" User:", userName);
+      console.log(" OTP:", otp);
 
-      //  send mail
-    //   await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
-    await mailer(email, "Login OTP", `Your OTP is ${otp}`);
+      // Store OTP
+      otpStore[emailNormalized] = otp;
+
+      // Send Mail (Mailer Order Important!)
+      await mailer(
+        emailNormalized,                 // userEmail
+        "Login OTP",               // app_name
+        "Your OTP for Login Verification", // title
+        userName,                        // userName
+        "https://meditrekaccess.com/logo.png", // app_logo
+        otp                              // otp
+      );
+
+      console.log(" OTP Mail Sent");
 
       return res.status(200).json({
         success: true,
         msg: "OTP sent to email",
-        email: email,
+        email: emailNormalized,
         user_id: user.user_id,
-        otp: otp // testing ke liye (production me hata dena)
+        otp: otp // remove in production
       });
 
     });
 
   } catch (error) {
-    return res.status(200).json({
+
+    console.log(" CATCH ERROR:", error.message);
+
+    return res.status(500).json({
       success: false,
       msg: error.message
     });
+
   }
 };
+
+module.exports = { signIn };
 //end
 const verifyUserLoginOtp = async (req, res) => {
 
