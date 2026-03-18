@@ -2,7 +2,7 @@ var express = require("express");
 const upload = require("../controller/multer");
 const uploadImage = require("../controller/multerimage");
 const connection = require("../connection/connection");
-const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser} = require("../controller/admin_controller");
+const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser,getLanguages,saveLanguages,getUserLanguages,updateUserLanguage,} = require("../controller/admin_controller");
 const { subAdminLogin,verifyLoginOtp, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient,dashboardGraphs } = require("../controller/subAdminController.js")
 const { verifyToken } = require("../controller/VerifyToken");
 const router = express.Router();
@@ -131,6 +131,11 @@ router.post("/edit_faq", upload.none(), editFaq)
 router.post("/delete_faq", upload.none(), deleteFaq)
 router.get("/get_user_medicine", getUserMedicine)
 
+// language api 
+router.get('/languages', getLanguages);
+router.post('/admin-save-languages', saveLanguages);
+router.get('/user-languages', getUserLanguages);
+router.post('/update-user-language', updateUserLanguage);
 
 
 module.exports = router;
