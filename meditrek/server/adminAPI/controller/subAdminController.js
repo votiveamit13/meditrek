@@ -3533,84 +3533,192 @@ const getAdverseofPatient = async (request, response) => {
 };
 
 // API grpa
-const dashboardGraphs = async (req,res)=>{
-  // exports.dashboardGraphs = async (req, res) => {
+// const dashboardGraphs = async (req,res)=>{
+//   // exports.dashboardGraphs = async (req, res) => {
+//   try {
+
+//     const monthlyQuery = `
+//       SELECT 
+//         DATE_FORMAT(createtime,'%b') as month,
+//         COUNT(*) as total 
+//       FROM patient_master
+//       WHERE delete_flag = 0 AND doctor_id = ?
+//       GROUP BY MONTH(createtime)
+//       ORDER BY MONTH(createtime)
+//     `;
+
+//     const genderQuery = `
+//      SELECT 
+//         CASE
+//           WHEN gender = 1 THEN 'Male'
+//           WHEN gender = 2 THEN 'Female'
+//           WHEN gender = 3 THEN 'Other'
+//           ELSE 'Unknown'
+//         END as gender,
+//         COUNT(*) as total
+//       FROM user_master
+//       WHERE delete_flag = 0
+//       AND doctor_id = ?
+//       GROUP BY gender
+//     `;
+
+//     const ageQuery = `
+//       SELECT 
+//         CASE
+//           WHEN age BETWEEN 0 AND 10 THEN '0-10'
+//           WHEN age BETWEEN 11 AND 20 THEN '11-20'
+//           WHEN age BETWEEN 21 AND 30 THEN '21-30'
+//           WHEN age BETWEEN 31 AND 40 THEN '31-40'
+//           WHEN age BETWEEN 31 AND 40 THEN '41-50'
+//           ELSE '51+'
+//         END as age_group,
+//         COUNT(*) as total
+//       FROM user_master
+//       WHERE delete_flag = 0
+//       AND doctor_id = ?
+//       GROUP BY age_group
+//     `;
+
+//     connection.query(monthlyQuery, (err, monthly) => {
+
+//       if (err) return res.json({ status:false, error: err });
+
+//       connection.query(genderQuery, (err, gender) => {
+
+//         if (err) return res.json({ status:false, error: err });
+
+//         connection.query(ageQuery, (err, age) => {
+
+//           if (err) return res.json({ status:false, error: err });
+
+//           res.json({
+//             status: true,
+//             message: "Dashboard data fetched",
+//             monthlyPatients: monthly,
+//             genderPercentage: gender,
+//             ageGroups: age
+//           });
+
+//         });
+
+//       });
+
+//     });
+
+//   } catch (error) {
+//     console.log(error);
+//     res.json({
+//       status:false,
+//       message:"Server error"
+//     });
+//   }
+// };
+
+const dashboardGraphs = async (req, res) => {
   try {
+    const doctor_id = req.doctor_id;
 
-    const monthlyQuery = `
-      SELECT 
-        DATE_FORMAT(createtime,'%b') as month,
-        COUNT(*) as total 
-      FROM patient_master
-      WHERE delete_flag = 0
-      GROUP BY MONTH(createtime)
-      ORDER BY MONTH(createtime)
+    if (!doctor_id) {
+      return res.status(200).json({
+        status: false,
+        msg: "doctor_id missing"
+      });
+    }
+
+    //  check doctor
+    const checksql = `
+      SELECT doctor_id FROM doctor_master 
+      WHERE doctor_id = ? AND delete_flag = 0
     `;
 
-    const genderQuery = `
-     SELECT 
-        CASE
-          WHEN gender = 1 THEN 'Male'
-          WHEN gender = 2 THEN 'Female'
-          WHEN gender = 3 THEN 'Other'
-          ELSE 'Unknown'
-        END as gender,
-        COUNT(*) as total
-      FROM user_master
-      WHERE delete_flag = 0
-      GROUP BY gender
-    `;
+    connection.query(checksql, [doctor_id], (err, check) => {
+      if (err) {
+        return res.json({ status: false, error: err.message });
+      }
 
-    const ageQuery = `
-      SELECT 
-        CASE
-          WHEN age BETWEEN 0 AND 10 THEN '0-10'
-          WHEN age BETWEEN 11 AND 20 THEN '11-20'
-          WHEN age BETWEEN 21 AND 30 THEN '21-30'
-          WHEN age BETWEEN 31 AND 40 THEN '31-40'
-          ELSE '40+'
-        END as age_group,
-        COUNT(*) as total
-      FROM user_master
-      WHERE delete_flag = 0
-      GROUP BY age_group
-    `;
+      if (check.length === 0) {
+        return res.json({ status: true, msg: "No data found" });
+      }
 
-    connection.query(monthlyQuery, (err, monthly) => {
+      //  Monthly Patients
+      const monthlyQuery = `
+        SELECT 
+          DATE_FORMAT(p.createtime,'%b') as month,
+          COUNT(*) as total
+        FROM patient_master p
+        WHERE p.delete_flag = 0 
+        AND p.doctor_id = ?
+        GROUP BY MONTH(p.createtime)
+        ORDER BY MONTH(p.createtime)
+      `;
 
-      if (err) return res.json({ status:false, error: err });
+      //  Gender (JOIN)
+      const genderQuery = `
+        SELECT 
+          CASE
+            WHEN u.gender = 1 THEN 'Male'
+            WHEN u.gender = 2 THEN 'Female'
+            WHEN u.gender = 3 THEN 'Other'
+            ELSE 'Unknown'
+          END as gender,
+          COUNT(*) as total
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.delete_flag = 0
+        AND p.doctor_id = ?
+        GROUP BY gender
+      `;
 
-      connection.query(genderQuery, (err, gender) => {
+      //  Age Group (JOIN)
+      const ageQuery = `
+        SELECT 
+          CASE
+            WHEN u.age BETWEEN 0 AND 10 THEN '0-10'
+            WHEN u.age BETWEEN 11 AND 20 THEN '11-20'
+            WHEN u.age BETWEEN 21 AND 30 THEN '21-30'
+            WHEN u.age BETWEEN 31 AND 40 THEN '31-40'
+            WHEN u.age BETWEEN 41 AND 50 THEN '41-50'
+            ELSE '51+'
+          END as age_group,
+          COUNT(*) as total
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.delete_flag = 0
+        AND p.doctor_id = ?
+        GROUP BY age_group
+      `;
 
-        if (err) return res.json({ status:false, error: err });
+      //  execute queries
+      connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
+        if (err) return res.json({ status: false, error: err.message });
 
-        connection.query(ageQuery, (err, age) => {
+        connection.query(genderQuery, [doctor_id], (err, gender) => {
+          if (err) return res.json({ status: false, error: err.message });
 
-          if (err) return res.json({ status:false, error: err });
+          connection.query(ageQuery, [doctor_id], (err, age) => {
+            if (err) return res.json({ status: false, error: err.message });
 
-          res.json({
-            status: true,
-            message: "Dashboard data fetched",
-            monthlyPatients: monthly,
-            genderPercentage: gender,
-            ageGroups: age
+            return res.json({
+              status: true,
+              message: "Doctor-wise graph data",
+              monthlyPatients: monthly,
+              genderPercentage: gender,
+              ageGroups: age
+            });
           });
-
         });
-
       });
 
     });
 
   } catch (error) {
     console.log(error);
-    res.json({
-      status:false,
-      message:"Server error"
+    return res.json({
+      status: false,
+      message: "Server error"
     });
   }
 };
-
 
 
 
