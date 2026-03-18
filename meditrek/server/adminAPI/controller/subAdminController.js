@@ -828,13 +828,71 @@ const subAdminDashboard = async (req, res) => {
       if (check.length <= 0) {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
       }
-      const query = "SELECT patient_id ,doctor_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
-      connection.query(query, [doctor_id], async (err, result) => {
-        if (err) {
-          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
-        }
-        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalPatients: result.length })
-      })
+      // const query = "SELECT patient_id ,doctor_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
+      // connection.query(query, [doctor_id], async (err, result) => {
+      //   if (err) {
+      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      //   }
+      //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalPatients: result.length })
+      // })
+      const totalSql = `
+        SELECT COUNT(*) as totalPatients
+        FROM patient_master
+        WHERE doctor_id = ? AND delete_flag = 0
+        `;
+
+        connection.query(totalSql, [doctor_id], (err, totalRes) => {
+
+          const totalPatients = totalRes[0].totalPatients;
+
+          // CURRENT WEEK
+          const currentWeekSql = `
+          SELECT COUNT(*) as currentWeek
+          FROM patient_master
+          WHERE doctor_id = ?
+          AND delete_flag = 0
+          AND createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          `;
+
+          connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
+
+            const currentWeek = currentRes[0].currentWeek;
+
+            // LAST WEEK
+            const lastWeekSql = `
+            SELECT COUNT(*) as lastWeek
+            FROM patient_master
+            WHERE doctor_id = ?
+            AND delete_flag = 0
+            AND createtime BETWEEN
+            DATE_SUB(NOW(), INTERVAL 14 DAY)
+            AND DATE_SUB(NOW(), INTERVAL 7 DAY)
+            `;
+
+            connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
+
+              const lastWeek = lastRes[0].lastWeek;
+
+              let growth = 0;
+
+              if (lastWeek > 0) {
+                growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+              }
+
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.msgDataFound,
+                totalPatients: totalPatients,
+                currentWeekPatients: currentWeek,
+                lastWeekPatients: lastWeek,
+                patientGrowth: growth.toFixed(2)
+              });
+
+            });
+
+          });
+
+        });
     })
 
   } catch (error) {
@@ -859,24 +917,108 @@ const medicationDashboard = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
       }
 
-      const query = `
-        SELECT COUNT(mm.medication_id) AS totalMedication
-        FROM patient_master AS pm
-        LEFT JOIN medication_master AS mm ON pm.user_id = mm.user_id AND mm.delete_flag = 0 AND pm.delete_flag = 0
-        WHERE pm.doctor_id = ?
-      `;
+      // const query = `
+      //   SELECT COUNT(mm.medication_id) AS totalMedication
+      //   FROM patient_master AS pm
+      //   LEFT JOIN medication_master AS mm ON pm.user_id = mm.user_id AND mm.delete_flag = 0 AND pm.delete_flag = 0
+      //   WHERE pm.doctor_id = ?
+      // `;
 
-      connection.query(query, [doctor_id], async (err, result) => {
-        if (err) {
-          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-        }
+      // connection.query(query, [doctor_id], async (err, result) => {
+      //   if (err) {
+      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+      //   }
 
-        return res.status(200).json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          totalMedication: result[0].totalMedication
+      //   return res.status(200).json({
+      //     success: true,
+      //     msg: languageMessages.msgDataFound,
+      //     totalMedication: result[0].totalMedication
+      //   });
+      // });
+      // ================= TOTAL =================
+        const totalSql = `
+          SELECT COUNT(mm.medication_id) AS totalMedication
+          FROM patient_master pm
+          LEFT JOIN medication_master mm 
+            ON pm.user_id = mm.user_id 
+            AND mm.delete_flag = 0
+          WHERE pm.doctor_id = ? 
+          AND pm.delete_flag = 0
+        `;
+
+        connection.query(totalSql, [doctor_id], (err, totalRes) => {
+
+          if (err) {
+            return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+          }
+
+          const totalMedication = totalRes[0].totalMedication;
+
+          // ================= CURRENT WEEK =================
+          const currentWeekSql = `
+            SELECT COUNT(mm.medication_id) AS currentWeek
+            FROM patient_master pm
+            LEFT JOIN medication_master mm 
+              ON pm.user_id = mm.user_id 
+              AND mm.delete_flag = 0
+            WHERE pm.doctor_id = ?
+            AND pm.delete_flag = 0
+            AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          `;
+
+          connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
+
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+            }
+
+            const currentWeek = currentRes[0].currentWeek;
+
+            // ================= LAST WEEK =================
+            const lastWeekSql = `
+              SELECT COUNT(mm.medication_id) AS lastWeek
+              FROM patient_master pm
+              LEFT JOIN medication_master mm 
+                ON pm.user_id = mm.user_id 
+                AND mm.delete_flag = 0
+              WHERE pm.doctor_id = ?
+              AND pm.delete_flag = 0
+              AND mm.createtime BETWEEN 
+                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            `;
+
+            connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
+
+              if (err) {
+                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+              }
+
+              const lastWeek = lastRes[0].lastWeek;
+
+              // ================= GROWTH =================
+              let growth = 0;
+
+              if (lastWeek === 0) {
+                growth = currentWeek > 0 ? 100 : 0;
+              } else {
+                growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+              }
+
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.msgDataFound,
+                totalMedication: totalMedication,
+                currentWeekMedication: currentWeek,
+                lastWeekMedication: lastWeek,
+                medicationGrowth: growth.toFixed(2)
+              });
+
+            });
+
+          });
+
         });
-      });
     });
 
   } catch (error) {
@@ -900,13 +1042,97 @@ const adverseDashboard = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
       }
       // const query = "SELECT adverse_reaction_id FROM adverse_reaction_master WHERE delete_flag = 0";
-      const query = "SELECT COUNT(asm.adverse_reaction_id) AS adverse_count FROM patient_master AS pm LEFT JOIN adverse_reaction_master AS asm ON pm.user_id = asm.user_id WHERE pm.doctor_id = ? AND asm.delete_flag = 0 AND pm.delete_flag =0";
-      connection.query(query, [doctor_id], async (err, result) => {
-        if (err) {
-          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
-        }
-        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalAdverseReaction: result[0].adverse_count })
-      })
+      // const query = "SELECT COUNT(asm.adverse_reaction_id) AS adverse_count FROM patient_master AS pm LEFT JOIN adverse_reaction_master AS asm ON pm.user_id = asm.user_id WHERE pm.doctor_id = ? AND asm.delete_flag = 0 AND pm.delete_flag =0";
+      // connection.query(query, [doctor_id], async (err, result) => {
+      //   if (err) {
+      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      //   }
+      //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalAdverseReaction: result[0].adverse_count })
+      // })
+        // ================= TOTAL =================
+        const totalSql = `
+          SELECT COUNT(asm.adverse_reaction_id) AS totalAdverseReaction
+          FROM patient_master pm
+          LEFT JOIN adverse_reaction_master asm 
+            ON pm.user_id = asm.user_id 
+            AND asm.delete_flag = 0
+          WHERE pm.doctor_id = ? 
+          AND pm.delete_flag = 0
+        `;
+
+        connection.query(totalSql, [doctor_id], (err, totalRes) => {
+
+          if (err) {
+            return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+          }
+
+          const totalAdverseReaction = totalRes[0].totalAdverseReaction;
+
+          // ================= CURRENT WEEK =================
+          const currentWeekSql = `
+            SELECT COUNT(asm.adverse_reaction_id) AS currentWeek
+            FROM patient_master pm
+            LEFT JOIN adverse_reaction_master asm 
+              ON pm.user_id = asm.user_id 
+              AND asm.delete_flag = 0
+            WHERE pm.doctor_id = ?
+            AND pm.delete_flag = 0
+            AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          `;
+
+          connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
+
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+            }
+
+            const currentWeek = currentRes[0].currentWeek;
+
+            // ================= LAST WEEK =================
+            const lastWeekSql = `
+              SELECT COUNT(asm.adverse_reaction_id) AS lastWeek
+              FROM patient_master pm
+              LEFT JOIN adverse_reaction_master asm 
+                ON pm.user_id = asm.user_id 
+                AND asm.delete_flag = 0
+              WHERE pm.doctor_id = ?
+              AND pm.delete_flag = 0
+              AND asm.createtime BETWEEN 
+                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            `;
+
+            connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
+
+              if (err) {
+                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+              }
+
+              const lastWeek = lastRes[0].lastWeek;
+
+              // ================= GROWTH =================
+              let growth = 0;
+
+              if (lastWeek === 0) {
+                growth = currentWeek > 0 ? 100 : 0;
+              } else {
+                growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+              }
+
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.msgDataFound,
+                totalAdverseReaction: totalAdverseReaction,
+                currentWeekAdverse: currentWeek,
+                lastWeekAdverse: lastWeek,
+                adverseGrowth: growth.toFixed(2)
+              });
+
+            });
+
+          });
+
+        });
     })
 
   } catch (error) {
@@ -930,13 +1156,97 @@ const labReportDashboard = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
       }
       // const query = "SELECT medical_report_id FROM medical_report_master WHERE delete_flag = 0";
-      const query = "SELECT COUNT(mrm.medical_report_id) AS report_count FROM patient_master AS pm LEFT JOIN medical_report_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0";
-      connection.query(query, [doctor_id], async (err, result) => {
+      // const query = "SELECT COUNT(mrm.medical_report_id) AS report_count FROM patient_master AS pm LEFT JOIN medical_report_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0";
+      // connection.query(query, [doctor_id], async (err, result) => {
+      //   if (err) {
+      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      //   }
+      //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalLabReports: result[0].report_count })
+      // })
+      // ================= TOTAL =================
+      const totalSql = `
+        SELECT COUNT(mrm.medical_report_id) AS totalLabReports
+        FROM patient_master pm
+        LEFT JOIN medical_report_master mrm 
+          ON pm.user_id = mrm.user_id 
+          AND mrm.delete_flag = 0
+        WHERE pm.doctor_id = ? 
+        AND pm.delete_flag = 0
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+
         if (err) {
-          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
         }
-        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalLabReports: result[0].report_count })
-      })
+
+        const totalLabReports = totalRes[0].totalLabReports;
+
+        // ================= CURRENT WEEK =================
+        const currentWeekSql = `
+          SELECT COUNT(mrm.medical_report_id) AS currentWeek
+          FROM patient_master pm
+          LEFT JOIN medical_report_master mrm 
+            ON pm.user_id = mrm.user_id 
+            AND mrm.delete_flag = 0
+          WHERE pm.doctor_id = ?
+          AND pm.delete_flag = 0
+          AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        `;
+
+        connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
+
+          if (err) {
+            return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+          }
+
+          const currentWeek = currentRes[0].currentWeek;
+
+          // ================= LAST WEEK =================
+          const lastWeekSql = `
+            SELECT COUNT(mrm.medical_report_id) AS lastWeek
+            FROM patient_master pm
+            LEFT JOIN medical_report_master mrm 
+              ON pm.user_id = mrm.user_id 
+              AND mrm.delete_flag = 0
+            WHERE pm.doctor_id = ?
+            AND pm.delete_flag = 0
+            AND mrm.createtime BETWEEN 
+              DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+              AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          `;
+
+          connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
+
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+            }
+
+            const lastWeek = lastRes[0].lastWeek;
+
+            // ================= GROWTH =================
+            let growth = 0;
+
+            if (lastWeek === 0) {
+              growth = currentWeek > 0 ? 100 : 0;
+            } else {
+              growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+            }
+
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              totalLabReports: totalLabReports,
+              currentWeekLabReports: currentWeek,
+              lastWeekLabReports: lastWeek,
+              labReportGrowth: growth.toFixed(2)
+            });
+
+          });
+
+        });
+
+      });
     })
 
   } catch (error) {
@@ -960,13 +1270,96 @@ const measurementDashboard = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
       }
       // const query = "SELECT measurement_id FROM measurement_master WHERE delete_flag = 0";
-      const query = "SELECT COUNT(mrm.measurement_id) AS report_count FROM patient_master AS pm LEFT JOIN measurement_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0"; 
-      connection.query(query, [doctor_id], async (err, result) => {
+      // const query = "SELECT COUNT(mrm.measurement_id) AS report_count FROM patient_master AS pm LEFT JOIN measurement_master AS mrm ON pm.user_id = mrm.user_id WHERE pm.doctor_id = ? AND mrm.delete_flag = 0 AND pm.delete_flag =0"; 
+      // connection.query(query, [doctor_id], async (err, result) => {
+      //   if (err) {
+      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+      //   }
+      //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalmeasurement: result[0].report_count })
+      // })// ================= TOTAL =================
+      const totalSql = `
+        SELECT COUNT(mrm.measurement_id) AS totalMeasurement
+        FROM patient_master pm
+        LEFT JOIN measurement_master mrm 
+          ON pm.user_id = mrm.user_id 
+          AND mrm.delete_flag = 0
+        WHERE pm.doctor_id = ? 
+        AND pm.delete_flag = 0
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+
         if (err) {
-          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
         }
-        return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalmeasurement: result[0].report_count })
-      })
+
+        const totalMeasurement = totalRes[0].totalMeasurement;
+
+        // ================= CURRENT WEEK =================
+        const currentWeekSql = `
+          SELECT COUNT(mrm.measurement_id) AS currentWeek
+          FROM patient_master pm
+          LEFT JOIN measurement_master mrm 
+            ON pm.user_id = mrm.user_id 
+            AND mrm.delete_flag = 0
+          WHERE pm.doctor_id = ?
+          AND pm.delete_flag = 0
+          AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        `;
+
+        connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
+
+          if (err) {
+            return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+          }
+
+          const currentWeek = currentRes[0].currentWeek;
+
+          // ================= LAST WEEK =================
+          const lastWeekSql = `
+            SELECT COUNT(mrm.measurement_id) AS lastWeek
+            FROM patient_master pm
+            LEFT JOIN measurement_master mrm 
+              ON pm.user_id = mrm.user_id 
+              AND mrm.delete_flag = 0
+            WHERE pm.doctor_id = ?
+            AND pm.delete_flag = 0
+            AND mrm.createtime BETWEEN 
+              DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+              AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          `;
+
+          connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
+
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+            }
+
+            const lastWeek = lastRes[0].lastWeek;
+
+            // ================= GROWTH =================
+            let growth = 0;
+
+            if (lastWeek === 0) {
+              growth = currentWeek > 0 ? 100 : 0;
+            } else {
+              growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+            }
+
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              totalMeasurement: totalMeasurement,
+              currentWeekMeasurement: currentWeek,
+              lastWeekMeasurement: lastWeek,
+              measurementGrowth: growth.toFixed(2)
+            });
+
+          });
+
+        });
+
+      });
     })
 
   } catch (error) {
@@ -3533,84 +3926,192 @@ const getAdverseofPatient = async (request, response) => {
 };
 
 // API grpa
-const dashboardGraphs = async (req,res)=>{
-  // exports.dashboardGraphs = async (req, res) => {
+// const dashboardGraphs = async (req,res)=>{
+//   // exports.dashboardGraphs = async (req, res) => {
+//   try {
+
+//     const monthlyQuery = `
+//       SELECT 
+//         DATE_FORMAT(createtime,'%b') as month,
+//         COUNT(*) as total 
+//       FROM patient_master
+//       WHERE delete_flag = 0 AND doctor_id = ?
+//       GROUP BY MONTH(createtime)
+//       ORDER BY MONTH(createtime)
+//     `;
+
+//     const genderQuery = `
+//      SELECT 
+//         CASE
+//           WHEN gender = 1 THEN 'Male'
+//           WHEN gender = 2 THEN 'Female'
+//           WHEN gender = 3 THEN 'Other'
+//           ELSE 'Unknown'
+//         END as gender,
+//         COUNT(*) as total
+//       FROM user_master
+//       WHERE delete_flag = 0
+//       AND doctor_id = ?
+//       GROUP BY gender
+//     `;
+
+//     const ageQuery = `
+//       SELECT 
+//         CASE
+//           WHEN age BETWEEN 0 AND 10 THEN '0-10'
+//           WHEN age BETWEEN 11 AND 20 THEN '11-20'
+//           WHEN age BETWEEN 21 AND 30 THEN '21-30'
+//           WHEN age BETWEEN 31 AND 40 THEN '31-40'
+//           WHEN age BETWEEN 31 AND 40 THEN '41-50'
+//           ELSE '51+'
+//         END as age_group,
+//         COUNT(*) as total
+//       FROM user_master
+//       WHERE delete_flag = 0
+//       AND doctor_id = ?
+//       GROUP BY age_group
+//     `;
+
+//     connection.query(monthlyQuery, (err, monthly) => {
+
+//       if (err) return res.json({ status:false, error: err });
+
+//       connection.query(genderQuery, (err, gender) => {
+
+//         if (err) return res.json({ status:false, error: err });
+
+//         connection.query(ageQuery, (err, age) => {
+
+//           if (err) return res.json({ status:false, error: err });
+
+//           res.json({
+//             status: true,
+//             message: "Dashboard data fetched",
+//             monthlyPatients: monthly,
+//             genderPercentage: gender,
+//             ageGroups: age
+//           });
+
+//         });
+
+//       });
+
+//     });
+
+//   } catch (error) {
+//     console.log(error);
+//     res.json({
+//       status:false,
+//       message:"Server error"
+//     });
+//   }
+// };
+
+const dashboardGraphs = async (req, res) => {
   try {
+    const doctor_id = req.doctor_id;
 
-    const monthlyQuery = `
-      SELECT 
-        DATE_FORMAT(createtime,'%b') as month,
-        COUNT(*) as total 
-      FROM patient_master
-      WHERE delete_flag = 0
-      GROUP BY MONTH(createtime)
-      ORDER BY MONTH(createtime)
+    if (!doctor_id) {
+      return res.status(200).json({
+        status: false,
+        msg: "doctor_id missing"
+      });
+    }
+
+    //  check doctor
+    const checksql = `
+      SELECT doctor_id FROM doctor_master 
+      WHERE doctor_id = ? AND delete_flag = 0
     `;
 
-    const genderQuery = `
-     SELECT 
-        CASE
-          WHEN gender = 1 THEN 'Male'
-          WHEN gender = 2 THEN 'Female'
-          WHEN gender = 3 THEN 'Other'
-          ELSE 'Unknown'
-        END as gender,
-        COUNT(*) as total
-      FROM user_master
-      WHERE delete_flag = 0
-      GROUP BY gender
-    `;
+    connection.query(checksql, [doctor_id], (err, check) => {
+      if (err) {
+        return res.json({ status: false, error: err.message });
+      }
 
-    const ageQuery = `
-      SELECT 
-        CASE
-          WHEN age BETWEEN 0 AND 10 THEN '0-10'
-          WHEN age BETWEEN 11 AND 20 THEN '11-20'
-          WHEN age BETWEEN 21 AND 30 THEN '21-30'
-          WHEN age BETWEEN 31 AND 40 THEN '31-40'
-          ELSE '40+'
-        END as age_group,
-        COUNT(*) as total
-      FROM user_master
-      WHERE delete_flag = 0
-      GROUP BY age_group
-    `;
+      if (check.length === 0) {
+        return res.json({ status: true, msg: "No data found" });
+      }
 
-    connection.query(monthlyQuery, (err, monthly) => {
+      //  Monthly Patients
+      const monthlyQuery = `
+        SELECT 
+          DATE_FORMAT(p.createtime,'%b') as month,
+          COUNT(*) as total
+        FROM patient_master p
+        WHERE p.delete_flag = 0 
+        AND p.doctor_id = ?
+        GROUP BY MONTH(p.createtime)
+        ORDER BY MONTH(p.createtime)
+      `;
 
-      if (err) return res.json({ status:false, error: err });
+      //  Gender (JOIN)
+      const genderQuery = `
+        SELECT 
+          CASE
+            WHEN u.gender = 1 THEN 'Male'
+            WHEN u.gender = 2 THEN 'Female'
+            WHEN u.gender = 3 THEN 'Other'
+            ELSE 'Unknown'
+          END as gender,
+          COUNT(*) as total
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.delete_flag = 0
+        AND p.doctor_id = ?
+        GROUP BY gender
+      `;
 
-      connection.query(genderQuery, (err, gender) => {
+      //  Age Group (JOIN)
+      const ageQuery = `
+        SELECT 
+          CASE
+            WHEN u.age BETWEEN 0 AND 10 THEN '0-10'
+            WHEN u.age BETWEEN 11 AND 20 THEN '11-20'
+            WHEN u.age BETWEEN 21 AND 30 THEN '21-30'
+            WHEN u.age BETWEEN 31 AND 40 THEN '31-40'
+            WHEN u.age BETWEEN 41 AND 50 THEN '41-50'
+            ELSE '51+'
+          END as age_group,
+          COUNT(*) as total
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.delete_flag = 0
+        AND p.doctor_id = ?
+        GROUP BY age_group
+      `;
 
-        if (err) return res.json({ status:false, error: err });
+      //  execute queries
+      connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
+        if (err) return res.json({ status: false, error: err.message });
 
-        connection.query(ageQuery, (err, age) => {
+        connection.query(genderQuery, [doctor_id], (err, gender) => {
+          if (err) return res.json({ status: false, error: err.message });
 
-          if (err) return res.json({ status:false, error: err });
+          connection.query(ageQuery, [doctor_id], (err, age) => {
+            if (err) return res.json({ status: false, error: err.message });
 
-          res.json({
-            status: true,
-            message: "Dashboard data fetched",
-            monthlyPatients: monthly,
-            genderPercentage: gender,
-            ageGroups: age
+            return res.json({
+              status: true,
+              message: "Doctor-wise graph data",
+              monthlyPatients: monthly,
+              genderPercentage: gender,
+              ageGroups: age
+            });
           });
-
         });
-
       });
 
     });
 
   } catch (error) {
     console.log(error);
-    res.json({
-      status:false,
-      message:"Server error"
+    return res.json({
+      status: false,
+      message: "Server error"
     });
   }
 };
-
 
 
 
