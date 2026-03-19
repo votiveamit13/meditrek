@@ -1585,7 +1585,7 @@ const getPatientsDetails = async (req, res) => {
       // Step 2: Get patient details
       const patientsql = `
         SELECT 
-          um.user_id, um.email, um.user_unique_id, um.name, um.mobile, um.image, um.address, um.dob, um.weight, um.height, um.diseases,
+          um.user_id, um.email, um.user_unique_id, um.name, um.mobile, um.image, um.address, um.dob, um.weight, um.height, um.diseases,um.gender,
           um.createtime, um.updatetime, um.active_flag, rsm.information_type 
         FROM user_master AS um LEFT JOIN report_share_master AS rsm ON um.user_id = rsm.user_id
         WHERE um.user_id = ?
@@ -1613,6 +1613,7 @@ const getPatientsDetails = async (req, res) => {
           address: data.address,
           dob: moment(data.dob).format("YYYY-MM-DD"),
           age: moment().diff(moment(data.dob), 'years'),
+           gender: data.gender, 
           weight: data.weight,
           height: data.height,
           information_type: data.information_type,
