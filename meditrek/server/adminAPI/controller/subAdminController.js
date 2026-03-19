@@ -873,9 +873,15 @@ const subAdminDashboard = async (req, res) => {
 
               const lastWeek = lastRes[0].lastWeek;
 
-              let growth = 0;
+             let growth = 0;
 
-              if (lastWeek > 0) {
+              if (lastWeek === 0) {
+                if (currentWeek > 0) {
+                  growth = 100; // full growth 🚀
+                } else {
+                  growth = 0;
+                }
+              } else {
                 growth = ((currentWeek - lastWeek) / lastWeek) * 100;
               }
 
@@ -955,15 +961,25 @@ const medicationDashboard = async (req, res) => {
           const totalMedication = totalRes[0].totalMedication;
 
           // ================= CURRENT WEEK =================
+          // const currentWeekSql = `
+          //   SELECT COUNT(mm.medication_id) AS currentWeek
+          //   FROM patient_master pm
+          //   LEFT JOIN medication_master mm 
+          //     ON pm.user_id = mm.user_id 
+          //     AND mm.delete_flag = 0
+          //   WHERE pm.doctor_id = ?
+          //   AND pm.delete_flag = 0
+          //   AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          // `;
           const currentWeekSql = `
             SELECT COUNT(mm.medication_id) AS currentWeek
             FROM patient_master pm
             LEFT JOIN medication_master mm 
               ON pm.user_id = mm.user_id 
               AND mm.delete_flag = 0
+              AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             WHERE pm.doctor_id = ?
             AND pm.delete_flag = 0
-            AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
           `;
 
           connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
@@ -975,17 +991,29 @@ const medicationDashboard = async (req, res) => {
             const currentWeek = currentRes[0].currentWeek;
 
             // ================= LAST WEEK =================
+            // const lastWeekSql = `
+            //   SELECT COUNT(mm.medication_id) AS lastWeek
+            //   FROM patient_master pm
+            //   LEFT JOIN medication_master mm 
+            //     ON pm.user_id = mm.user_id 
+            //     AND mm.delete_flag = 0
+            //   WHERE pm.doctor_id = ?
+            //   AND pm.delete_flag = 0
+            //   AND mm.createtime BETWEEN 
+            //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            // `;
             const lastWeekSql = `
               SELECT COUNT(mm.medication_id) AS lastWeek
               FROM patient_master pm
               LEFT JOIN medication_master mm 
                 ON pm.user_id = mm.user_id 
                 AND mm.delete_flag = 0
+                AND mm.createtime BETWEEN 
+                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
               WHERE pm.doctor_id = ?
               AND pm.delete_flag = 0
-              AND mm.createtime BETWEEN 
-                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             `;
 
             connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
@@ -999,11 +1027,12 @@ const medicationDashboard = async (req, res) => {
               // ================= GROWTH =================
               let growth = 0;
 
-              if (lastWeek === 0) {
-                growth = currentWeek > 0 ? 100 : 0;
-              } else {
-                growth = ((currentWeek - lastWeek) / lastWeek) * 100;
-              }
+            if (lastWeek === 0) {
+              growth = currentWeek > 0 ? 100 : 0;
+            } else {
+              growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+            }
+              
 
               return res.status(200).json({
                 success: true,
@@ -1069,15 +1098,25 @@ const adverseDashboard = async (req, res) => {
           const totalAdverseReaction = totalRes[0].totalAdverseReaction;
 
           // ================= CURRENT WEEK =================
+          // const currentWeekSql = `
+          //   SELECT COUNT(asm.adverse_reaction_id) AS currentWeek
+          //   FROM patient_master pm
+          //   LEFT JOIN adverse_reaction_master asm 
+          //     ON pm.user_id = asm.user_id 
+          //     AND asm.delete_flag = 0
+          //   WHERE pm.doctor_id = ?
+          //   AND pm.delete_flag = 0
+          //   AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          // `;
           const currentWeekSql = `
             SELECT COUNT(asm.adverse_reaction_id) AS currentWeek
             FROM patient_master pm
             LEFT JOIN adverse_reaction_master asm 
               ON pm.user_id = asm.user_id 
               AND asm.delete_flag = 0
+              AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             WHERE pm.doctor_id = ?
             AND pm.delete_flag = 0
-            AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
           `;
 
           connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
@@ -1089,17 +1128,29 @@ const adverseDashboard = async (req, res) => {
             const currentWeek = currentRes[0].currentWeek;
 
             // ================= LAST WEEK =================
+            // const lastWeekSql = `
+            //   SELECT COUNT(asm.adverse_reaction_id) AS lastWeek
+            //   FROM patient_master pm
+            //   LEFT JOIN adverse_reaction_master asm 
+            //     ON pm.user_id = asm.user_id 
+            //     AND asm.delete_flag = 0
+            //   WHERE pm.doctor_id = ?
+            //   AND pm.delete_flag = 0
+            //   AND asm.createtime BETWEEN 
+            //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+            //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            // `;
             const lastWeekSql = `
               SELECT COUNT(asm.adverse_reaction_id) AS lastWeek
               FROM patient_master pm
               LEFT JOIN adverse_reaction_master asm 
                 ON pm.user_id = asm.user_id 
                 AND asm.delete_flag = 0
+                AND asm.createtime BETWEEN 
+                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
               WHERE pm.doctor_id = ?
               AND pm.delete_flag = 0
-              AND asm.createtime BETWEEN 
-                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
             `;
 
             connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
@@ -1112,6 +1163,7 @@ const adverseDashboard = async (req, res) => {
 
               // ================= GROWTH =================
               let growth = 0;
+
 
               if (lastWeek === 0) {
                 growth = currentWeek > 0 ? 100 : 0;
@@ -1183,15 +1235,25 @@ const labReportDashboard = async (req, res) => {
         const totalLabReports = totalRes[0].totalLabReports;
 
         // ================= CURRENT WEEK =================
+        // const currentWeekSql = `
+        //   SELECT COUNT(mrm.medical_report_id) AS currentWeek
+        //   FROM patient_master pm
+        //   LEFT JOIN medical_report_master mrm 
+        //     ON pm.user_id = mrm.user_id 
+        //     AND mrm.delete_flag = 0
+        //   WHERE pm.doctor_id = ?
+        //   AND pm.delete_flag = 0
+        //   AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        // `;
         const currentWeekSql = `
           SELECT COUNT(mrm.medical_report_id) AS currentWeek
           FROM patient_master pm
           LEFT JOIN medical_report_master mrm 
             ON pm.user_id = mrm.user_id 
             AND mrm.delete_flag = 0
+            AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
           WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
-          AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
         `;
 
         connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
@@ -1203,18 +1265,31 @@ const labReportDashboard = async (req, res) => {
           const currentWeek = currentRes[0].currentWeek;
 
           // ================= LAST WEEK =================
+          // const lastWeekSql = `
+          //   SELECT COUNT(mrm.medical_report_id) AS lastWeek
+          //   FROM patient_master pm
+          //   LEFT JOIN medical_report_master mrm 
+          //     ON pm.user_id = mrm.user_id 
+          //     AND mrm.delete_flag = 0
+          //   WHERE pm.doctor_id = ?
+          //   AND pm.delete_flag = 0
+          //   AND mrm.createtime BETWEEN 
+          //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+          //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          // `;
+
           const lastWeekSql = `
-            SELECT COUNT(mrm.medical_report_id) AS lastWeek
-            FROM patient_master pm
-            LEFT JOIN medical_report_master mrm 
-              ON pm.user_id = mrm.user_id 
-              AND mrm.delete_flag = 0
-            WHERE pm.doctor_id = ?
-            AND pm.delete_flag = 0
-            AND mrm.createtime BETWEEN 
-              DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-              AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-          `;
+              SELECT COUNT(mrm.medical_report_id) AS lastWeek
+              FROM patient_master pm
+              LEFT JOIN medical_report_master mrm 
+                ON pm.user_id = mrm.user_id 
+                AND mrm.delete_flag = 0
+                AND mrm.createtime BETWEEN 
+                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              WHERE pm.doctor_id = ?
+              AND pm.delete_flag = 0
+            `;
 
           connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
 
@@ -1227,7 +1302,7 @@ const labReportDashboard = async (req, res) => {
             // ================= GROWTH =================
             let growth = 0;
 
-            if (lastWeek === 0) {
+           if (lastWeek === 0) {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
@@ -1278,7 +1353,7 @@ const measurementDashboard = async (req, res) => {
       //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalmeasurement: result[0].report_count })
       // })// ================= TOTAL =================
       const totalSql = `
-        SELECT COUNT(mrm.measurement_id) AS totalMeasurement
+        SELECT COUNT(mrm.measurement_id) AS totalmeasurement
         FROM patient_master pm
         LEFT JOIN measurement_master mrm 
           ON pm.user_id = mrm.user_id 
@@ -1293,18 +1368,28 @@ const measurementDashboard = async (req, res) => {
           return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
         }
 
-        const totalMeasurement = totalRes[0].totalMeasurement;
+        const totalmeasurement = totalRes[0].totalmeasurement;
 
         // ================= CURRENT WEEK =================
+        // const currentWeekSql = `
+        //   SELECT COUNT(mrm.measurement_id) AS currentWeek
+        //   FROM patient_master pm
+        //   LEFT JOIN measurement_master mrm 
+        //     ON pm.user_id = mrm.user_id 
+        //     AND mrm.delete_flag = 0
+        //   WHERE pm.doctor_id = ?
+        //   AND pm.delete_flag = 0
+        //   AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        // `;
         const currentWeekSql = `
           SELECT COUNT(mrm.measurement_id) AS currentWeek
           FROM patient_master pm
           LEFT JOIN measurement_master mrm 
             ON pm.user_id = mrm.user_id 
             AND mrm.delete_flag = 0
+            AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
           WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
-          AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
         `;
 
         connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
@@ -1316,18 +1401,31 @@ const measurementDashboard = async (req, res) => {
           const currentWeek = currentRes[0].currentWeek;
 
           // ================= LAST WEEK =================
+          // const lastWeekSql = `
+          //   SELECT COUNT(mrm.measurement_id) AS lastWeek
+          //   FROM patient_master pm
+          //   LEFT JOIN measurement_master mrm 
+          //     ON pm.user_id = mrm.user_id 
+          //     AND mrm.delete_flag = 0
+          //   WHERE pm.doctor_id = ?
+          //   AND pm.delete_flag = 0
+          //   AND mrm.createtime BETWEEN 
+          //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+          //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          // `;
+
           const lastWeekSql = `
-            SELECT COUNT(mrm.measurement_id) AS lastWeek
-            FROM patient_master pm
-            LEFT JOIN measurement_master mrm 
-              ON pm.user_id = mrm.user_id 
-              AND mrm.delete_flag = 0
-            WHERE pm.doctor_id = ?
-            AND pm.delete_flag = 0
-            AND mrm.createtime BETWEEN 
-              DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-              AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-          `;
+              SELECT COUNT(mrm.measurement_id) AS lastWeek
+              FROM patient_master pm
+              LEFT JOIN measurement_master mrm 
+                ON pm.user_id = mrm.user_id 
+                AND mrm.delete_flag = 0
+                AND mrm.createtime BETWEEN 
+                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              WHERE pm.doctor_id = ?
+              AND pm.delete_flag = 0
+            `;
 
           connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
 
@@ -1340,7 +1438,7 @@ const measurementDashboard = async (req, res) => {
             // ================= GROWTH =================
             let growth = 0;
 
-            if (lastWeek === 0) {
+           if (lastWeek === 0) {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
@@ -1349,7 +1447,7 @@ const measurementDashboard = async (req, res) => {
             return res.status(200).json({
               success: true,
               msg: languageMessages.msgDataFound,
-              totalMeasurement: totalMeasurement,
+              totalmeasurement: totalmeasurement,
               currentWeekMeasurement: currentWeek,
               lastWeekMeasurement: lastWeek,
               measurementGrowth: growth.toFixed(2)
