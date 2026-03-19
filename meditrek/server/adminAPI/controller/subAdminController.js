@@ -1460,375 +1460,146 @@ const getAllPatients = async (req, res) => {
 //   }
 // }
 
-// const getPatientsDetails = async (req, res) => {
-//   const doctor_id = req.doctor_id;
-//   const { user_id } = req.query;
-
-//   try {
-//     if (!doctor_id) {
-//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
-//     }
-
-//     if (!user_id) {
-//       return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
-//     }
-
-//     // Step 1: Validate doctor
-//     const checksql = "SELECT doctor_id, doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
-//     connection.query(checksql, [doctor_id], async (err, doctorCheck) => {
-//       if (err) {
-//         return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-//       }
-
-//       if (doctorCheck.length === 0) {
-//         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
-//       }
-
-//       // Step 2: Check if patient is shared with doctor
-// // const shareCheckSql = `
-// //   SELECT user_id 
-// //   FROM report_share_master 
-// //   WHERE doctor_id = ? 
-// //   AND user_id = ?
-// //   AND delete_flag = 0
-// //   LIMIT 1
-// // `;
-
-// connection.query( [doctor_id, user_id], (err, shareRes) => {
-
-//   if (err) {
-//     return res.status(200).json({
-//       success: false,
-//       msg: languageMessages.internalServerError,
-//       err: err.message
-//     });
-//   }
-
-//   // agar patient doctor ko share nahi hai
-//   if (shareRes.length === 0) {
-//     return res.status(200).json({
-//       success: false,
-//       msg: "Patient not found"
-//     });
-//   }
-
-//       // Step 2: Get patient details
-//    const patientsql = `
-//   SELECT DISTINCT
-//     um.user_id, um.email, um.user_unique_id, um.name, um.mobile,
-//     um.image, um.address, um.dob, um.weight, um.height, um.diseases,
-//     um.createtime, um.updatetime, um.active_flag
-//   FROM user_master um
-//   INNER JOIN report_share_master rs
-//     ON um.user_id = rs.user_id
-//   WHERE um.user_id = ?
-//   AND um.delete_flag = 0
-//   AND rs.doctor_id = ?
-//   AND rs.delete_flag = 0
-//   LIMIT 1
-// `;
-
-//       connection.query(patientsql, [doctor_id, user_id], async (err, patientRes) => {
-         
-//         if (err) {
-//           return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-//         }
-
-//         if (patientRes.length === 0) {
-//           return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patienDetails: "NA" });
-//         }
-
-//         const data = patientRes[0];
-//         const diseasesIds = data.diseases;
-
-//         const patient = {
-//           user_id: data.user_id,
-//           email: data.email,
-//           user_unique_id: data.user_unique_id,
-//           name: data.name,
-//           mobile: data.mobile,
-//           image: data.image,
-//           address: data.address,
-//           dob: moment(data.dob).format("YYYY-MM-DD"),
-//           age: moment().diff(moment(data.dob), 'years'),
-//           weight: data.weight,
-//           height: data.height,
-//           information_type: data.information_type,
-//           active_flag: data.active_flag,
-//           diseaseName: data.diseases,
-//           createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
-//           updatetime: moment(data.updatetime).format("DD-MM-YYYY hh:mm A"),
-//           disease_names: ""
-//         };
-
-//         // Step 3: If diseases exist, fetch names
-//         if (diseasesIds) {
-//           const diseaseQuery = `
-//             SELECT GROUP_CONCAT(disease_name SEPARATOR ', ') AS disease_names 
-//             FROM disease_master 
-//             WHERE FIND_IN_SET(disease_id, ?)
-//           `;
-//           connection.query(diseaseQuery, [diseasesIds], (err, diseaseRes) => {
-//             if (!err && diseaseRes.length > 0) {
-//               patient.disease_names = diseaseRes[0].disease_names || "";
-//             }
-
-//             // Step 4: Get reports
-//             const reportsql = `
-//               SELECT 
-//                 mr.medical_report_id, mr.createtime, mr.file,
-//                 rc.report_category_id, rc.category_name 
-//               FROM medical_report_master mr
-//               JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
-//               JOIN report_category rc ON rc.report_category_id = mr.report_category_id
-//               WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
-//               ORDER BY mr.medical_report_id DESC
-//             `;
-
-//             connection.query(reportsql, [doctor_id, user_id], (err, report) => {
-//               if (err) {
-//                 return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-//               }
-
-//               report.forEach(r => {
-//                 r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
-//               });
-
-//               return res.status(200).json({
-//                 success: true,
-//                 msg: languageMessages.msgDataFound,
-//                 patienDetails: patient,
-//                 report: report.length > 0 ? report : "NA"
-//               });
-//             });
-//           });
-//         } else {
-//           // No diseases, proceed to report
-//           const reportsql = `
-//             SELECT 
-//               mr.medical_report_id, mr.createtime, mr.file,
-//               rc.report_category_id, rc.category_name 
-//             FROM medical_report_master mr
-//             JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
-//             JOIN report_category rc ON rc.report_category_id = mr.report_category_id
-//             WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
-//             ORDER BY mr.medical_report_id DESC
-//           `;
-
-//           connection.query(reportsql, [doctor_id, user_id], (err, report) => {
-//             if (err) {
-//               return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-//             }
-
-//             report.forEach(r => {
-//               r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
-//             });
-
-//             return res.status(200).json({
-//               success: true,
-//               msg: languageMessages.msgDataFound,
-//               patienDetails: patient,
-//               report: report.length > 0 ? report : "NA"
-//             });
-//           });
-//         }
-//       });
-//     });
-//     });
-//   } catch (error) {
-//     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
-//   }
-// };
 const getPatientsDetails = async (req, res) => {
   const doctor_id = req.doctor_id;
   const { user_id } = req.query;
 
   try {
-    // 🔹 Validate Inputs
     if (!doctor_id) {
-      return res.status(400).json({
-        success: false,
-        msg: "Doctor not found",
-      });
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
     }
 
     if (!user_id) {
-      return res.status(400).json({
-        success: false,
-        msg: "User id required",
-      });
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
     }
 
-    // 🔹 Step 1: Check Doctor
-    const doctorSql = `
-      SELECT doctor_id 
-      FROM doctor_master 
-      WHERE doctor_id = ? 
-      AND delete_flag = 0
-      LIMIT 1
-    `;
-
-    connection.query(doctorSql, [doctor_id], (err, doctorResult) => {
+    // Step 1: Validate doctor
+    const checksql = "SELECT doctor_id, doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
+    connection.query(checksql, [doctor_id], async (err, doctorCheck) => {
       if (err) {
-        return res.status(500).json({
-          success: false,
-          msg: "Internal server error",
-          err: err.message,
-        });
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
       }
 
-      if (doctorResult.length === 0) {
-        return res.status(404).json({
-          success: false,
-          msg: "Doctor not found",
-        });
+      if (doctorCheck.length === 0) {
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
       }
 
-      // 🔹 Step 2: Get Patient (WITH SECURITY JOIN)
+      // Step 2: Get patient details
       const patientsql = `
-        SELECT DISTINCT
-          um.user_id,
-          um.email,
-          um.user_unique_id,
-          um.name,
-          um.mobile,
-          um.image,
-          um.address,
-          um.dob,
-          um.weight,
-          um.height,
-          um.diseases,
-          um.createtime,
-          um.updatetime,
-          um.active_flag,
-          rs.information_type
-        FROM user_master um
-        INNER JOIN patient_master pm
-          ON pm.user_id = um.user_id
-          AND pm.doctor_id = ?
-          AND pm.delete_flag = 0
-          AND pm.patient_id = (
-            SELECT MAX(patient_id)
-            FROM patient_master
-            WHERE user_id = um.user_id
-            AND doctor_id = ?
-            AND delete_flag = 0
-          )
-        INNER JOIN report_share_master rs
-          ON rs.user_id = um.user_id
-          AND rs.doctor_id = ?
-          AND rs.delete_flag = 0
+        SELECT 
+          um.user_id, um.email, um.user_unique_id, um.name, um.mobile, um.image, um.address, um.dob, um.weight, um.height, um.diseases,
+          um.createtime, um.updatetime, um.active_flag, rsm.information_type 
+        FROM user_master AS um LEFT JOIN report_share_master AS rsm ON um.user_id = rsm.user_id
         WHERE um.user_id = ?
-        AND um.delete_flag = 0
-        LIMIT 1
       `;
 
-      connection.query(
-        patientsql,
-        [doctor_id, doctor_id, doctor_id, user_id],
-        (err, patientRes) => {
-          if (err) {
-            return res.status(500).json({
-              success: false,
-              msg: "Internal server error",
-              err: err.message,
-            });
-          }
+      connection.query(patientsql, [user_id], async (err, patientRes) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+        }
 
-          //  If not shared OR deleted → Block access
-          if (patientRes.length === 0) {
-            return res.status(404).json({
-              success: false,
-              msg: "Patient not found or access denied",
-            });
-          }
+        if (patientRes.length === 0) {
+          return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, patienDetails: "NA" });
+        }
 
-          const data = patientRes[0];
+        const data = patientRes[0];
+        const diseasesIds = data.diseases;
 
-          // 🔹 Format Patient Object
-          const patient = {
-            user_id: data.user_id,
-            email: data.email,
-            user_unique_id: data.user_unique_id,
-            name: data.name,
-            mobile: data.mobile,
-            image: data.image,
-            address: data.address,
-            dob: data.dob
-              ? moment(data.dob).format("YYYY-MM-DD")
-              : null,
-            age: data.dob
-              ? moment().diff(moment(data.dob), "years")
-              : null,
-            weight: data.weight,
-            height: data.height,
-            information_type: data.information_type,
-            active_flag: data.active_flag,
-            disease_names: "",
-            createtime: data.createtime
-              ? moment(data.createtime).format("DD-MM-YYYY hh:mm A")
-              : null,
-            updatetime: data.updatetime
-              ? moment(data.updatetime).format("DD-MM-YYYY hh:mm A")
-              : null,
-          };
-          console.log("PATIENT RESPONSE:", patient);
+        const patient = {
+          user_id: data.user_id,
+          email: data.email,
+          user_unique_id: data.user_unique_id,
+          name: data.name,
+          mobile: data.mobile,
+          image: data.image,
+          address: data.address,
+          dob: moment(data.dob).format("YYYY-MM-DD"),
+          age: moment().diff(moment(data.dob), 'years'),
+          weight: data.weight,
+          height: data.height,
+          information_type: data.information_type,
+          active_flag: data.active_flag,
+          diseaseName: data.diseases,
+          createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+          updatetime: moment(data.updatetime).format("DD-MM-YYYY hh:mm A"),
+          disease_names: ""
+        };
 
-          // 🔹 Step 3: Get Reports
-          const reportSql = `
-            SELECT 
-              mr.medical_report_id,
-              mr.createtime,
-              mr.file,
-              rc.category_name
-            FROM medical_report_master mr
-            INNER JOIN report_share_master rs
-              ON rs.medical_report_id = mr.medical_report_id
-            INNER JOIN report_category rc
-              ON rc.report_category_id = mr.report_category_id
-            WHERE rs.doctor_id = ?
-            AND rs.user_id = ?
-            AND mr.delete_flag = 0
-            ORDER BY mr.medical_report_id DESC
+        // Step 3: If diseases exist, fetch names
+        if (diseasesIds) {
+          const diseaseQuery = `
+            SELECT GROUP_CONCAT(disease_name SEPARATOR ', ') AS disease_names 
+            FROM disease_master 
+            WHERE FIND_IN_SET(disease_id, ?)
           `;
+          connection.query(diseaseQuery, [diseasesIds], (err, diseaseRes) => {
+            if (!err && diseaseRes.length > 0) {
+              patient.disease_names = diseaseRes[0].disease_names || "";
+            }
 
-          connection.query(
-            reportSql,
-            [doctor_id, user_id],
-            (err, reports) => {
+            // Step 4: Get reports
+            const reportsql = `
+              SELECT 
+                mr.medical_report_id, mr.createtime, mr.file,
+                rc.report_category_id, rc.category_name 
+              FROM medical_report_master mr
+              JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
+              JOIN report_category rc ON rc.report_category_id = mr.report_category_id
+              WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
+              ORDER BY mr.medical_report_id DESC
+            `;
+
+            connection.query(reportsql, [doctor_id, user_id], (err, report) => {
               if (err) {
-                return res.status(500).json({
-                  success: false,
-                  msg: "Internal server error",
-                  err: err.message,
-                });
+                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
               }
 
-              if (reports.length > 0) {
-                reports.forEach((r) => {
-                  r.createtime = moment(r.createtime).format(
-                    "YYYY-MM-DD HH:mm:ss"
-                  );
-                });
-              }
+              report.forEach(r => {
+                r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
+              });
 
               return res.status(200).json({
                 success: true,
-                msg: "Data found",
+                msg: languageMessages.msgDataFound,
                 patienDetails: patient,
-                report: reports.length > 0 ? reports : "NA",
+                report: report.length > 0 ? report : "NA"
               });
+            });
+          });
+        } else {
+          // No diseases, proceed to report
+          const reportsql = `
+            SELECT 
+              mr.medical_report_id, mr.createtime, mr.file,
+              rc.report_category_id, rc.category_name 
+            FROM medical_report_master mr
+            JOIN report_share_master rs ON rs.medical_report_id = mr.medical_report_id
+            JOIN report_category rc ON rc.report_category_id = mr.report_category_id
+            WHERE rs.doctor_id = ? AND rs.user_id = ? AND mr.delete_flag = 0
+            ORDER BY mr.medical_report_id DESC
+          `;
+
+          connection.query(reportsql, [doctor_id, user_id], (err, report) => {
+            if (err) {
+              return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
             }
-          );
+
+            report.forEach(r => {
+              r.createtime = moment(r.createtime).format("YYYY-MM-DD HH:mm:ss");
+            });
+
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              patienDetails: patient,
+              report: report.length > 0 ? report : "NA"
+            });
+          });
         }
-      );
+      });
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      msg: "Internal server error",
-      err: error.message,
-    });
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
   }
 };
 //get medications 
@@ -4063,23 +3834,25 @@ const dashboardGraphs = async (req, res) => {
       `;
 
       //  Age Group (JOIN)
-      const ageQuery = `
-        SELECT 
-          CASE
-            WHEN u.age BETWEEN 0 AND 10 THEN '0-10'
-            WHEN u.age BETWEEN 11 AND 20 THEN '11-20'
-            WHEN u.age BETWEEN 21 AND 30 THEN '21-30'
-            WHEN u.age BETWEEN 31 AND 40 THEN '31-40'
-            WHEN u.age BETWEEN 41 AND 50 THEN '41-50'
-            ELSE '51+'
-          END as age_group,
-          COUNT(*) as total
-        FROM patient_master p
-        JOIN user_master u ON u.user_id = p.user_id
-        WHERE p.delete_flag = 0
-        AND p.doctor_id = ?
-        GROUP BY age_group
-      `;
+     const ageQuery = `
+      SELECT 
+        CASE
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 10 THEN '0-10'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 11 AND 20 THEN '11-20'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 21 AND 30 THEN '21-30'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 40 THEN '31-40'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 50 THEN '41-50'
+          ELSE '51+'
+        END as age_group,
+        COUNT(*) as total
+      FROM patient_master p
+      JOIN user_master u ON u.user_id = p.user_id
+      WHERE p.delete_flag = 0
+      AND p.doctor_id = ?
+      AND u.dob IS NOT NULL
+      GROUP BY age_group
+      ORDER BY age_group
+    `;
 
       //  execute queries
       connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
