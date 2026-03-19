@@ -3834,23 +3834,25 @@ const dashboardGraphs = async (req, res) => {
       `;
 
       //  Age Group (JOIN)
-      const ageQuery = `
-        SELECT 
-          CASE
-            WHEN u.age BETWEEN 0 AND 10 THEN '0-10'
-            WHEN u.age BETWEEN 11 AND 20 THEN '11-20'
-            WHEN u.age BETWEEN 21 AND 30 THEN '21-30'
-            WHEN u.age BETWEEN 31 AND 40 THEN '31-40'
-            WHEN u.age BETWEEN 41 AND 50 THEN '41-50'
-            ELSE '51+'
-          END as age_group,
-          COUNT(*) as total
-        FROM patient_master p
-        JOIN user_master u ON u.user_id = p.user_id
-        WHERE p.delete_flag = 0
-        AND p.doctor_id = ?
-        GROUP BY age_group
-      `;
+     const ageQuery = `
+      SELECT 
+        CASE
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 10 THEN '0-10'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 11 AND 20 THEN '11-20'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 21 AND 30 THEN '21-30'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 40 THEN '31-40'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 50 THEN '41-50'
+          ELSE '51+'
+        END as age_group,
+        COUNT(*) as total
+      FROM patient_master p
+      JOIN user_master u ON u.user_id = p.user_id
+      WHERE p.delete_flag = 0
+      AND p.doctor_id = ?
+      AND u.dob IS NOT NULL
+      GROUP BY age_group
+      ORDER BY age_group
+    `;
 
       //  execute queries
       connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
