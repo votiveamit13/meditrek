@@ -4245,5 +4245,5 @@ const getNotificationHistory = (req, res) => {
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory, 
 }

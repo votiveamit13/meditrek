@@ -6486,9 +6486,193 @@ const saveLanguages = (req, res) => {
       }
     );
   };
+      // post api 
+  const getAllInsightsPosts = (req, res) => {
+      try {
+        const sql = `
+          SELECT * FROM newInsights_posts
+          ORDER BY id DESC
+        `;
 
+        connection.query(sql, (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.json({
+              success: false,
+              msg: 'DB Error'
+            });
+          }
 
+          return res.json({
+            success: true,
+            data: result
+          });
+        });
 
+      } catch (error) {
+        console.error(error);
+        return res.json({
+          success: false,
+          msg: 'Server error'
+        });
+      }
+    };
+
+    const createPost = (req, res) => {
+    try {
+      const { admin_id, title, description, url, is_visible } = req.body;
+
+      const image = req.file ? req.file.filename : null;
+
+      if (!title || !description || !url) {
+        return res.json({
+          success: false,
+          msg: 'All fields are required'
+        });
+      }
+
+      const sql = `
+        INSERT INTO newInsights_posts 
+        (admin_id, title, description, image, url, is_visible)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+
+      connection.query(
+        sql,
+        [admin_id, title, description, image, url, is_visible],
+        (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.json({
+              success: false,
+              msg: 'DB Error'
+            });
+          }
+
+          return res.json({
+            success: true,
+            msg: 'Post created successfully'
+          });
+        }
+      );
+    } catch (error) {
+      console.error(error);
+      return res.json({
+        success: false,
+        msg: 'Server error'
+      });
+    }
+    };
+
+    // get post api 
+  const getInsightsPosts = (req, res) => {
+    const sql = `
+      SELECT * FROM newInsights_posts 
+      WHERE is_visible = 1 
+      ORDER BY id DESC
+    `;
+
+    connection.query(sql, (err, result) => {
+      if (err) {
+        return res.json({ success: false, msg: 'DB Error' });
+      }
+
+      return res.json({
+        success: true,
+        data: result
+      });
+    });
+  };
+
+  const updateInsightsPost = (req, res) => {
+    try {
+      const { id, admin_id, title, description, url, is_visible } = req.body;
+
+      const image = req.file ? req.file.filename : null;
+
+      if (!id) {
+        return res.json({
+          success: false,
+          msg: "Post id is required"
+        });
+      }
+
+      let sql = `
+        UPDATE newInsights_posts 
+        SET admin_id=?, title=?, description=?, url=?, is_visible=?
+      `;
+
+      let values = [admin_id, title, description, url, is_visible];
+
+      //  
+      if (image) {
+        sql += `, image=?`;
+        values.push(image);
+      }
+
+      sql += ` WHERE id=?`;
+      values.push(id);
+
+      connection.query(sql, values, (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.json({
+            success: false,
+            msg: "DB Error"
+          });
+        }
+
+        return res.json({
+          success: true,
+          msg: "Post updated successfully"
+        });
+      });
+
+    } catch (error) {
+      console.error(error);
+      return res.json({
+        success: false,
+        msg: "Server error"
+      });
+    }
+  };
+
+const deleteInsightsPost = (req, res) => {
+    try {
+      const { id } = req.body;
+
+      if (!id) {
+        return res.json({
+          success: false,
+          msg: "Post id is required"
+        });
+      }
+
+      const sql = `DELETE FROM newInsights_posts WHERE id=?`;
+
+      connection.query(sql, [id], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.json({
+            success: false,
+            msg: "DB Error"
+          });
+        }
+
+        return res.json({
+          success: true,
+          msg: "Post deleted successfully"
+        });
+      });
+
+    } catch (error) {
+      console.error(error);
+      return res.json({
+        success: false,
+        msg: "Server error"
+      });
+    }
+  };
 
 
 
@@ -6621,4 +6805,9 @@ module.exports = {
   saveLanguages,
   getUserLanguages,
   updateUserLanguage,
+  getAllInsightsPosts,
+  createPost,
+  getInsightsPosts,
+  updateInsightsPost,
+  deleteInsightsPost,
 };
