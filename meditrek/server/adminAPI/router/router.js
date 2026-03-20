@@ -2,12 +2,13 @@ var express = require("express");
 const upload = require("../controller/multer");
 const uploadImage = require("../controller/multerimage");
 const connection = require("../connection/connection");
-const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser,getLanguages,saveLanguages,getUserLanguages,updateUserLanguage,} = require("../controller/admin_controller");
-const { subAdminLogin,verifyLoginOtp, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient,dashboardGraphs,sendNotificationAll,sendNotificationUsers,getNotificationHistory } = require("../controller/subAdminController.js")
+const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser,getLanguages,saveLanguages,getUserLanguages,updateUserLanguage,createPost,getInsightsPosts,updateInsightsPost,deleteInsightsPost,getAllInsightsPosts,} = require("../controller/admin_controller");
+const { subAdminLogin,verifyLoginOtp, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient,dashboardGraphs,sendNotificationAll,sendNotificationUsers,getNotificationHistory, } = require("../controller/subAdminController.js")
 const { verifyToken } = require("../controller/VerifyToken");
+const uploadInsights = require('../../webservice/middleware/insightsUpload');
 const router = express.Router();
 
-
+// console.log("Admin routes loaded");
 router.get('/get_patient_measurements', upload.none(), getPatientMeasurements);
 router.get('/get_patient_medications_list', upload.none(), getPatientMedicationList);
 router.get('/get_patient_reports', upload.none(), getPatientReport);
@@ -141,6 +142,24 @@ router.post('/update-user-language', updateUserLanguage);
 router.post("/send_notification_all", verifyToken, sendNotificationAll);
 router.post("/send_notification_users", verifyToken, sendNotificationUsers);
 router.get("/notification_history", verifyToken, getNotificationHistory);
+
+// NewInsights post route
+
+// router.post( '/new-insights-create-post',  uploadInsights.single('image'),  createPost);
+// router.get('/get-insights-posts', getInsightsPosts);
+// // router.post('/update-insights-post', upload.single('image'), updateInsightsPost);
+// router.post('/update-insights-post', uploadInsights.single('image'), updateInsightsPost);
+// router.post('/delete-insights-post', deleteInsightsPost);
+// router.get('/get-all-insights-posts', getAllInsightsPosts);
+router.get('/get-all-insights-posts', getAllInsightsPosts);
+
+router.post('/new-insights-create-post', uploadInsights.single('image'), createPost);
+
+router.get('/get-insights-posts', getInsightsPosts);
+
+router.post('/update-insights-post', uploadInsights.single('image'), updateInsightsPost);
+
+router.post('/delete-insights-post', deleteInsightsPost);
 
 
 module.exports = router;
