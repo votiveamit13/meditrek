@@ -6212,22 +6212,63 @@ const DoctorActivateDeactivateUser = async (request, response) => {
   }
 };
 // languages api 
-const getLanguages = (req, res) => {
-  try {
-    connection.query(
-      "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
-      (err, rows) => {
-        if (err) {
-          return res.json({ success: false, error: err.message });
-        }
+// const getLanguages = (req, res) => {
+//   try {
+//     connection.query(
+//       "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
+//       (err, rows) => {
+//         if (err) {
+//           return res.json({ success: false, error: err.message });
+//         }
 
-        res.json({ success: true, data: rows });
-      }
-    );
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-};
+//         res.json({ success: true, data: rows });
+//       }
+//     );
+//   } catch (err) {
+//     res.json({ success: false, error: err.message });
+//   }
+// };
+  const getLanguages = (req, res) => {
+    const { admin_id } = req.query;
+
+    try {
+      // 1. Sab languages le lo
+      connection.query(
+        "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
+        (err, languages) => {
+          if (err) {
+            return res.json({ success: false, error: err.message });
+          }
+
+          // Agar admin_id nahi aaya to simple return
+          if (!admin_id) {
+            return res.json({ success: true, data: languages });
+          }
+
+          // 2. Admin ke selected languages le lo
+          connection.query(
+            "SELECT language_id FROM admin_selected_languages WHERE admin_id = ?",
+            [admin_id],
+            (err2, selectedRows) => {
+              if (err2) {
+                return res.json({ success: false, error: err2.message });
+              }
+
+              const selectedLanguages = selectedRows.map(r => r.language_id);
+
+              res.json({
+                success: true,
+                data: languages,
+                selectedLanguages: selectedLanguages
+              });
+            }
+          );
+        }
+      );
+    } catch (err) {
+      res.json({ success: false, error: err.message });
+    }
+  };
 
 const saveLanguages = (req, res) => {
   const { admin_id, languages } = req.body;
@@ -6347,104 +6388,104 @@ const saveLanguages = (req, res) => {
 //     }
 //   );
 // };
-const getUserLanguages = (req, res) => {
-  const { admin_id, user_id } = req.query;
+  const getUserLanguages = (req, res) => {
+    const { admin_id, user_id } = req.query;
 
-  if (!admin_id || !user_id) {
-    return res.json({ success: false, msg: "admin_id & user_id required" });
-  }
-
-  // Step 1: Get admin languages
-  connection.query(
-    `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
-     FROM admin_selected_languages asl
-     JOIN languages_master lm ON lm.id = asl.language_id
-     WHERE asl.admin_id = ?
-     ORDER BY lm.is_default DESC`,
-    [admin_id],
-    (err, rows) => {
-
-      if (err) {
-        return res.json({ success: false, error: err.message });
-      }
-
-      // Step 2: Get user's current language
-      connection.query(
-        "SELECT current_language FROM user_master WHERE user_id = ?",
-        [user_id],
-        (err2, userData) => {
-
-          if (err2) {
-            return res.json({ success: false, error: err2.message });
-          }
-
-          const userLang = userData[0]?.current_language;
-
-          const defaultLang = rows.find(r => r.is_default == 1);
-
-          res.json({
-            success: true,
-            data: {
-              current_language: userLang || defaultLang?.language_code,
-              language: rows.map(r => ({
-                id: r.id,
-                language_name: r.language_name,
-                language_code: r.language_code
-              }))
-            }
-          });
-        }
-      );
+    if (!admin_id || !user_id) {
+      return res.json({ success: false, msg: "admin_id & user_id required" });
     }
-  );
-};
 
-const updateUserLanguage = (req, res) => {
-  const { user_id, language_code } = req.body;
+    // Step 1: Get admin languages
+    connection.query(
+      `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
+      FROM admin_selected_languages asl
+      JOIN languages_master lm ON lm.id = asl.language_id
+      WHERE asl.admin_id = ?
+      ORDER BY lm.is_default DESC`,
+      [admin_id],
+      (err, rows) => {
 
-  if (!user_id || !language_code) {
-    return res.json({ 
-      success: false, 
-      msg: "user_id & language_code required" 
-    });
-  }
+        if (err) {
+          return res.json({ success: false, error: err.message });
+        }
 
-  connection.query(
-    "UPDATE user_master SET current_language = ? WHERE user_id = ?",
-    [language_code, user_id],
-    (err) => {
+        // Step 2: Get user's current language
+        connection.query(
+          "SELECT current_language FROM user_master WHERE user_id = ?",
+          [user_id],
+          (err2, userData) => {
 
-      if (err) {
-        return res.json({ 
-          success: false, 
-          error: err.message 
-        });
-      }
+            if (err2) {
+              return res.json({ success: false, error: err2.message });
+            }
 
-      //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
-      connection.query(
-        "SELECT current_language FROM user_master WHERE user_id = ?",
-        [user_id],
-        (err2, result) => {
+            const userLang = userData[0]?.current_language;
 
-          if (err2) {
-            return res.json({ 
-              success: false, 
-              error: err2.message 
+            const defaultLang = rows.find(r => r.is_default == 1);
+
+            res.json({
+              success: true,
+              data: {
+                current_language: userLang || defaultLang?.language_code,
+                language: rows.map(r => ({
+                  id: r.id,
+                  language_name: r.language_name,
+                  language_code: r.language_code
+                }))
+              }
             });
           }
+        );
+      }
+    );
+  };
 
-          res.json({
-            success: true,
-            msg: "Language updated successfully",
-            current_language: result[0]?.current_language
+  const updateUserLanguage = (req, res) => {
+    const { user_id, language_code } = req.body;
+
+    if (!user_id || !language_code) {
+      return res.json({ 
+        success: false, 
+        msg: "user_id & language_code required" 
+      });
+    }
+
+    connection.query(
+      "UPDATE user_master SET current_language = ? WHERE user_id = ?",
+      [language_code, user_id],
+      (err) => {
+
+        if (err) {
+          return res.json({ 
+            success: false, 
+            error: err.message 
           });
         }
-      );
 
-    }
-  );
-};
+        //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
+        connection.query(
+          "SELECT current_language FROM user_master WHERE user_id = ?",
+          [user_id],
+          (err2, result) => {
+
+            if (err2) {
+              return res.json({ 
+                success: false, 
+                error: err2.message 
+              });
+            }
+
+            res.json({
+              success: true,
+              msg: "Language updated successfully",
+              current_language: result[0]?.current_language
+            });
+          }
+        );
+
+      }
+    );
+  };
 
 
 
