@@ -12,6 +12,7 @@ const {
   sendMail
 } = require("../controller/mailer");
 const { resolve } = require("path");
+const admin = require("../../webservice/helpers/firebase");
 
 let otpStore = {};
 // const subAdminLogin = async (req, res) => {
@@ -3985,10 +3986,264 @@ const dashboardGraphs = async (req, res) => {
   }
 };
 
+// Send Notification patinet
+//  COMMON FUNCTION (Push Notification)
+const sendPush = async (playerIds, title, message) => {
+  if (!playerIds.length) return;
+
+  const payload = {
+    notification: {
+      title: title,
+      body: message,
+    },
+    tokens: playerIds,
+  };
+
+  try {
+    await admin.messaging().sendEachForMulticast(payload);
+  } catch (err) {
+    console.log("Push Error:", err);
+  }
+};
+
+// ALL USERS
+// const sendNotificationAll = (req, res) => {
+//   const { title, message } = req.body;
+//   const doctor_id = req.user_id;
+
+//   if (!title || !message) {
+//     return res.json({ success: false, msg: "title & message required" });
+//   }
+
+//   const sql = `
+//     SELECT u.user_id, n.player_id 
+//     FROM user_master u
+//     LEFT JOIN user_notification n ON u.user_id = n.user_id
+//     WHERE u.delete_flag = 0 AND u.notification_status = 1
+//   `;
+
+//   connection.query(sql, async (err, result) => {
+//     if (err) {
+//       console.log("Fetch Error:", err);
+//       return res.json({ success: false, msg: "DB Error" });
+//     }
+
+//     if (!result.length) {
+//       return res.json({ success: false, msg: "No users found" });
+//     }
+
+//     const playerIds = result.map(r => r.player_id).filter(p => p);
+
+//     const values = result.map(r => [
+//       r.user_id,
+//       doctor_id,
+//       title,
+//       message,
+//       0,
+//       new Date()
+//     ]);
+
+//     // save notification
+//     if (values.length > 0) {
+//       connection.query(
+//         "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+//         [values],
+//         (err) => {
+//           if (err) console.log("Insert Error:", err);
+//         }
+//       );
+//     }
+
+//     await sendPush(playerIds, title, message);
+
+//     return res.json({
+//       success: true,
+//       msg: "Notification sent to all users"
+//     });
+//   });
+// };
+const sendNotificationAll = (req, res) => {
+  const { title, message } = req.body;
+  const doctor_id = req.doctor_id;
+
+  if (!title || !message) {
+    return res.json({ success: false, msg: "title & message required" });
+  }
+
+  // const sql = `
+  //   SELECT p.user_id, n.player_id
+  //   FROM patient_master p
+  //   LEFT JOIN user_notification n ON p.user_id = n.user_id
+  //   WHERE p.doctor_id = ?
+  //   AND p.delete_flag = 0
+  // `;
+  const sql = `
+    SELECT p.user_id, MAX(n.player_id) as player_id
+    FROM patient_master p
+    LEFT JOIN user_notification n ON p.user_id = n.user_id
+    WHERE p.doctor_id = ?
+    AND p.delete_flag = 0
+    GROUP BY p.user_id
+  `;
+
+  connection.query(sql, [doctor_id], async (err, result) => {
+    if (err) return res.json({ success: false, msg: err });
+
+    console.log("Patients found:", result.length);
+
+    if (!result.length) {
+      return res.json({ success: false, msg: "No patients found" });
+    }
+
+    const playerIds = result.map(r => r.player_id).filter(p => p);
+
+    const values = result.map(r => [
+      r.user_id,
+      doctor_id,
+      title,
+      message,
+      0,
+      new Date()
+    ]);
+
+    connection.query(
+      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+      [values],
+      (err) => {
+        if (err) console.log("Insert Error:", err);
+      }
+    );
+
+    await sendPush(playerIds, title, message);
+
+    res.json({
+      success: true,
+      msg: `Notification sent to ${result.length} patients`
+    });
+  });
+};
+
+//  SPECIFIC USERS
+const sendNotificationUsers = (req, res) => {
+  const { title, message, user_ids } = req.body;
+  const doctor_id = req.doctor_id; //  
+
+  console.log("doctor_id:", doctor_id);
+  console.log("user_ids:", user_ids);
+
+  if (!title || !message || !user_ids?.length) {
+    return res.json({ success: false, msg: "missing params" });
+  }
+
+  const sql = `
+    SELECT p.user_id, n.player_id
+    FROM patient_master p
+    LEFT JOIN user_notification n ON p.user_id = n.user_id
+    WHERE p.doctor_id = ?
+    AND p.user_id IN (?)
+    AND p.delete_flag = 0
+  `;
+
+  connection.query(sql, [doctor_id, user_ids], async (err, result) => {
+    if (err) {
+      console.log("Fetch Error:", err);
+      return res.json({ success: false, msg: "DB Error" });
+    }
+
+    console.log("Matched Patients:", result.length);
+
+    if (!result.length) {
+      return res.json({ success: false, msg: "No valid patients found" });
+    }
+
+    const playerIds = result.map(r => r.player_id).filter(p => p);
+
+    const values = result.map(r => [
+      r.user_id,
+      doctor_id,
+      title,
+      message,
+      0,
+      new Date()
+    ]);
+
+    connection.query(
+      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+      [values],
+      (err) => {
+        if (err) console.log("Insert Error:", err);
+      }
+    );
+
+    await sendPush(playerIds, title, message);
+
+    return res.json({
+      success: true,
+      msg: `Notification sent to ${result.length} patients`
+    });
+  });
+};
+
+const getNotificationHistory = (req, res) => {
+  const doctor_id = req.doctor_id;
+
+  if (!doctor_id) {
+    return res.json({ success: false, msg: "doctor_id missing" });
+  }
+
+  // const sql = `
+  //   SELECT 
+  //     u.user_id,
+  //     u.name,
+  //     u.email,
+  //     n.title,
+  //     n.message,
+  //     n.createtime
+  //   FROM user_notification_message n
+  //   JOIN user_master u ON n.user_id = u.user_id
+  //   WHERE n.other_user_id = ?
+  //   ORDER BY n.createtime DESC
+  // `;
+
+   const sql = `
+     SELECT 
+        u.user_id,
+        u.name,
+        u.email,
+        n.title,
+        n.message,
+        n.createtime
+      FROM user_notification_message n
+      JOIN user_master u ON n.user_id = u.user_id
+      WHERE n.other_user_id = ?
+      ORDER BY n.createtime DESC
+    `;
+
+  
+  
+  
+
+  connection.query(sql, [doctor_id], (err, result) => {
+    if (err) {
+      console.log("Fetch Error:", err);
+      return res.json({ success: false, msg: "DB Error" });
+    }
+
+    if (!result.length) {
+      return res.json({ success: false, msg: "No notifications found" });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      data: result
+    });
+  });
+};
 
 
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory
 }
