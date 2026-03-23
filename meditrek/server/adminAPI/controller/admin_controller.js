@@ -6270,63 +6270,63 @@ const DoctorActivateDeactivateUser = async (request, response) => {
     }
   };
 
-const saveLanguages = (req, res) => {
-  const { admin_id, languages } = req.body;
+  const saveLanguages = (req, res) => {
+    const { admin_id, languages } = req.body;
 
-  if (!admin_id) {
-    return res.json({ success: false, msg: "admin_id required" });
-  }
-
-  // 1. Get default language
-  connection.query(
-    "SELECT id FROM languages_master WHERE is_default = 1",
-    (err, defaultLang) => {
-      if (err) {
-        return res.json({ success: false, error: err.message });
-      }
-
-      const defaultLangId = defaultLang[0].id;
-
-      // 2. Ensure English included
-      let finalLanguages = languages || [];
-
-      if (!finalLanguages.includes(defaultLangId)) {
-        finalLanguages.push(defaultLangId);
-      }
-
-      finalLanguages = [...new Set(finalLanguages)];
-
-      // 3. Delete old
-      connection.query(
-        "DELETE FROM admin_selected_languages WHERE admin_id = ?",
-        [admin_id],
-        (err) => {
-          if (err) {
-            return res.json({ success: false, error: err.message });
-          }
-
-          // 4. Insert new
-          const values = finalLanguages.map(lang_id => [admin_id, lang_id]);
-
-          connection.query(
-            "INSERT INTO admin_selected_languages (admin_id, language_id) VALUES ?",
-            [values],
-            (err) => {
-              if (err) {
-                return res.json({ success: false, error: err.message });
-              }
-
-              res.json({
-                success: true,
-                msg: "Languages saved (English always included)"
-              });
-            }
-          );
-        }
-      );
+    if (!admin_id) {
+      return res.json({ success: false, msg: "admin_id required" });
     }
-  );
-};
+
+    // 1. Get default language
+    connection.query(
+      "SELECT id FROM languages_master WHERE is_default = 1",
+      (err, defaultLang) => {
+        if (err) {
+          return res.json({ success: false, error: err.message });
+        }
+
+        const defaultLangId = defaultLang[0].id;
+
+        // 2. Ensure English included
+        let finalLanguages = languages || [];
+
+        if (!finalLanguages.includes(defaultLangId)) {
+          finalLanguages.push(defaultLangId);
+        }
+
+        finalLanguages = [...new Set(finalLanguages)];
+
+        // 3. Delete old
+        connection.query(
+          "DELETE FROM admin_selected_languages WHERE admin_id = ?",
+          [admin_id],
+          (err) => {
+            if (err) {
+              return res.json({ success: false, error: err.message });
+            }
+
+            // 4. Insert new
+            const values = finalLanguages.map(lang_id => [admin_id, lang_id]);
+
+            connection.query(
+              "INSERT INTO admin_selected_languages (admin_id, language_id) VALUES ?",
+              [values],
+              (err) => {
+                if (err) {
+                  return res.json({ success: false, error: err.message });
+                }
+
+                res.json({
+                  success: true,
+                  msg: "Languages saved (English always included)"
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  };
 
 // const getUserLanguages = (req, res) => {
 //   const { admin_id } = req.query;
@@ -6389,6 +6389,12 @@ const saveLanguages = (req, res) => {
 //   );
 // };
   const getUserLanguages = (req, res) => {
+    const languageMap = {
+        en: "English",
+        es: "Español",
+        fr: "Français",
+        ar: "العربية"
+      };
     const { admin_id, user_id } = req.query;
 
     if (!admin_id || !user_id) {
@@ -6427,9 +6433,14 @@ const saveLanguages = (req, res) => {
               success: true,
               data: {
                 current_language: userLang || defaultLang?.language_code,
+                // language: rows.map(r => ({
+                //   id: r.id,
+                //   language_name: r.language_name,
+                //   language_code: r.language_code
+                // }))
                 language: rows.map(r => ({
                   id: r.id,
-                  language_name: r.language_name,
+                  language_name: languageMap[r.language_code] || r.language_name,
                   language_code: r.language_code
                 }))
               }
