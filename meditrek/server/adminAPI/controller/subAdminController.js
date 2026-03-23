@@ -3199,9 +3199,12 @@ const getPatientMeasurements = async (req, res) => {
       let completed = 0;
 
       shares.forEach((share, index) => {
-        const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
-        const endTime = share.createtime;
-
+        // const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+        // const endTime = share.createtime;
+         const startTime = share.createtime;
+          const endTime = index === 0
+            ? moment().format('YYYY-MM-DD HH:mm:ss') // latest time
+            : shares[index - 1].createtime;
         const measurementSql = `
           SELECT *
           FROM measurement_master
