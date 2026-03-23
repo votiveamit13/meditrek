@@ -2417,210 +2417,422 @@ const changePassword = async (request, response) => {
 
 // };
 // const otpStore = {};
+// const otpStore = require('../../otpStore');
+
+// const signIn = async (req, res) => {
+
+// //   console.log(" ===== SIGNIN API HIT =====");
+//   console.log(" Request Body:", req.body);
+
+//   const { email, password, player_id, device_type } = req.body;
+
+//   if (!email || !password) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: "Email and password required"
+//     });
+//   }
+
+//   try {
+
+//     // const sql = `
+//     //   SELECT user_id, name, password, active_flag, delete_flag
+//     //   FROM user_master
+//     //   WHERE email = ?
+//     // `;
+//     const sql = `
+//         SELECT user_id, name, password, active_flag, delete_flag
+//         FROM user_master
+//         WHERE email = ? AND delete_flag = 0
+//         LIMIT 1
+//         `;
+
+//     connection.query(sql, [email], async (err, result) => {
+
+//       if (err) {
+//         console.log(" DB ERROR:", err.message);
+//         return res.status(200).json({ success: false, msg: err.message });
+//       }
+
+//       if (!result || result.length === 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Email not registered"
+//         });
+//       }
+
+//       const user = result[0];
+
+//       if (user.delete_flag == 1) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "User deleted"
+//         });
+//       }
+
+//       if (user.active_flag == 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Account deactivated"
+//         });
+//       }
+
+//       // Password check
+//       const hashedPass = await hashPassword(password);
+
+//       if (hashedPass !== user.password) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Wrong password"
+//         });
+//       }
+
+//       // ================= OTP SECTION =================
+
+//       const otp = Math.floor(100000 + Math.random() * 900000);
+
+//       const emailNormalized = email.trim().toLowerCase();
+//       const userName = user.name || "User";
+
+//       console.log(" Email:", emailNormalized);
+//       console.log(" User:", userName);
+//       console.log(" OTP:", otp);
+
+//       // Store OTP
+//       otpStore[emailNormalized] = otp;
+
+//       // Send Mail (Mailer Order Important!)
+//       await mailer(
+//         emailNormalized,                 // userEmail
+//         "Login OTP",               // app_name
+//         "Your OTP for Login Verification", // title
+//         userName,                        // userName
+//         "https://meditrekaccess.com/logo.png", // app_logo
+//         otp                              // otp
+//       );
+
+//       console.log(" OTP Mail Sent");
+
+//       return res.status(200).json({
+//         success: true,
+//         msg: "OTP sent to email",
+//         email: emailNormalized,
+//         user_id: user.user_id,
+//         otp: otp // remove in production
+//       });
+
+//     });
+
+//   } catch (error) {
+
+//     console.log(" CATCH ERROR:", error.message);
+
+//     return res.status(500).json({
+//       success: false,
+//       msg: error.message
+//     });
+
+//   }
+// };
+
+// module.exports = { signIn };
+// //end
+// const verifyUserLoginOtp = async (req, res) => {
+
+//   console.log("========== VERIFY API HIT ==========");
+
+//   try {
+
+//     console.log("Request Body:", req.body);
+
+//     const emailNormalized = req.body.email
+//       ? req.body.email.trim().toLowerCase()
+//       : "";
+
+//     const { otp } = req.body;
+
+//     console.log("Normalized Email:", emailNormalized);
+//     console.log("Entered OTP:", otp);
+//     console.log("Stored OTP Before Check:", otpStore[emailNormalized]);
+
+//     if (!otpStore[emailNormalized]) {
+//       console.log("OTP NOT FOUND IN STORE");
+//       return res.status(200).json({
+//         success: false,
+//         msg: "Invalid OTP"
+//       });
+//     }
+
+//     if (String(otpStore[emailNormalized]) !== String(otp)) {
+//       console.log("OTP MISMATCH");
+//       return res.status(200).json({
+//         success: false,
+//         msg: "Invalid OTP"
+//       });
+//     }
+
+//     console.log("OTP MATCH SUCCESS");
+
+//     const sql = `SELECT user_id FROM user_master WHERE email = ?`;
+
+//     connection.query(sql, [emailNormalized], async (err, result) => {
+
+//       console.log("Database Result:", result);
+
+//       if (err) {
+//         console.log("DB ERROR:", err.message);
+//         return res.status(200).json({
+//           success: false,
+//           msg: err.message
+//         });
+//       }
+
+//       if (!result || result.length === 0) {
+//         console.log("USER NOT FOUND IN DB");
+//         return res.status(200).json({
+//           success: false,
+//           msg: "User not found"
+//         });
+//       }
+
+//       const user_id = result[0].user_id;
+
+//       console.log("User ID Found:", user_id);
+
+//       const token = jwt.sign(
+//         { user_id },
+//         process.env.SECRET_KEY,
+//         { expiresIn: "7d" }
+//       );
+
+//       delete otpStore[emailNormalized];
+
+//       const userDetails = await getUserDetails(user_id);
+
+//       console.log("LOGIN SUCCESS");
+
+//       return res.status(200).json({
+//         success: true,
+//         msg: "Login successful",
+//         token,
+//         userDataArray: userDetails
+//       });
+
+//     });
+
+//   } catch (error) {
+//     console.log("CATCH ERROR:", error.message);
+//     return res.status(200).json({
+//       success: false,
+//       msg: error.message
+//     });
+//   }
+// };
+
 const otpStore = require('../../otpStore');
 
-const signIn = async (req, res) => {
+const signIn = async (request, response) => {
 
-  console.log(" ===== SIGNIN API HIT =====");
-  console.log(" Request Body:", req.body);
+    const { email, password, player_id, device_type, login_type } = request.body;
 
-  const { email, password, player_id, device_type } = req.body;
-
-  if (!email || !password) {
-    return res.status(200).json({
-      success: false,
-      msg: "Email and password required"
-    });
-  }
-
-  try {
-
-    const sql = `
-      SELECT user_id, name, password, active_flag, delete_flag
-      FROM user_master
-      WHERE email = ?
-    `;
-
-    connection.query(sql, [email], async (err, result) => {
-
-      if (err) {
-        console.log(" DB ERROR:", err.message);
-        return res.status(200).json({ success: false, msg: err.message });
-      }
-
-      if (!result || result.length === 0) {
-        return res.status(200).json({
-          success: false,
-          msg: "Email not registered"
+    if (!email || !password) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "email",
         });
-      }
+    }
 
-      const user = result[0];
-
-      if (user.delete_flag == 1) {
-        return res.status(200).json({
-          success: false,
-          msg: "User deleted"
+    if (!player_id) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "player_id",
         });
-      }
+    }
 
-      if (user.active_flag == 0) {
-        return res.status(200).json({
-          success: false,
-          msg: "Account deactivated"
+    if (!device_type) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "device_type",
         });
-      }
+    }
 
-      // Password check
-      const hashedPass = await hashPassword(password);
+    try {
 
-      if (hashedPass !== user.password) {
-        return res.status(200).json({
-          success: false,
-          msg: "Wrong password"
+        const emailNormalized = email.trim().toLowerCase();
+
+        const userQuery = `
+          SELECT user_id, name, password, active_flag, profile_complete, login_type, delete_flag
+          FROM user_master 
+          WHERE LOWER(email) = ? AND delete_flag = 0
+          ORDER BY user_id DESC
+          LIMIT 1
+        `;
+
+        connection.query(userQuery, [emailNormalized], async (err, results) => {
+
+            if (err) {
+                return response.status(200).json({
+                    success: false,
+                    msg: languageMessage.internalServerError,
+                    key: err.message,
+                });
+            }
+
+            if (results.length === 0) {
+                return response.status(200).json({
+                    success: false,
+                    msg: languageMessage.userNotFound
+                });
+            }
+
+            const user = results[0];
+
+            if (results[0].otp_verifiy === 0) {
+                const userDetails = await getUserDetails(results[0].user_id);
+                return response.status(200).json({
+                    success: true,
+                    msg: languageMessage.signInSuccess,
+                    userDataArray: userDetails,
+                });
+            }
+
+            if (results[0].profile_completed === 0) {
+                const userDetails = await getUserDetails(results[0].user_id);
+                return response.status(200).json({
+                    success: true,
+                    msg: languageMessage.signInSuccess,
+                    userDataArray: userDetails,
+                });
+            }
+
+            var logInType;
+            if (login_type) {
+                logInType = login_type
+            } else {
+                logInType = results[0].login_type;
+            }
+
+            if (user.active_flag === 0) {
+                return response.status(200).json({
+                    success: false,
+                    msg: languageMessage.accountdeactivated,
+                    active_flag: user.active_flag,
+                });
+            }
+
+            const hashedPassword = await hashPassword(password);
+
+            if (hashedPassword !== user.password) {
+                return response.status(200).json({
+                    success: false,
+                    msg: languageMessage.IncorrectPassword
+                });
+            }
+
+            const otp = Math.floor(100000 + Math.random() * 900000);
+
+            const userName = user.name || "User";
+
+            otpStore[emailNormalized] = otp;
+
+            await mailer(
+                emailNormalized,
+                "Login OTP",
+                "Your OTP for Login Verification",
+                userName,
+                "https://meditrekaccess.com/logo.png",
+                otp
+            );
+
+            return response.status(200).json({
+                success: true,
+                msg: "OTP sent to email",
+                email: emailNormalized,
+                user_id: user.user_id,
+                otp: otp
+            });
+
         });
-      }
 
-      // ================= OTP SECTION =================
-
-      const otp = Math.floor(100000 + Math.random() * 900000);
-
-      const emailNormalized = email.trim().toLowerCase();
-      const userName = user.name || "User";
-
-      console.log(" Email:", emailNormalized);
-      console.log(" User:", userName);
-      console.log(" OTP:", otp);
-
-      // Store OTP
-      otpStore[emailNormalized] = otp;
-
-      // Send Mail (Mailer Order Important!)
-      await mailer(
-        emailNormalized,                 // userEmail
-        "Login OTP",               // app_name
-        "Your OTP for Login Verification", // title
-        userName,                        // userName
-        "https://meditrekaccess.com/logo.png", // app_logo
-        otp                              // otp
-      );
-
-      console.log(" OTP Mail Sent");
-
-      return res.status(200).json({
-        success: true,
-        msg: "OTP sent to email",
-        email: emailNormalized,
-        user_id: user.user_id,
-        otp: otp // remove in production
-      });
-
-    });
-
-  } catch (error) {
-
-    console.log(" CATCH ERROR:", error.message);
-
-    return res.status(500).json({
-      success: false,
-      msg: error.message
-    });
-
-  }
+    } catch (err) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            key: err.message,
+        });
+    }
 };
 
-module.exports = { signIn };
-//end
 const verifyUserLoginOtp = async (req, res) => {
 
-  console.log("========== VERIFY API HIT ==========");
+    try {
 
-  try {
+        const emailNormalized = req.body.email
+            ? req.body.email.trim().toLowerCase()
+            : "";
 
-    console.log("Request Body:", req.body);
+        const { otp } = req.body;
 
-    const emailNormalized = req.body.email
-      ? req.body.email.trim().toLowerCase()
-      : "";
+        if (!otpStore[emailNormalized]) {
+            return res.status(200).json({
+                success: false,
+                msg: "Invalid OTP"
+            });
+        }
 
-    const { otp } = req.body;
+        if (String(otpStore[emailNormalized]) !== String(otp)) {
+            return res.status(200).json({
+                success: false,
+                msg: "Invalid OTP"
+            });
+        }
 
-    console.log("Normalized Email:", emailNormalized);
-    console.log("Entered OTP:", otp);
-    console.log("Stored OTP Before Check:", otpStore[emailNormalized]);
+        const sql = `
+            SELECT user_id 
+            FROM user_master 
+            WHERE LOWER(email) = ? AND delete_flag = 0
+            LIMIT 1
+        `;
 
-    if (!otpStore[emailNormalized]) {
-      console.log("OTP NOT FOUND IN STORE");
-      return res.status(200).json({
-        success: false,
-        msg: "Invalid OTP"
-      });
-    }
+        connection.query(sql, [emailNormalized], async (err, result) => {
 
-    if (String(otpStore[emailNormalized]) !== String(otp)) {
-      console.log("OTP MISMATCH");
-      return res.status(200).json({
-        success: false,
-        msg: "Invalid OTP"
-      });
-    }
+            if (err || result.length === 0) {
+                return res.status(200).json({
+                    success: false,
+                    msg: "User not found"
+                });
+            }
 
-    console.log("OTP MATCH SUCCESS");
+            const user_id = result[0].user_id;
 
-    const sql = `SELECT user_id FROM user_master WHERE email = ?`;
+            const token = jwt.sign(
+                { user_id },
+                process.env.SECRET_KEY,
+                { expiresIn: "7d" }
+            );
 
-    connection.query(sql, [emailNormalized], async (err, result) => {
+            delete otpStore[emailNormalized];
 
-      console.log("Database Result:", result);
+            const userDetails = await getUserDetails(user_id);
 
-      if (err) {
-        console.log("DB ERROR:", err.message);
-        return res.status(200).json({
-          success: false,
-          msg: err.message
+            return res.status(200).json({
+                success: true,
+                msg: "Login successful",
+                token,
+                userDataArray: userDetails
+            });
+
         });
-      }
 
-      if (!result || result.length === 0) {
-        console.log("USER NOT FOUND IN DB");
+    } catch (error) {
         return res.status(200).json({
-          success: false,
-          msg: "User not found"
+            success: false,
+            msg: error.message
         });
-      }
-
-      const user_id = result[0].user_id;
-
-      console.log("User ID Found:", user_id);
-
-      const token = jwt.sign(
-        { user_id },
-        process.env.SECRET_KEY,
-        { expiresIn: "7d" }
-      );
-
-      delete otpStore[emailNormalized];
-
-      const userDetails = await getUserDetails(user_id);
-
-      console.log("LOGIN SUCCESS");
-
-      return res.status(200).json({
-        success: true,
-        msg: "Login successful",
-        token,
-        userDataArray: userDetails
-      });
-
-    });
-
-  } catch (error) {
-    console.log("CATCH ERROR:", error.message);
-    return res.status(200).json({
-      success: false,
-      msg: error.message
-    });
-  }
+    }
 };
 
 const getUserNotification = async (request, response) => {
