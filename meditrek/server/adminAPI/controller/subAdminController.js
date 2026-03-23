@@ -3878,9 +3878,117 @@ const getAdverseofPatient = async (request, response) => {
 //   }
 // };
 
-const dashboardGraphs = async (req, res) => {
+// const dashboardGraphs = async (req, res) => {
+//   try {
+//     const doctor_id = req.doctor_id;
+
+//     if (!doctor_id) {
+//       return res.status(200).json({
+//         status: false,
+//         msg: "doctor_id missing"
+//       });
+//     }
+
+//     //  check doctor
+//     const checksql = `
+//       SELECT doctor_id FROM doctor_master 
+//       WHERE doctor_id = ? AND delete_flag = 0
+//     `;
+
+//     connection.query(checksql, [doctor_id], (err, check) => {
+//       if (err) {
+//         return res.json({ status: false, error: err.message });
+//       }
+
+//       if (check.length === 0) {
+//         return res.json({ status: true, msg: "No data found" });
+//       }
+
+//       //  Monthly Patients
+//       const monthlyQuery = `
+//         SELECT 
+//           DATE_FORMAT(p.createtime,'%b') as month,
+//           COUNT(*) as total
+//         FROM patient_master p
+//         WHERE p.delete_flag = 0 
+//         AND p.doctor_id = ?
+//         GROUP BY MONTH(p.createtime)
+//         ORDER BY MONTH(p.createtime)
+//       `;
+
+//       //  Gender (JOIN)
+//       const genderQuery = `
+//         SELECT 
+//           CASE
+//             WHEN u.gender = 1 THEN 'Male'
+//             WHEN u.gender = 2 THEN 'Female'
+//             WHEN u.gender = 3 THEN 'Other'
+//             ELSE 'Unknown'
+//           END as gender,
+//           COUNT(*) as total
+//         FROM patient_master p
+//         JOIN user_master u ON u.user_id = p.user_id
+//         WHERE p.delete_flag = 0
+//         AND p.doctor_id = ?
+//         GROUP BY gender
+//       `;
+
+//       //  Age Group (JOIN)
+//      const ageQuery = `
+//       SELECT 
+//         CASE
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 10 THEN '0-10'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 11 AND 20 THEN '11-20'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 21 AND 30 THEN '21-30'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 40 THEN '31-40'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 50 THEN '41-50'
+//           ELSE '51+'
+//         END as age_group,
+//         COUNT(*) as total
+//       FROM patient_master p
+//       JOIN user_master u ON u.user_id = p.user_id
+//       WHERE p.delete_flag = 0
+//       AND p.doctor_id = ?
+//       AND u.dob IS NOT NULL
+//       GROUP BY age_group
+//       ORDER BY age_group
+//     `;
+
+//       //  execute queries
+//       connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
+//         if (err) return res.json({ status: false, error: err.message });
+
+//         connection.query(genderQuery, [doctor_id], (err, gender) => {
+//           if (err) return res.json({ status: false, error: err.message });
+
+//           connection.query(ageQuery, [doctor_id], (err, age) => {
+//             if (err) return res.json({ status: false, error: err.message });
+
+//             return res.json({
+//               status: true,
+//               message: "Doctor-wise graph data",
+//               monthlyPatients: monthly,
+//               genderPercentage: gender,
+//               ageGroups: age
+//             });
+//           });
+//         });
+//       });
+
+//     });
+
+//   } catch (error) {
+//     console.log(error);
+//     return res.json({
+//       status: false,
+//       message: "Server error"
+//     });
+//   }
+// };
+  const dashboardGraphs = async (req, res) => {
   try {
     const doctor_id = req.doctor_id;
+    const year = req.query.year;
 
     if (!doctor_id) {
       return res.status(200).json({
@@ -3889,7 +3997,6 @@ const dashboardGraphs = async (req, res) => {
       });
     }
 
-    //  check doctor
     const checksql = `
       SELECT doctor_id FROM doctor_master 
       WHERE doctor_id = ? AND delete_flag = 0
@@ -3904,7 +4011,6 @@ const dashboardGraphs = async (req, res) => {
         return res.json({ status: true, msg: "No data found" });
       }
 
-      //  Monthly Patients
       const monthlyQuery = `
         SELECT 
           DATE_FORMAT(p.createtime,'%b') as month,
@@ -3912,11 +4018,21 @@ const dashboardGraphs = async (req, res) => {
         FROM patient_master p
         WHERE p.delete_flag = 0 
         AND p.doctor_id = ?
+        ${year ? "AND YEAR(p.createtime) = ?" : ""}
         GROUP BY MONTH(p.createtime)
         ORDER BY MONTH(p.createtime)
       `;
 
-      //  Gender (JOIN)
+      const params = year ? [doctor_id, year] : [doctor_id];
+
+      const yearQuery = `
+        SELECT DISTINCT YEAR(createtime) as year
+        FROM patient_master
+        WHERE delete_flag = 0
+        AND doctor_id = ?
+        ORDER BY year DESC
+      `;
+
       const genderQuery = `
         SELECT 
           CASE
@@ -3933,29 +4049,27 @@ const dashboardGraphs = async (req, res) => {
         GROUP BY gender
       `;
 
-      //  Age Group (JOIN)
-     const ageQuery = `
-      SELECT 
-        CASE
-          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 10 THEN '0-10'
-          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 11 AND 20 THEN '11-20'
-          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 21 AND 30 THEN '21-30'
-          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 40 THEN '31-40'
-          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 50 THEN '41-50'
-          ELSE '51+'
-        END as age_group,
-        COUNT(*) as total
-      FROM patient_master p
-      JOIN user_master u ON u.user_id = p.user_id
-      WHERE p.delete_flag = 0
-      AND p.doctor_id = ?
-      AND u.dob IS NOT NULL
-      GROUP BY age_group
-      ORDER BY age_group
-    `;
+      const ageQuery = `
+        SELECT 
+          CASE
+            WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 10 THEN '0-10'
+            WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 11 AND 20 THEN '11-20'
+            WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 21 AND 30 THEN '21-30'
+            WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 40 THEN '31-40'
+            WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 50 THEN '41-50'
+            ELSE '51+'
+          END as age_group,
+          COUNT(*) as total
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.delete_flag = 0
+        AND p.doctor_id = ?
+        AND u.dob IS NOT NULL
+        GROUP BY age_group
+        ORDER BY age_group
+      `;
 
-      //  execute queries
-      connection.query(monthlyQuery, [doctor_id], (err, monthly) => {
+      connection.query(monthlyQuery, params, (err, monthly) => {
         if (err) return res.json({ status: false, error: err.message });
 
         connection.query(genderQuery, [doctor_id], (err, gender) => {
@@ -3964,13 +4078,19 @@ const dashboardGraphs = async (req, res) => {
           connection.query(ageQuery, [doctor_id], (err, age) => {
             if (err) return res.json({ status: false, error: err.message });
 
-            return res.json({
-              status: true,
-              message: "Doctor-wise graph data",
-              monthlyPatients: monthly,
-              genderPercentage: gender,
-              ageGroups: age
+            connection.query(yearQuery, [doctor_id], (err, years) => {
+              if (err) return res.json({ status: false, error: err.message });
+
+              return res.json({
+                status: true,
+                message: "Doctor-wise graph data",
+                monthlyPatients: monthly,
+                genderPercentage: gender,
+                ageGroups: age,
+                availableYears: years.map(y => y.year)
+              });
             });
+
           });
         });
       });
