@@ -1,4 +1,5 @@
 const connection = require("../connection/connection");
+const { getNotificationArrSingle } = require("../../webservice/shared functions/functions");
 const db = require("../connection/connection");
 const moment = require("moment");
 const crypto = require("crypto");
@@ -4129,30 +4130,99 @@ const sendPush = async (playerIds, title, message) => {
   }
 };
 
-// ALL USERS
-// const sendNotificationAll = (req, res) => {
-//   const { title, message } = req.body;
-//   const doctor_id = req.user_id;
 
-//   if (!title || !message) {
-//     return res.json({ success: false, msg: "title & message required" });
+// const sendNotificationAll = (req, res) => {
+    //   const { title, message } = req.body;
+    //   const doctor_id = req.doctor_id;
+
+    //   if (!title || !message) {
+    //     return res.json({ success: false, msg: "title & message required" });
+    //   }
+
+    //   // const sql = `
+    //   //   SELECT p.user_id, n.player_id
+    //   //   FROM patient_master p
+    //   //   LEFT JOIN user_notification n ON p.user_id = n.user_id
+    //   //   WHERE p.doctor_id = ?
+    //   //   AND p.delete_flag = 0
+    //   // `;
+    //   const sql = `
+    //     SELECT p.user_id, MAX(n.player_id) as player_id
+    //     FROM patient_master p
+    //     LEFT JOIN user_notification n ON p.user_id = n.user_id
+    //     WHERE p.doctor_id = ?
+    //     AND p.delete_flag = 0
+    //     GROUP BY p.user_id
+    //   `;
+
+    //   connection.query(sql, [doctor_id], async (err, result) => {
+    //     if (err) return res.json({ success: false, msg: err });
+
+    //     console.log("Patients found:", result.length);
+
+    //     if (!result.length) {
+    //       return res.json({ success: false, msg: "No patients found" });
+    //     }
+
+    //     const playerIds = result.map(r => r.player_id).filter(p => p);
+
+    //     const values = result.map(r => [
+    //       r.user_id,
+    //       doctor_id,
+    //       title,
+    //       message,
+    //       0,
+    //       new Date()
+    //     ]);
+
+    //     connection.query(
+    //       "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //       [values],
+    //       (err) => {
+    //         if (err) console.log("Insert Error:", err);
+    //       }
+    //     );
+
+    //     await sendPush(playerIds, title, message);
+
+    //     res.json({
+    //       success: true,
+    //       msg: `Notification sent to ${result.length} patients`
+    //     });
+    //   });
+    // };
+
+    // //  SPECIFIC USERS
+// const sendNotificationUsers = (req, res) => {
+//   const { title, message, user_ids } = req.body;
+//   const doctor_id = req.doctor_id; //  
+
+//   console.log("doctor_id:", doctor_id);
+//   console.log("user_ids:", user_ids);
+
+//   if (!title || !message || !user_ids?.length) {
+//     return res.json({ success: false, msg: "missing params" });
 //   }
 
 //   const sql = `
-//     SELECT u.user_id, n.player_id 
-//     FROM user_master u
-//     LEFT JOIN user_notification n ON u.user_id = n.user_id
-//     WHERE u.delete_flag = 0 AND u.notification_status = 1
+//     SELECT p.user_id, n.player_id
+//     FROM patient_master p
+//     LEFT JOIN user_notification n ON p.user_id = n.user_id
+//     WHERE p.doctor_id = ?
+//     AND p.user_id IN (?)
+//     AND p.delete_flag = 0
 //   `;
 
-//   connection.query(sql, async (err, result) => {
+//   connection.query(sql, [doctor_id, user_ids], async (err, result) => {
 //     if (err) {
 //       console.log("Fetch Error:", err);
 //       return res.json({ success: false, msg: "DB Error" });
 //     }
 
+//     console.log("Matched Patients:", result.length);
+
 //     if (!result.length) {
-//       return res.json({ success: false, msg: "No users found" });
+//       return res.json({ success: false, msg: "No valid patients found" });
 //     }
 
 //     const playerIds = result.map(r => r.player_id).filter(p => p);
@@ -4166,25 +4236,23 @@ const sendPush = async (playerIds, title, message) => {
 //       new Date()
 //     ]);
 
-//     // save notification
-//     if (values.length > 0) {
-//       connection.query(
-//         "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-//         [values],
-//         (err) => {
-//           if (err) console.log("Insert Error:", err);
-//         }
-//       );
-//     }
+//     connection.query(
+//       "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+//       [values],
+//       (err) => {
+//         if (err) console.log("Insert Error:", err);
+//       }
+//     );
 
 //     await sendPush(playerIds, title, message);
 
 //     return res.json({
 //       success: true,
-//       msg: "Notification sent to all users"
+//       msg: `Notification sent to ${result.length} patients`
 //     });
 //   });
 // };
+
 const sendNotificationAll = (req, res) => {
   const { title, message } = req.body;
   const doctor_id = req.doctor_id;
@@ -4218,26 +4286,40 @@ const sendNotificationAll = (req, res) => {
       return res.json({ success: false, msg: "No patients found" });
     }
 
-    const playerIds = result.map(r => r.player_id).filter(p => p);
+    // const playerIds = result.map(r => r.player_id).filter(p => p);
 
-    const values = result.map(r => [
-      r.user_id,
-      doctor_id,
-      title,
-      message,
-      0,
-      new Date()
-    ]);
+    // const values = result.map(r => [
+    //   r.user_id,
+    //   doctor_id,
+    //   title,
+    //   message,
+    //   0,
+    //   new Date()
+    // ]);
 
-    connection.query(
-      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-      [values],
-      (err) => {
-        if (err) console.log("Insert Error:", err);
-      }
-    );
+    // connection.query(
+    //   "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //   [values],
+    //   (err) => {
+    //     if (err) console.log("Insert Error:", err);
+    //   }
+    // );
 
-    await sendPush(playerIds, title, message);
+    // await sendPush(playerIds, title, message);
+    for (const r of result) {
+      await new Promise(resolve => {
+            getNotificationArrSingle(
+              doctor_id,
+              r.user_id,
+              "General",
+              "0",
+              title, title, title, title, title,
+              message, message, message, message, message,
+              {},
+              resolve
+            );
+          });
+        }
 
     res.json({
       success: true,
@@ -4246,7 +4328,6 @@ const sendNotificationAll = (req, res) => {
   });
 };
 
-//  SPECIFIC USERS
 const sendNotificationUsers = (req, res) => {
   const { title, message, user_ids } = req.body;
   const doctor_id = req.doctor_id; //  
@@ -4281,24 +4362,46 @@ const sendNotificationUsers = (req, res) => {
 
     const playerIds = result.map(r => r.player_id).filter(p => p);
 
+    // const values = result.map(r => [
+    //   r.user_id,
+    //   doctor_id,
+    //   title,
+    //   message,
+    //   0,
+    //   new Date()
+    // ]);
     const values = result.map(r => [
-      r.user_id,
-      doctor_id,
+      doctor_id,     
+      r.user_id,     
       title,
       message,
       0,
       new Date()
     ]);
 
-    connection.query(
-      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-      [values],
-      (err) => {
-        if (err) console.log("Insert Error:", err);
-      }
-    );
+    // connection.query(
+    //   "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //   [values],
+    //   (err) => {
+    //     if (err) console.log("Insert Error:", err);
+    //   }
+    // );
 
-    await sendPush(playerIds, title, message);
+    // await sendPush(playerIds, title, message);
+    for (const r of result) {
+        await new Promise(resolve => {
+          getNotificationArrSingle(
+            doctor_id,         
+            r.user_id,         
+            "General",          
+            "0",
+            title, title, title, title, title,
+            message, message, message, message, message,
+            {},
+            resolve
+          );
+        });
+      }
 
     return res.json({
       success: true,
