@@ -2640,6 +2640,119 @@ async function sendDoctorEmail(toEmail, doctorName, password) {
 
 }
 
+// otp for subadminlogin
+// otp for subadminlogin
+async function sendOtpEmail(toEmail, userName, otp) {
+
+  const app_name = "Meditrek";
+  const app_logo = "https://meditrekaccess.com/meditrek/server/uploads/td_logo.png";
+
+  let transporter = nodemailer.createTransport({
+    host: "mail.meditrekaccess.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: "support@meditrekaccess.com",
+      pass: "i[f4+,z6ea$h2AY,",
+    },
+    tls: { rejectUnauthorized: false },
+  });
+
+  const htmlContent = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>OTP Verification</title>
+  </head>
+
+  <body style="margin:0; padding:0; background:#f4f6f8; font-family:Arial, sans-serif;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px;">
+      <tr>
+        <td align="center">
+
+          <!-- Main Card -->
+          <table width="100%" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+
+            <!-- Header -->
+            <tr style="background:#1DDEC4;">
+              <td align="center" style="padding:25px;">
+               <img 
+                    src="${app_logo}" 
+                    width="90" 
+                    height="90"
+                    alt="Meditrek Logo"
+                    style="display:block; margin:auto;"
+                    />
+                <h2 style="margin:10px 0 0; color:#000;">OTP Verification</h2>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding:30px; color:#333;">
+
+                <p style="margin:0 0 10px;">Hi <b>${userName}</b>,</p>
+
+                <p style="margin:0 0 20px;">
+                  Use the OTP below to complete your login. This OTP is valid for a short time.
+                </p>
+
+                <!-- OTP BOX -->
+                <div style="text-align:center; margin:30px 0;">
+                  <span style="
+                    display:inline-block;
+                    font-size:32px;
+                    font-weight:bold;
+                    letter-spacing:8px;
+                    color:#1DDEC4;
+                    border:2px dashed #1DDEC4;
+                    padding:15px 25px;
+                    border-radius:10px;
+                    background:#f9ffff;
+                  ">
+                    ${otp}
+                  </span>
+                </div>
+
+                <p style="color:#777; font-size:14px;">
+                  ⚠️ Do not share this OTP with anyone for security reasons.
+                </p>
+
+                <p style="margin-top:25px;">
+                  Regards,<br>
+                  <b>${app_name} Team</b>
+                </p>
+
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr style="background:#F68519;">
+              <td align="center" style="padding:15px; color:#fff; font-size:14px;">
+                © 2025 ${app_name} | All rights reserved.
+              </td>
+            </tr>
+
+          </table>
+
+        </td>
+      </tr>
+    </table>
+
+  </body>
+  </html>`;
+
+  await transporter.sendMail({
+    from: `"${app_name}" <support@meditrekaccess.com>`,
+    to: toEmail,
+    subject: "🔐 Your OTP Code",
+    html: htmlContent,
+  });
+}
+
+
 module.exports = {
 
   mailer,
@@ -2660,7 +2773,8 @@ module.exports = {
 
   mailerRejectDoctorByAdmin,
 
-  sendDoctorEmail
+  sendDoctorEmail,
+  sendOtpEmail
 
 };
 

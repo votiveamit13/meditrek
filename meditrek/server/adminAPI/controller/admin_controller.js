@@ -6229,10 +6229,16 @@ const DoctorActivateDeactivateUser = async (request, response) => {
 //   }
 // };
   const getLanguages = (req, res) => {
+      const languageMap = {
+        en: "English",
+        es: "Español",
+        fr: "Français",
+        ar: "العربية"
+      }
     const { admin_id } = req.query;
 
     try {
-      // 1. Sab languages le lo
+      // 1. 
       connection.query(
         "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
         (err, languages) => {
@@ -6240,12 +6246,18 @@ const DoctorActivateDeactivateUser = async (request, response) => {
             return res.json({ success: false, error: err.message });
           }
 
-          // Agar admin_id nahi aaya to simple return
+          // 
           if (!admin_id) {
-            return res.json({ success: true, data: languages });
-          }
+            // return res.json({ success: true, data: languages });
+            const formattedLanguages = languages.map(l => ({
+                ...l,
+                language_name: languageMap[l.language_code?.toLowerCase()] || l.language_name
+              }));
 
-          // 2. Admin ke selected languages le lo
+              return res.json({ success: true, data: formattedLanguages });
+                        }
+
+          // 2. 
           connection.query(
             "SELECT language_id FROM admin_selected_languages WHERE admin_id = ?",
             [admin_id],
@@ -6256,11 +6268,21 @@ const DoctorActivateDeactivateUser = async (request, response) => {
 
               const selectedLanguages = selectedRows.map(r => r.language_id);
 
-              res.json({
-                success: true,
-                data: languages,
-                selectedLanguages: selectedLanguages
-              });
+              // res.json({
+              //   success: true,
+              //   data: languages,
+              //   selectedLanguages: selectedLanguages
+              // });
+              const formattedLanguages = languages.map(l => ({
+                  ...l,
+                  language_name: languageMap[l.language_code?.toLowerCase()] || l.language_name
+                }));
+
+                res.json({
+                  success: true,
+                  data: formattedLanguages,
+                  selectedLanguages: selectedLanguages
+                });
             }
           );
         }

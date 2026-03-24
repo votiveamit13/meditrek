@@ -122,10 +122,76 @@ let otpStore = {};
 
 //   }
 // };
+// const subAdminLogin = async (req, res) => {
+//   const { sendOtpEmail } = require('../mailer');
+//   const { email, password } = req.body;
+
+//   try {
+    
+//     const sqlCheckUser = `
+//     SELECT doctor_id, doctor_name, email, password 
+//     FROM doctor_master 
+//     WHERE delete_flag = 0 
+//     AND approve_status = 1 
+//     AND email = ? 
+//     AND active_flag = 1
+//     `;
+
+//     connection.query(sqlCheckUser, [email], async (err, userResult) => {
+
+//       if (userResult.length <= 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Email not registered"
+//         });
+//       }
+
+//       var adminPassword = userResult[0].password;
+//       const hashedPass = await hashPassword(password);
+
+//       if (adminPassword != hashedPass) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Wrong password"
+//         });
+//       }
+
+//       // OTP generate
+//       const otp = Math.floor(100000 + Math.random() * 900000);
+//       console.log("Login OTP:", otp);
+
+//       otpStore[email] = otp;
+
+//       // await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+//       await sendOtpEmail(emailTrim, user.name || "User", otp);
+
+//       return res.status(200).json({
+//         success: true,
+//         msg: "OTP sent to email",
+//         email: email,
+//         doctor_id: userResult[0].doctor_id,
+//          otp: otp
+//       });
+
+//     });
+
+//   } catch (error) {
+
+//     return res.status(200).json({
+//       success: false,
+//       msg: error.message
+//     });
+
+//   }
+// };
 const subAdminLogin = async (req, res) => {
+
+  const { sendOtpEmail } = require('./mailer');
   const { email, password } = req.body;
 
   try {
+
+    const emailTrim = email.trim(); // 
 
     const sqlCheckUser = `
     SELECT doctor_id, doctor_name, email, password 
@@ -136,16 +202,18 @@ const subAdminLogin = async (req, res) => {
     AND active_flag = 1
     `;
 
-    connection.query(sqlCheckUser, [email], async (err, userResult) => {
+    connection.query(sqlCheckUser, [emailTrim], async (err, userResult) => {
 
-      if (userResult.length <= 0) {
+      if (!userResult || userResult.length === 0) {
         return res.status(200).json({
           success: false,
           msg: "Email not registered"
         });
       }
 
-      var adminPassword = userResult[0].password;
+      const user = userResult[0]; // 
+
+      var adminPassword = user.password;
       const hashedPass = await hashPassword(password);
 
       if (adminPassword != hashedPass) {
@@ -155,31 +223,28 @@ const subAdminLogin = async (req, res) => {
         });
       }
 
-      // OTP generate
       const otp = Math.floor(100000 + Math.random() * 900000);
-      console.log("Login OTP:", otp);
 
-      otpStore[email] = otp;
+      otpStore[emailTrim] = otp;
 
-      await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+      //  correct call
+      await sendOtpEmail(emailTrim, user.doctor_name || "User", otp);
 
       return res.status(200).json({
         success: true,
         msg: "OTP sent to email",
-        email: email,
-        doctor_id: userResult[0].doctor_id,
-         otp: otp
+        email: emailTrim,
+        doctor_id: user.doctor_id,
+        otp: otp
       });
 
     });
 
   } catch (error) {
-
     return res.status(200).json({
       success: false,
       msg: error.message
     });
-
   }
 };
 
