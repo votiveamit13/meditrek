@@ -4531,10 +4531,269 @@ const getNotificationHistory = (req, res) => {
     });
   });
 };
+// analytics api
 
+const getAllDiseases = (req, res) => {
+  const sql = `
+    SELECT disease_id, disease_name
+    FROM disease_master
+    WHERE delete_flag = 0
+    ORDER BY disease_name ASC
+  `;
 
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      diseases: result
+    });
+  });
+};
+
+const getAllMedicines = (req, res) => {
+  const sql = `
+    SELECT 
+      medicine_id,
+      medicine_name,
+      description,
+      added_by
+    FROM medicine_master
+    WHERE delete_flag = 0
+    ORDER BY medicine_name ASC
+  `;
+
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      medicines: result
+    });
+  });
+};
+
+const getPatientAnalytics = (req, res) => {
+  const { doctor_id, gender, age_group, columns = [] } = req.body;
+
+  if (!doctor_id) {
+    return res.json({ success: false, msg: "doctor_id required" });
+  }
+
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+  let params = [doctor_id];
+
+  if (gender !== undefined && gender !== "") {
+    where += ` AND u.gender = ?`;
+    params.push(Number(gender));
+  }
+
+  if (age_group && age_group !== "") {
+    if (age_group === "0-18")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18";
+    else if (age_group === "19-25")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 25";
+    else if (age_group === "26-40")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 26 AND 40";
+    else if (age_group === "41-60")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 60";
+    else if (age_group === "60+")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60";
+  }
+
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.name,
+      IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
+      u.gender,
+      u.diseases,
+      GROUP_CONCAT(m.medicine_name) AS medicines
+    FROM patient_master p
+    LEFT JOIN user_master u ON u.user_id = p.user_id
+    LEFT JOIN medicine_master m 
+      ON m.user_id = u.user_id AND m.delete_flag = 0
+    ${where}
+    GROUP BY u.user_id
+  `;
+
+  connection.query(sql, params, (err, users) => {
+    if (err) {
+      return res.json({ success: false, error: err.message });
+    }
+
+    let patientList = [];
+
+    users.forEach(user => {
+      let row = {};
+
+      if (columns.includes("name")) row.patient_name = user.name;
+      if (columns.includes("age")) row.age = user.age;
+
+      if (columns.includes("gender")) {
+        row.gender =
+          user.gender == 1
+            ? "Male"
+            : user.gender == 2
+            ? "Female"
+            : "Other";
+      }
+
+      if (columns.includes("diseases")) {
+        let cleanDiseases = [];
+
+        if (user.diseases) {
+          let matches = user.diseases.match(/name:\s*([^,}]+)/g);
+
+          if (matches) {
+            matches.forEach(m => {
+              let name = m.split(":")[1].trim();
+              cleanDiseases.push(name);
+            });
+          }
+        }
+
+        row.diseases = cleanDiseases.join(", ");
+      }
+
+      if (columns.includes("medications")) {
+        row.medications = user.medicines || "";
+      }
+
+      patientList.push(row);
+    });
+
+    return res.json({
+      success: true,
+      total_patients: users.length,
+      patients: patientList
+    });
+  });
+};
+
+// const getDiseaseAnalytics = (req, res) => {
+//   const doctor_id = req.body.doctor_id;
+
+//     if (!doctor_id) {
+//       return res.json({ success: false, msg: "doctor_id required" });
+//     }
+
+//    const sql = `
+//   SELECT 
+//     p.user_id,
+//     u.name,
+//     u.age,
+//     u.gender,
+//     u.diseases
+//   FROM patient_master p
+//   LEFT JOIN user_master u ON u.user_id = p.user_id
+//   WHERE p.doctor_id = ?
+//   AND p.delete_flag = 0
+// `;
+
+//     connection.query(sql, [doctor_id], (err, users) => {
+//       if (err) {
+//         return res.json({ success: false, error: err.message });
+//       }
+
+//       // diseases master
+//       connection.query(
+//         "SELECT disease_id, disease_name FROM disease_master WHERE delete_flag = 0",
+//         (err2, diseaseList) => {
+
+//           const diseaseMap = {};
+//           diseaseList.forEach(d => {
+//             diseaseMap[d.disease_id] = d.disease_name;
+//           });
+
+//           let totalPatients = users.length;
+//           let diseaseCount = {};
+//           let patientList = [];
+
+//           users.forEach(user => {
+//             let diseaseNames = [];
+
+//             // if (user.diseases) {
+//             //   let ids = user.diseases.split(',');
+
+//             //   ids.forEach(id => {
+//             //     let name = diseaseMap[id];
+//             //     if (name) {
+//             //       diseaseNames.push(name);
+//             //       diseaseCount[name] = (diseaseCount[name] || 0) + 1;
+//             //     }
+//             //   });
+//             // }
+
+//             if (user.diseases) {
+//             let diseaseArray = [];
+
+//             try {
+//               diseaseArray = JSON.parse(user.diseases);
+//             } catch (e) {
+//               diseaseArray = [];
+//             }
+
+//             diseaseArray.forEach(d => {
+//               let name = d.name;
+
+//               if (name) {
+//                 diseaseNames.push(name);
+//                 diseaseCount[name] = (diseaseCount[name] || 0) + 1;
+//               }
+//             });
+//           }
+
+//             patientList.push({
+//               patient_name: user.name,
+//               age: user.age,
+//               gender:
+//                 user.gender == 1
+//                   ? "Male"
+//                   : user.gender == 2
+//                   ? "Female"
+//                   : "Other",
+//               diseases: diseaseNames.join(", ")
+//             });
+//           });
+
+//           let diseaseDistribution = [];
+
+//           Object.keys(diseaseCount).forEach(name => {
+//             let count = diseaseCount[name];
+//             let percent = ((count / totalPatients) * 100).toFixed(1);
+
+//             diseaseDistribution.push({
+//               disease: name,
+//               count,
+//               percent
+//             });
+//           });
+
+//           res.json({
+//             success: true,
+//             total_patients: totalPatients,
+//             disease_distribution: diseaseDistribution,
+//             patients: patientList
+//           });
+//         }
+//         );
+//       });
+//     };
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory, 
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalytics,
 }
