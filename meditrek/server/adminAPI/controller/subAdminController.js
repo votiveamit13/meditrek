@@ -2061,74 +2061,236 @@ const getAllMedicalReports = async (req, res) => {
 };
 
 //add note 
-const addNote = async (req, res) => {
-  const { description, user_id } = req.body
-  try {
-    if (!user_id) {
-      return res.status(200).json({
-        success: false,
-        msg: languageMessages.msg_empty_param,
-        key: "user_id"
-      });
-    }
-    if (!description) {
-      return res.status(200).json({
-        success: false,
-        msg: languageMessages.msg_empty_param,
-        key: "description"
-      });
-    }
+// const addNote = async (req, res) => {
+//   const { description, user_id } = req.body
+//   try {
+//     if (!user_id) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "user_id"
+//       });
+//     }
+//     if (!description) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "description"
+//       });
+//     }
 
-    // First check if user exists
-    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
-    connection.query(patientSql, [user_id], (err, patient) => {
-      if (err) {
+//     // First check if user exists
+//     const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//     connection.query(patientSql, [user_id], (err, patient) => {
+//       if (err) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           err: err.message,
+//         });
+//       }
+
+//       if (patient.length <= 0) {
+//         return res.status(200).json({
+//           success: true,
+//           msg: languageMessages.msgDataNotFound,
+//           patient: "NA"
+//         });
+//       }
+
+//       const addquery = "INSERT INTO note_master(user_id, description, createtime, updatetime) VALUES (?,?,now(), now())"
+//       connection.query(addquery, [user_id, description], (addError, addResult) => {
+//         if (addError) {
+//           return res.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: addError.message
+//           })
+//         }
+//         if (addResult.affectedRows > 0) {
+//           return res.status(200).json({
+//             success: true,
+//             msg: 'Note added successfully'
+//           })
+//         }
+//       })
+
+//     })
+//   } catch (error) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message,
+//     });
+//   }
+// }
+
+  const addNote = async (req, res) => {
+    const { description, user_id,doctor_id  } = req.body
+    // const doctor_id = req.doctor_id;
+    // console.log("BODY:", req.body);
+    try {
+      if (!user_id) {
         return res.status(200).json({
           success: false,
-          msg: languageMessages.internalServerError,
-          err: err.message,
+          msg: languageMessages.msg_empty_param,
+          key: "user_id"
         });
       }
-
-      if (patient.length <= 0) {
+      if (!description) {
         return res.status(200).json({
-          success: true,
-          msg: languageMessages.msgDataNotFound,
-          patient: "NA"
+          success: false,
+          msg: languageMessages.msg_empty_param,
+          key: "description"
         });
       }
 
-      const addquery = "INSERT INTO note_master(user_id, description, createtime, updatetime) VALUES (?,?,now(), now())"
-      connection.query(addquery, [user_id, description], (addError, addResult) => {
-        if (addError) {
+      
+      const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+      connection.query(patientSql, [user_id], (err, patient) => {
+        if (err) {
           return res.status(200).json({
             success: false,
             msg: languageMessages.internalServerError,
-            error: addError.message
-          })
+            err: err.message,
+          });
         }
-        if (addResult.affectedRows > 0) {
+
+        if (patient.length <= 0) {
           return res.status(200).json({
             success: true,
-            msg: 'Note added successfully'
-          })
+            msg: languageMessages.msgDataNotFound,
+            patient: "NA"
+          });
         }
-      })
 
-    })
-  } catch (error) {
-    return res.status(200).json({
-      success: false,
-      msg: languageMessages.internalServerError,
-      err: error.message,
-    });
+        const addquery = "INSERT INTO note_master(user_id, doctor_id,description, createtime, updatetime) VALUES (?,?,?,now(), now())"
+        connection.query(addquery, [user_id, doctor_id,description], (addError, addResult) => {
+          if (addError) {
+            return res.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: addError.message
+            })
+          }
+          if (addResult.affectedRows > 0) {
+            return res.status(200).json({
+              success: true,
+              msg: 'Note added successfully'
+            })
+          }
+        })
+
+      })
+    } catch (error) {
+      return res.status(200).json({
+        success: false,
+        msg: languageMessages.internalServerError,
+        err: error.message,
+      });
+    }
   }
-}
+
 
 //get note 
+// const getNotes = async (req, res) => {
+//   try {
+//     const { user_id } = req.query;
+
+//     if (!user_id) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "user_id"
+//       });
+//     }
+
+//     // First check if user exists
+//     const userSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//     connection.query(userSql, [user_id], (err, user) => {
+//       if (err) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           err: err.message,
+//         });
+//       }
+
+//       if (user.length <= 0) {
+//         return res.status(200).json({
+//           success: true,
+//           msg: languageMessages.msgDataNotFound,
+//           user: "NA"
+//         });
+//       }
+
+//       // Get note details
+//       const getQuery = `
+//         SELECT 
+//           note_id,
+//           user_id, 
+//           description, 
+//           createtime
+//         FROM 
+//           note_master 
+//         WHERE 
+//           user_id = ? 
+//           AND delete_flag = 0
+//         ORDER BY createtime DESC
+//       `;
+
+//       connection.query(getQuery, [user_id], (err, results) => {
+//         if (err) {
+//           return res.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             err: err.message,
+//           });
+//         }
+
+//         if (results.length <= 0) {
+//           return res.status(200).json({
+//             success: true,
+//             msg: languageMessages.msgDataNotFound,
+//             notes: []
+//           });
+//         }
+
+//         const notes = results.map((data, index) => ({
+//           sr_no: index + 1,
+//           note_id: data.note_id,
+//           user_id: data.user_id,
+//           description: data.description,
+//           createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A")
+//         }));
+
+//         // Format the response data
+//         // const notes = results.map(data => ({
+//         //   note_id: data.note_id,
+//         //   user_id: data.user_id,
+//         //   description: data.description,
+//         //   createtime: moment(data.createtime).format("DD-MM-YYYY HH:mm:ss")
+//         // }));
+
+//         return res.status(200).json({
+//           success: true,
+//           msg: languageMessages.msgDataFound,
+//           notes: notes
+//         });
+//       });
+//     });
+//   } catch (error) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message,
+//     });
+//   }
+// };
 const getNotes = async (req, res) => {
+  
   try {
-    const { user_id } = req.query;
+    const { user_id ,doctor_id } = req.query;
 
     if (!user_id) {
       return res.status(200).json({
@@ -2138,7 +2300,7 @@ const getNotes = async (req, res) => {
       });
     }
 
-    // First check if user exists
+    //
     const userSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(userSql, [user_id], (err, user) => {
       if (err) {
@@ -2157,7 +2319,6 @@ const getNotes = async (req, res) => {
         });
       }
 
-      // Get note details
       const getQuery = `
         SELECT 
           note_id,
@@ -2167,12 +2328,13 @@ const getNotes = async (req, res) => {
         FROM 
           note_master 
         WHERE 
-          user_id = ? 
+          user_id = ? AND doctor_id = ?
           AND delete_flag = 0
         ORDER BY createtime DESC
       `;
+      // const doctor_id = req.doctor_id;
 
-      connection.query(getQuery, [user_id], (err, results) => {
+      connection.query(getQuery, [user_id,doctor_id], (err, results) => {
         if (err) {
           return res.status(200).json({
             success: false,
