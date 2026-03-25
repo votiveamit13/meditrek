@@ -1,4 +1,5 @@
 const connection = require("../connection/connection");
+const { getNotificationArrSingle } = require("../../webservice/shared functions/functions");
 const db = require("../connection/connection");
 const moment = require("moment");
 const crypto = require("crypto");
@@ -121,10 +122,76 @@ let otpStore = {};
 
 //   }
 // };
+// const subAdminLogin = async (req, res) => {
+//   const { sendOtpEmail } = require('../mailer');
+//   const { email, password } = req.body;
+
+//   try {
+    
+//     const sqlCheckUser = `
+//     SELECT doctor_id, doctor_name, email, password 
+//     FROM doctor_master 
+//     WHERE delete_flag = 0 
+//     AND approve_status = 1 
+//     AND email = ? 
+//     AND active_flag = 1
+//     `;
+
+//     connection.query(sqlCheckUser, [email], async (err, userResult) => {
+
+//       if (userResult.length <= 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Email not registered"
+//         });
+//       }
+
+//       var adminPassword = userResult[0].password;
+//       const hashedPass = await hashPassword(password);
+
+//       if (adminPassword != hashedPass) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: "Wrong password"
+//         });
+//       }
+
+//       // OTP generate
+//       const otp = Math.floor(100000 + Math.random() * 900000);
+//       console.log("Login OTP:", otp);
+
+//       otpStore[email] = otp;
+
+//       // await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+//       await sendOtpEmail(emailTrim, user.name || "User", otp);
+
+//       return res.status(200).json({
+//         success: true,
+//         msg: "OTP sent to email",
+//         email: email,
+//         doctor_id: userResult[0].doctor_id,
+//          otp: otp
+//       });
+
+//     });
+
+//   } catch (error) {
+
+//     return res.status(200).json({
+//       success: false,
+//       msg: error.message
+//     });
+
+//   }
+// };
 const subAdminLogin = async (req, res) => {
+
+  const { sendOtpEmail } = require('./mailer');
   const { email, password } = req.body;
 
   try {
+
+    const emailTrim = email.trim(); // 
 
     const sqlCheckUser = `
     SELECT doctor_id, doctor_name, email, password 
@@ -135,16 +202,18 @@ const subAdminLogin = async (req, res) => {
     AND active_flag = 1
     `;
 
-    connection.query(sqlCheckUser, [email], async (err, userResult) => {
+    connection.query(sqlCheckUser, [emailTrim], async (err, userResult) => {
 
-      if (userResult.length <= 0) {
+      if (!userResult || userResult.length === 0) {
         return res.status(200).json({
           success: false,
           msg: "Email not registered"
         });
       }
 
-      var adminPassword = userResult[0].password;
+      const user = userResult[0]; // 
+
+      var adminPassword = user.password;
       const hashedPass = await hashPassword(password);
 
       if (adminPassword != hashedPass) {
@@ -154,31 +223,28 @@ const subAdminLogin = async (req, res) => {
         });
       }
 
-      // OTP generate
       const otp = Math.floor(100000 + Math.random() * 900000);
-      console.log("Login OTP:", otp);
 
-      otpStore[email] = otp;
+      otpStore[emailTrim] = otp;
 
-      await sendMail(email, "Login OTP", `Your OTP is ${otp}`);
+      //  correct call
+      await sendOtpEmail(emailTrim, user.doctor_name || "User", otp);
 
       return res.status(200).json({
         success: true,
         msg: "OTP sent to email",
-        email: email,
-        doctor_id: userResult[0].doctor_id,
-         otp: otp
+        email: emailTrim,
+        doctor_id: user.doctor_id,
+        otp: otp
       });
 
     });
 
   } catch (error) {
-
     return res.status(200).json({
       success: false,
       msg: error.message
     });
-
   }
 };
 
@@ -3199,9 +3265,12 @@ const getPatientMeasurements = async (req, res) => {
       let completed = 0;
 
       shares.forEach((share, index) => {
-        const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
-        const endTime = share.createtime;
-
+        // const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+        // const endTime = share.createtime;
+         const startTime = share.createtime;
+          const endTime = index === 0
+            ? moment().format('YYYY-MM-DD HH:mm:ss') // latest time
+            : shares[index - 1].createtime;
         const measurementSql = `
           SELECT *
           FROM measurement_master
@@ -4126,30 +4195,99 @@ const sendPush = async (playerIds, title, message) => {
   }
 };
 
-// ALL USERS
-// const sendNotificationAll = (req, res) => {
-//   const { title, message } = req.body;
-//   const doctor_id = req.user_id;
 
-//   if (!title || !message) {
-//     return res.json({ success: false, msg: "title & message required" });
+// const sendNotificationAll = (req, res) => {
+    //   const { title, message } = req.body;
+    //   const doctor_id = req.doctor_id;
+
+    //   if (!title || !message) {
+    //     return res.json({ success: false, msg: "title & message required" });
+    //   }
+
+    //   // const sql = `
+    //   //   SELECT p.user_id, n.player_id
+    //   //   FROM patient_master p
+    //   //   LEFT JOIN user_notification n ON p.user_id = n.user_id
+    //   //   WHERE p.doctor_id = ?
+    //   //   AND p.delete_flag = 0
+    //   // `;
+    //   const sql = `
+    //     SELECT p.user_id, MAX(n.player_id) as player_id
+    //     FROM patient_master p
+    //     LEFT JOIN user_notification n ON p.user_id = n.user_id
+    //     WHERE p.doctor_id = ?
+    //     AND p.delete_flag = 0
+    //     GROUP BY p.user_id
+    //   `;
+
+    //   connection.query(sql, [doctor_id], async (err, result) => {
+    //     if (err) return res.json({ success: false, msg: err });
+
+    //     console.log("Patients found:", result.length);
+
+    //     if (!result.length) {
+    //       return res.json({ success: false, msg: "No patients found" });
+    //     }
+
+    //     const playerIds = result.map(r => r.player_id).filter(p => p);
+
+    //     const values = result.map(r => [
+    //       r.user_id,
+    //       doctor_id,
+    //       title,
+    //       message,
+    //       0,
+    //       new Date()
+    //     ]);
+
+    //     connection.query(
+    //       "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //       [values],
+    //       (err) => {
+    //         if (err) console.log("Insert Error:", err);
+    //       }
+    //     );
+
+    //     await sendPush(playerIds, title, message);
+
+    //     res.json({
+    //       success: true,
+    //       msg: `Notification sent to ${result.length} patients`
+    //     });
+    //   });
+    // };
+
+    // //  SPECIFIC USERS
+// const sendNotificationUsers = (req, res) => {
+//   const { title, message, user_ids } = req.body;
+//   const doctor_id = req.doctor_id; //  
+
+//   console.log("doctor_id:", doctor_id);
+//   console.log("user_ids:", user_ids);
+
+//   if (!title || !message || !user_ids?.length) {
+//     return res.json({ success: false, msg: "missing params" });
 //   }
 
 //   const sql = `
-//     SELECT u.user_id, n.player_id 
-//     FROM user_master u
-//     LEFT JOIN user_notification n ON u.user_id = n.user_id
-//     WHERE u.delete_flag = 0 AND u.notification_status = 1
+//     SELECT p.user_id, n.player_id
+//     FROM patient_master p
+//     LEFT JOIN user_notification n ON p.user_id = n.user_id
+//     WHERE p.doctor_id = ?
+//     AND p.user_id IN (?)
+//     AND p.delete_flag = 0
 //   `;
 
-//   connection.query(sql, async (err, result) => {
+//   connection.query(sql, [doctor_id, user_ids], async (err, result) => {
 //     if (err) {
 //       console.log("Fetch Error:", err);
 //       return res.json({ success: false, msg: "DB Error" });
 //     }
 
+//     console.log("Matched Patients:", result.length);
+
 //     if (!result.length) {
-//       return res.json({ success: false, msg: "No users found" });
+//       return res.json({ success: false, msg: "No valid patients found" });
 //     }
 
 //     const playerIds = result.map(r => r.player_id).filter(p => p);
@@ -4163,25 +4301,23 @@ const sendPush = async (playerIds, title, message) => {
 //       new Date()
 //     ]);
 
-//     // save notification
-//     if (values.length > 0) {
-//       connection.query(
-//         "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-//         [values],
-//         (err) => {
-//           if (err) console.log("Insert Error:", err);
-//         }
-//       );
-//     }
+//     connection.query(
+//       "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+//       [values],
+//       (err) => {
+//         if (err) console.log("Insert Error:", err);
+//       }
+//     );
 
 //     await sendPush(playerIds, title, message);
 
 //     return res.json({
 //       success: true,
-//       msg: "Notification sent to all users"
+//       msg: `Notification sent to ${result.length} patients`
 //     });
 //   });
 // };
+
 const sendNotificationAll = (req, res) => {
   const { title, message } = req.body;
   const doctor_id = req.doctor_id;
@@ -4215,26 +4351,40 @@ const sendNotificationAll = (req, res) => {
       return res.json({ success: false, msg: "No patients found" });
     }
 
-    const playerIds = result.map(r => r.player_id).filter(p => p);
+    // const playerIds = result.map(r => r.player_id).filter(p => p);
 
-    const values = result.map(r => [
-      r.user_id,
-      doctor_id,
-      title,
-      message,
-      0,
-      new Date()
-    ]);
+    // const values = result.map(r => [
+    //   r.user_id,
+    //   doctor_id,
+    //   title,
+    //   message,
+    //   0,
+    //   new Date()
+    // ]);
 
-    connection.query(
-      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-      [values],
-      (err) => {
-        if (err) console.log("Insert Error:", err);
-      }
-    );
+    // connection.query(
+    //   "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //   [values],
+    //   (err) => {
+    //     if (err) console.log("Insert Error:", err);
+    //   }
+    // );
 
-    await sendPush(playerIds, title, message);
+    // await sendPush(playerIds, title, message);
+    for (const r of result) {
+      await new Promise(resolve => {
+            getNotificationArrSingle(
+              doctor_id,
+              r.user_id,
+              "General",
+              "0",
+              title, title, title, title, title,
+              message, message, message, message, message,
+              {},
+              resolve
+            );
+          });
+        }
 
     res.json({
       success: true,
@@ -4243,7 +4393,6 @@ const sendNotificationAll = (req, res) => {
   });
 };
 
-//  SPECIFIC USERS
 const sendNotificationUsers = (req, res) => {
   const { title, message, user_ids } = req.body;
   const doctor_id = req.doctor_id; //  
@@ -4278,24 +4427,46 @@ const sendNotificationUsers = (req, res) => {
 
     const playerIds = result.map(r => r.player_id).filter(p => p);
 
+    // const values = result.map(r => [
+    //   r.user_id,
+    //   doctor_id,
+    //   title,
+    //   message,
+    //   0,
+    //   new Date()
+    // ]);
     const values = result.map(r => [
-      r.user_id,
-      doctor_id,
+      doctor_id,     
+      r.user_id,     
       title,
       message,
       0,
       new Date()
     ]);
 
-    connection.query(
-      "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
-      [values],
-      (err) => {
-        if (err) console.log("Insert Error:", err);
-      }
-    );
+    // connection.query(
+    //   "INSERT INTO user_notification_message (user_id, other_user_id, title, message, read_status, createtime) VALUES ?",
+    //   [values],
+    //   (err) => {
+    //     if (err) console.log("Insert Error:", err);
+    //   }
+    // );
 
-    await sendPush(playerIds, title, message);
+    // await sendPush(playerIds, title, message);
+    for (const r of result) {
+        await new Promise(resolve => {
+          getNotificationArrSingle(
+            doctor_id,         
+            r.user_id,         
+            "General",          
+            "0",
+            title, title, title, title, title,
+            message, message, message, message, message,
+            {},
+            resolve
+          );
+        });
+      }
 
     return res.json({
       success: true,
@@ -4360,10 +4531,269 @@ const getNotificationHistory = (req, res) => {
     });
   });
 };
+// analytics api
 
+const getAllDiseases = (req, res) => {
+  const sql = `
+    SELECT disease_id, disease_name
+    FROM disease_master
+    WHERE delete_flag = 0
+    ORDER BY disease_name ASC
+  `;
 
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      diseases: result
+    });
+  });
+};
+
+const getAllMedicines = (req, res) => {
+  const sql = `
+    SELECT 
+      medicine_id,
+      medicine_name,
+      description,
+      added_by
+    FROM medicine_master
+    WHERE delete_flag = 0
+    ORDER BY medicine_name ASC
+  `;
+
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      medicines: result
+    });
+  });
+};
+
+const getPatientAnalytics = (req, res) => {
+  const { doctor_id, gender, age_group, columns = [] } = req.body;
+
+  if (!doctor_id) {
+    return res.json({ success: false, msg: "doctor_id required" });
+  }
+
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+  let params = [doctor_id];
+
+  if (gender !== undefined && gender !== "") {
+    where += ` AND u.gender = ?`;
+    params.push(Number(gender));
+  }
+
+  if (age_group && age_group !== "") {
+    if (age_group === "0-18")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18";
+    else if (age_group === "19-25")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 25";
+    else if (age_group === "26-40")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 26 AND 40";
+    else if (age_group === "41-60")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 60";
+    else if (age_group === "60+")
+      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60";
+  }
+
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.name,
+      IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
+      u.gender,
+      u.diseases,
+      GROUP_CONCAT(m.medicine_name) AS medicines
+    FROM patient_master p
+    LEFT JOIN user_master u ON u.user_id = p.user_id
+    LEFT JOIN medicine_master m 
+      ON m.user_id = u.user_id AND m.delete_flag = 0
+    ${where}
+    GROUP BY u.user_id
+  `;
+
+  connection.query(sql, params, (err, users) => {
+    if (err) {
+      return res.json({ success: false, error: err.message });
+    }
+
+    let patientList = [];
+
+    users.forEach(user => {
+      let row = {};
+
+      if (columns.includes("name")) row.patient_name = user.name;
+      if (columns.includes("age")) row.age = user.age;
+
+      if (columns.includes("gender")) {
+        row.gender =
+          user.gender == 1
+            ? "Male"
+            : user.gender == 2
+            ? "Female"
+            : "Other";
+      }
+
+      if (columns.includes("diseases")) {
+        let cleanDiseases = [];
+
+        if (user.diseases) {
+          let matches = user.diseases.match(/name:\s*([^,}]+)/g);
+
+          if (matches) {
+            matches.forEach(m => {
+              let name = m.split(":")[1].trim();
+              cleanDiseases.push(name);
+            });
+          }
+        }
+
+        row.diseases = cleanDiseases.join(", ");
+      }
+
+      if (columns.includes("medications")) {
+        row.medications = user.medicines || "";
+      }
+
+      patientList.push(row);
+    });
+
+    return res.json({
+      success: true,
+      total_patients: users.length,
+      patients: patientList
+    });
+  });
+};
+
+// const getDiseaseAnalytics = (req, res) => {
+//   const doctor_id = req.body.doctor_id;
+
+//     if (!doctor_id) {
+//       return res.json({ success: false, msg: "doctor_id required" });
+//     }
+
+//    const sql = `
+//   SELECT 
+//     p.user_id,
+//     u.name,
+//     u.age,
+//     u.gender,
+//     u.diseases
+//   FROM patient_master p
+//   LEFT JOIN user_master u ON u.user_id = p.user_id
+//   WHERE p.doctor_id = ?
+//   AND p.delete_flag = 0
+// `;
+
+//     connection.query(sql, [doctor_id], (err, users) => {
+//       if (err) {
+//         return res.json({ success: false, error: err.message });
+//       }
+
+//       // diseases master
+//       connection.query(
+//         "SELECT disease_id, disease_name FROM disease_master WHERE delete_flag = 0",
+//         (err2, diseaseList) => {
+
+//           const diseaseMap = {};
+//           diseaseList.forEach(d => {
+//             diseaseMap[d.disease_id] = d.disease_name;
+//           });
+
+//           let totalPatients = users.length;
+//           let diseaseCount = {};
+//           let patientList = [];
+
+//           users.forEach(user => {
+//             let diseaseNames = [];
+
+//             // if (user.diseases) {
+//             //   let ids = user.diseases.split(',');
+
+//             //   ids.forEach(id => {
+//             //     let name = diseaseMap[id];
+//             //     if (name) {
+//             //       diseaseNames.push(name);
+//             //       diseaseCount[name] = (diseaseCount[name] || 0) + 1;
+//             //     }
+//             //   });
+//             // }
+
+//             if (user.diseases) {
+//             let diseaseArray = [];
+
+//             try {
+//               diseaseArray = JSON.parse(user.diseases);
+//             } catch (e) {
+//               diseaseArray = [];
+//             }
+
+//             diseaseArray.forEach(d => {
+//               let name = d.name;
+
+//               if (name) {
+//                 diseaseNames.push(name);
+//                 diseaseCount[name] = (diseaseCount[name] || 0) + 1;
+//               }
+//             });
+//           }
+
+//             patientList.push({
+//               patient_name: user.name,
+//               age: user.age,
+//               gender:
+//                 user.gender == 1
+//                   ? "Male"
+//                   : user.gender == 2
+//                   ? "Female"
+//                   : "Other",
+//               diseases: diseaseNames.join(", ")
+//             });
+//           });
+
+//           let diseaseDistribution = [];
+
+//           Object.keys(diseaseCount).forEach(name => {
+//             let count = diseaseCount[name];
+//             let percent = ((count / totalPatients) * 100).toFixed(1);
+
+//             diseaseDistribution.push({
+//               disease: name,
+//               count,
+//               percent
+//             });
+//           });
+
+//           res.json({
+//             success: true,
+//             total_patients: totalPatients,
+//             disease_distribution: diseaseDistribution,
+//             patients: patientList
+//           });
+//         }
+//         );
+//       });
+//     };
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory, 
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalytics,
 }
