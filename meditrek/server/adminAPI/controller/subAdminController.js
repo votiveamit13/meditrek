@@ -3496,6 +3496,106 @@ const deleteDoctorAccount = async (req, res) => {
 //   }
 // };
 
+// const getPatientMeasurements = async (req, res) => {
+//   try {
+//     const { user_id, doctor_id } = req.query;
+
+//     if (!user_id || !doctor_id) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param
+//       });
+//     }
+
+//     const shareSql = `
+//       SELECT createtime
+//       FROM report_share_master
+//       WHERE user_id = ?
+//         AND doctor_id = ?
+//         AND share_type = 0
+//         AND delete_flag = 0
+//         AND FIND_IN_SET('3', information_type)
+//       ORDER BY createtime DESC
+//     `;
+
+//     connection.query(shareSql, [user_id, doctor_id], (err, shares) => {
+//       if (err || shares.length === 0) {
+//         return res.status(200).json({
+//           success: true,
+//           msg: "Measurements not shared",
+//           measurements: []
+//         });
+//       }
+
+//       const result = [];
+//       let completed = 0;
+
+//       shares.forEach((share, index) => {
+//         const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+//         const endTime = share.createtime;
+
+//         const measurementSql = `
+//           SELECT *
+//           FROM measurement_master
+//           WHERE user_id = ?
+//             AND delete_flag = 0
+//             AND createtime > ?
+//             AND createtime <= ?
+//           ORDER BY createtime DESC
+//         `;
+
+//         connection.query(
+//           measurementSql,
+//           [user_id, startTime, endTime],
+//           (err2, rows) => {
+//             completed++;
+
+//             if (!err2 && rows.length > 0) {
+//               rows.forEach(r => {
+//                 const mTime = moment
+//                   .utc(r.createtime)
+//                   .tz("Europe/Paris");
+
+//                 result.push({
+//                     sr_no: result.length + 1,
+//                   date: mTime.format("DD-MM-YYYY"),
+//                   time: mTime.format("hh:mm A"),
+
+//                   type: r.type,
+//                   systolic_bp: r.systolic_bp,
+//                   diastolic_bp: r.diastolic_bp,
+//                   pulse: r.pulse,
+//                   fasting_glucose: r.fasting_glucose,
+//                   ppbgs: r.ppbgs,
+//                   weight: r.weight,
+//                   temperature: r.temperature,
+//                   symptom: r.symptom,
+//                   symptom_range: r.symptom_range
+//                 });
+//               });
+//             }
+
+//             if (completed === shares.length) {
+//               return res.status(200).json({
+//                 success: true,
+//                 msg: languageMessages.msgDataFound,
+//                 measurements: result
+//               });
+//             }
+//           }
+//         );
+//       });
+//     });
+
+//   } catch (error) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message
+//     });
+//   }
+// };
+
 const getPatientMeasurements = async (req, res) => {
   try {
     const { user_id, doctor_id } = req.query;
@@ -3534,14 +3634,27 @@ const getPatientMeasurements = async (req, res) => {
         const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
         const endTime = share.createtime;
 
+        // const measurementSql = `
+        //   SELECT *
+        //   FROM measurement_master
+        //   WHERE user_id = ?
+        //     AND delete_flag = 0
+        //     AND createtime > ?
+        //     AND createtime <= ?
+        //   ORDER BY createtime DESC
+        // `;
         const measurementSql = `
-          SELECT *
-          FROM measurement_master
-          WHERE user_id = ?
-            AND delete_flag = 0
-            AND createtime > ?
-            AND createtime <= ?
-          ORDER BY createtime DESC
+          SELECT 
+            m.*,
+            s.symptom_name AS symptomname
+          FROM measurement_master m
+          LEFT JOIN symptoms_master s 
+            ON m.symptom = s.symptom_id
+          WHERE m.user_id = ?
+            AND m.delete_flag = 0
+            AND m.createtime > ?
+            AND m.createtime <= ?
+          ORDER BY m.createtime DESC
         `;
 
         connection.query(
@@ -3570,7 +3683,8 @@ const getPatientMeasurements = async (req, res) => {
                   weight: r.weight,
                   temperature: r.temperature,
                   symptom: r.symptom,
-                  symptom_range: r.symptom_range
+                  symptom_range: r.symptom_range,
+                  symptomname: r.symptomname
                 });
               });
             }
@@ -3595,7 +3709,6 @@ const getPatientMeasurements = async (req, res) => {
     });
   }
 };
-
 
 
 
