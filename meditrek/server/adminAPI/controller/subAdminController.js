@@ -3392,6 +3392,110 @@ const deleteDoctorAccount = async (req, res) => {
 }
 
 // get shared measurements
+// const getPatientMeasurements = async (req, res) => {
+//   try {
+//     const { user_id, doctor_id } = req.query;
+
+//     if (!user_id || !doctor_id) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param
+//       });
+//     }
+
+//     const shareSql = `
+//       SELECT createtime
+//       FROM report_share_master
+//       WHERE user_id = ?
+//         AND doctor_id = ?
+//         AND share_type = 0
+//         AND delete_flag = 0
+//         AND FIND_IN_SET('3', information_type)
+//       ORDER BY createtime DESC
+//     `;
+
+//     connection.query(shareSql, [user_id, doctor_id], (err, shares) => {
+//       if (err || shares.length === 0) {
+//         return res.status(200).json({
+//           success: true,
+//           msg: "Measurements not shared",
+//           measurements: []
+//         });
+//       }
+
+//       const result = [];
+//       let completed = 0;
+
+//       shares.forEach((share, index) => {
+//         // const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+//         // const endTime = share.createtime;
+//         //  const startTime = share.createtime;
+//         const startTime = '1970-01-01 00:00:00';
+//           const endTime = index === 0
+//             ? moment().format('YYYY-MM-DD HH:mm:ss') // latest time
+//             : shares[index - 1].createtime;
+//         const measurementSql = `
+//           SELECT *
+//           FROM measurement_master
+//           WHERE user_id = ?
+//             AND delete_flag = 0
+//             AND createtime > ?
+//             AND createtime <= ?
+//           ORDER BY createtime DESC
+//         `;
+
+//         connection.query(
+//           measurementSql,
+//           [user_id, startTime, endTime],
+//           (err2, rows) => {
+//             completed++;
+
+//             if (!err2 && rows.length > 0) {
+//               rows.forEach(r => {
+//                 const mTime = moment
+//                   .utc(r.createtime)
+//                   .tz("Europe/Paris");
+
+//                 result.push({
+//                     sr_no: result.length + 1,
+//                   date: mTime.format("DD-MM-YYYY"),
+//                   time: mTime.format("hh:mm A"),
+
+//                   type: r.type,
+//                   systolic_bp: r.systolic_bp,
+//                   diastolic_bp: r.diastolic_bp,
+//                   pulse: r.pulse,
+//                   fasting_glucose: r.fasting_glucose,
+//                   ppbgs: r.ppbgs,
+//                   weight: r.weight,
+//                   temperature: r.temperature,
+//                   symptom: r.symptom,
+//                   symptom_range: r.symptom_range
+//                 });
+//               });
+//             }
+
+//             if (completed === shares.length) {
+//               return res.status(200).json({
+//                 success: true,
+//                 msg: languageMessages.msgDataFound,
+//                 measurements: result
+//               });
+//             }
+//           }
+//         );
+//       });
+//     });
+
+//   } catch (error) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message
+//     });
+//   }
+// };
+
 const getPatientMeasurements = async (req, res) => {
   try {
     const { user_id, doctor_id } = req.query;
@@ -3427,12 +3531,9 @@ const getPatientMeasurements = async (req, res) => {
       let completed = 0;
 
       shares.forEach((share, index) => {
-        // const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
-        // const endTime = share.createtime;
-         const startTime = share.createtime;
-          const endTime = index === 0
-            ? moment().format('YYYY-MM-DD HH:mm:ss') // latest time
-            : shares[index - 1].createtime;
+        const startTime = index === 0 ? '1970-01-01 00:00:00' : shares[index - 1].createtime;
+        const endTime = share.createtime;
+
         const measurementSql = `
           SELECT *
           FROM measurement_master
@@ -4747,8 +4848,124 @@ const getAllMedicines = (req, res) => {
   });
 };
 
-const getPatientAnalytics = (req, res) => {
-  const { doctor_id, gender, age_group, columns = [] } = req.body;
+// const getPatientAnalytics = (req, res) => {
+//   const { doctor_id, gender, age_group, columns = [] } = req.body;
+
+//   if (!doctor_id) {
+//     return res.json({ success: false, msg: "doctor_id required" });
+//   }
+
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+//   let params = [doctor_id];
+
+//   if (gender !== undefined && gender !== "") {
+//     where += ` AND u.gender = ?`;
+//     params.push(Number(gender));
+//   }
+
+//   // if (age_group && age_group !== "") {
+//   //   if (age_group === "0-18")
+//   //     where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18";
+//   //   else if (age_group === "19-25")
+//   //     where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 25";
+//   //   else if (age_group === "26-40")
+//   //     where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 26 AND 40";
+//   //   else if (age_group === "41-60")
+//   //     where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 60";
+//   //   else if (age_group === "60+")
+//   //     where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60";
+//   // }
+//   if (age_group && age_group !== "") {
+//       if (age_group.includes("-")) {
+//         const [min, max] = age_group.split("-").map(Number);
+//         where += ` AND u.dob IS NOT NULL 
+//           AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+//       } else if (age_group === "60+") {
+//         where += ` AND u.dob IS NOT NULL 
+//           AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60`;
+//       }
+//     }
+
+//   const sql = `
+//     SELECT 
+//       u.user_id,
+//       u.name,
+//       IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
+//       u.gender,
+//       u.diseases,
+//       GROUP_CONCAT(m.medicine_name) AS medicines
+//     FROM patient_master p
+//     LEFT JOIN user_master u ON u.user_id = p.user_id
+//     LEFT JOIN medicine_master m 
+//       ON m.user_id = u.user_id AND m.delete_flag = 0
+//     ${where}
+//     GROUP BY u.user_id
+//   `;
+
+//   connection.query(sql, params, (err, users) => {
+//     if (err) {
+//       return res.json({ success: false, error: err.message });
+//     }
+
+//     let patientList = [];
+
+//     users.forEach(user => {
+//       let row = {};
+
+//       if (columns.includes("name")) row.patient_name = user.name;
+//       if (columns.includes("age")) row.age = user.age;
+
+//       if (columns.includes("gender")) {
+//         row.gender =
+//           user.gender == 1
+//             ? "Male"
+//             : user.gender == 2
+//             ? "Female"
+//             : "Other";
+//       }
+
+//       if (columns.includes("diseases")) {
+//         let cleanDiseases = [];
+
+//         if (user.diseases) {
+//           let matches = user.diseases.match(/name:\s*([^,}]+)/g);
+
+//           if (matches) {
+//             matches.forEach(m => {
+//               let name = m.split(":")[1].trim();
+//               cleanDiseases.push(name);
+//             });
+//           }
+//         }
+
+//         row.diseases = cleanDiseases.join(", ");
+//       }
+
+//       if (columns.includes("medications")) {
+//         row.medications = user.medicines || "";
+//       }
+
+//       patientList.push(row);
+//     });
+
+//     return res.json({
+//       success: true,
+//       total_patients: users.length,
+//       patients: patientList
+//     });
+//   });
+// };
+
+const getPatientAnalyticsCustomTable = (req, res) => {
+  const {
+    doctor_id,
+    gender,
+    age_group,
+    disease = [],
+    medication = [],
+    symptoms = [],
+    columns = []
+  } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -4763,16 +4980,32 @@ const getPatientAnalytics = (req, res) => {
   }
 
   if (age_group && age_group !== "") {
-    if (age_group === "0-18")
-      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18";
-    else if (age_group === "19-25")
-      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 25";
-    else if (age_group === "26-40")
-      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 26 AND 40";
-    else if (age_group === "41-60")
-      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 41 AND 60";
-    else if (age_group === "60+")
-      where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60";
+    if (age_group.includes("-")) {
+      const [min, max] = age_group.split("-").map(Number);
+      where += ` AND u.dob IS NOT NULL 
+        AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+    } else if (age_group === "60+") {
+      where += ` AND u.dob IS NOT NULL 
+        AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60`;
+    }
+  }
+
+  if (disease.length > 0) {
+    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+    where += ` AND (${diseaseConditions})`;
+    disease.forEach(d => params.push(`%${d}%`));
+  }
+
+  if (medication.length > 0) {
+    const medConditions = medication.map(() => `m.medicine_name LIKE ?`).join(" OR ");
+    where += ` AND (${medConditions})`;
+    medication.forEach(m => params.push(`%${m}%`));
+  }
+
+  if (symptoms.length > 0) {
+    const symConditions = symptoms.map(() => `sm.symptom_name LIKE ?`).join(" OR ");
+    where += ` AND (${symConditions})`;
+    symptoms.forEach(s => params.push(`%${s}%`));
   }
 
   const sql = `
@@ -4782,11 +5015,16 @@ const getPatientAnalytics = (req, res) => {
       IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
       u.gender,
       u.diseases,
-      GROUP_CONCAT(m.medicine_name) AS medicines
+      GROUP_CONCAT(DISTINCT m.medicine_name) AS medicines,
+      GROUP_CONCAT(DISTINCT sm.symptom_name) AS reported_symptoms
     FROM patient_master p
     LEFT JOIN user_master u ON u.user_id = p.user_id
     LEFT JOIN medicine_master m 
       ON m.user_id = u.user_id AND m.delete_flag = 0
+    LEFT JOIN adverse_reaction_master arm 
+      ON arm.user_id = u.user_id AND arm.delete_flag = 0
+    LEFT JOIN symptoms_master sm 
+      ON sm.symptom_id = arm.symptom_id AND sm.delete_flag = 0
     ${where}
     GROUP BY u.user_id
   `;
@@ -4800,6 +5038,8 @@ const getPatientAnalytics = (req, res) => {
 
     users.forEach(user => {
       let row = {};
+
+      row.user_id = user.user_id;
 
       if (columns.includes("name")) row.patient_name = user.name;
       if (columns.includes("age")) row.age = user.age;
@@ -4818,11 +5058,9 @@ const getPatientAnalytics = (req, res) => {
 
         if (user.diseases) {
           let matches = user.diseases.match(/name:\s*([^,}]+)/g);
-
           if (matches) {
             matches.forEach(m => {
-              let name = m.split(":")[1].trim();
-              cleanDiseases.push(name);
+              cleanDiseases.push(m.split(":")[1].trim());
             });
           }
         }
@@ -4832,6 +5070,10 @@ const getPatientAnalytics = (req, res) => {
 
       if (columns.includes("medications")) {
         row.medications = user.medicines || "";
+      }
+
+      if (columns.includes("reported_symptoms")) {
+        row.reported_symptoms = user.reported_symptoms || "";
       }
 
       patientList.push(row);
@@ -4957,5 +5199,5 @@ const getPatientAnalytics = (req, res) => {
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalytics,
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,
 }
