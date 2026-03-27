@@ -5208,7 +5208,7 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 };
 
 const getPatientDemographics = (req, res) => {
-  const { doctor_id, gender, age_group } = req.body;
+  const { doctor_id, gender, age_group,page = 1, limit = 10  } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5216,6 +5216,7 @@ const getPatientDemographics = (req, res) => {
 
   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0`;
   let params = [doctor_id];
+  const offset = (page - 1) * limit;
 
   if (gender !== undefined && gender !== "") {
     where += ` AND um.gender = ?`;
@@ -5258,7 +5259,8 @@ const getPatientDemographics = (req, res) => {
         CASE 
           WHEN um.gender = 1 THEN 'Male'
           WHEN um.gender = 2 THEN 'Female'
-          ELSE 'Other'
+           WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
         END as gender,
         COUNT(*) as count
       FROM patient_master pm
@@ -5266,9 +5268,10 @@ const getPatientDemographics = (req, res) => {
       ${where}
       GROUP BY age_group, gender
       ORDER BY age_group
+      LIMIT ? OFFSET ?
     `;
 
-    connection.query(dataSql, params, (err2, rows) => {
+    connection.query(dataSql,  [...params, Number(limit), Number(offset)], (err2, rows) => {
       if (err2) {
         return res.json({ success: false, error: err2.message });
       }
