@@ -5378,7 +5378,6 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
 
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
-
   if (gender !== undefined && gender !== null) {
     where += ` AND u.gender = ?`;
     params.push(gender);
@@ -5444,7 +5443,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
   });
 };
 const getPatientDiseasesMedicineList = (req, res) => {
-  const { doctor_id, gender, age_group } = req.body;
+  const { doctor_id, gender, age_group,page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5452,6 +5451,7 @@ const getPatientDiseasesMedicineList = (req, res) => {
 
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
   let params = [doctor_id];
+  const offset = (page - 1) * limit;
 
   if (gender !== undefined) {
     where += ` AND u.gender = ?`;
@@ -5477,7 +5477,8 @@ const getPatientDiseasesMedicineList = (req, res) => {
       CASE 
         WHEN u.gender = 1 THEN 'Male'
         WHEN u.gender = 2 THEN 'Female'
-        ELSE 'Other'
+         WHEN u.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
       END as gender,
       u.diseases,
       GROUP_CONCAT(DISTINCT med.medicine_name) as medications
@@ -5486,10 +5487,10 @@ const getPatientDiseasesMedicineList = (req, res) => {
     LEFT JOIN medication_master m ON m.user_id = u.user_id
     LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
     ${where}
-    GROUP BY p.user_id
+    GROUP BY p.user_id LIMIT ? OFFSET ?
   `;
 
-  connection.query(sql, params, (err, patients) => {
+  connection.query(sql,  [...params, Number(limit), Number(offset)], (err, patients) => {
     if (err) {
       console.log(err);
       return res.json({ success: false, msg: "Error" });
@@ -5507,7 +5508,8 @@ const getDiseaseMedicineSummary = (req, res) => {
     doctor_id,
     gender,
     age_group,
-    disease = []
+    disease = [],
+    page = 1, limit = 10
   } = req.body;
 
   if (!doctor_id) {
@@ -5516,8 +5518,8 @@ const getDiseaseMedicineSummary = (req, res) => {
 
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
-
-  if (gender !== undefined && gender !== null) {
+  const offset = (page - 1) * limit;
+  if (gender !== undefined && gender !== null && gender !== "") {
     where += ` AND u.gender = ?`;
     params.push(gender);
   }
@@ -5605,10 +5607,10 @@ const getDiseaseMedicineSummary = (req, res) => {
         LEFT JOIN medication_master m ON m.user_id = u.user_id
         LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
         ${where}
-        AND med.medicine_name IS NOT NULL
+        AND med.medicine_name IS NOT NULL LIMIT ? OFFSET ?
       `;
 
-      connection.query(drilldownSql, params, (err, drillRows) => {
+      connection.query(drilldownSql,  [...params, Number(limit), Number(offset)], (err, drillRows) => {
         if (err) {
           console.log(err);
           return res.json({ success: false, msg: "Error" });
