@@ -5615,9 +5615,414 @@ const getDiseaseMedicineSummary = (req, res) => {
 };
 
 
+// B)Medication Demographics Summary
+// =========================
+// const getPatientMedicationDemographics = (req, res) => {
+//   const { doctor_id, gender, age_group, medication = [] } = req.body;
+
+//   if (!doctor_id) {
+//     return res.json({ success: false, msg: "doctor_id required" });
+//   }
+
+//   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let params = [doctor_id];
+
+//   // Gender filter
+//   if (gender !== undefined && gender !== null && gender !== "") {
+//     where += ` AND u.gender = ?`;
+//     params.push(gender);
+//   }
+
+//   // Age filter
+//   if (age_group) {
+//     if (age_group.includes("+")) {
+//       const min = parseInt(age_group.replace("+", ""));
+//       where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+//       params.push(min);
+//     } else {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+//       params.push(min, max);
+//     }
+//   }
+
+//   // Medication filter
+//   if (medication.length) {
+//     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
+//     medication.forEach(m => params.push(`%${m}%`));
+//   }
+
+//   // Total patients
+//   const totalSql = `
+//     SELECT COUNT(DISTINCT pm.user_id) as total
+//     FROM patient_master pm
+//     JOIN user_master u ON u.user_id = pm.user_id
+//     LEFT JOIN medication_master m ON m.user_id = u.user_id
+//     LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//     ${where}
+//   `;
+
+//   connection.query(totalSql, params, (err, totalResult) => {
+//     if (err) return res.json({ success: false, error: err.message });
+
+//     const total = totalResult[0]?.total || 0;
+
+//     // Age group + gender summary
+//     const dataSql = `
+//       SELECT 
+//         CASE 
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
+//           WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 45 THEN '31-45'
+//           ELSE '46+'
+//         END as age_group,
+//         CASE 
+//           WHEN u.gender = 1 THEN 'Male'
+//           WHEN u.gender = 2 THEN 'Female'
+//           ELSE 'Other'
+//         END as gender,
+//         COUNT(DISTINCT pm.user_id) as count
+//       FROM patient_master pm
+//       JOIN user_master u ON u.user_id = pm.user_id
+//       LEFT JOIN medication_master m ON m.user_id = u.user_id
+//       LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//       ${where}
+//       GROUP BY age_group, gender
+//       ORDER BY age_group
+//     `;
+
+//     connection.query(dataSql, params, (err2, rows) => {
+//       if (err2) return res.json({ success: false, error: err2.message });
+
+//       const data = rows.map(r => ({
+//         age_group: r.age_group,
+//         gender: r.gender,
+//         count: r.count,
+//         percentage: total > 0 ? ((r.count / total) * 100).toFixed(2) : "0.00"
+//       }));
+
+//       return res.json({
+//         success: true,
+//         total_patients: total,
+//         data
+//       });
+//     });
+//   });
+// };
+
+// //  Patient Details (Filtered)
+// const getPatientMedicationDemographicsDetails = (req, res) => {
+//   const { doctor_id, gender, age_group, medication = [], search } = req.body;
+
+//   if (!doctor_id) return res.json({ success: false, msg: "doctor_id required" });
+
+//   let where = `
+//     WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()
+//   `;
+//   let params = [doctor_id];
+
+//   if (gender !== undefined && gender !== null && gender !== "") {
+//     where += " AND u.gender = ?";
+//     params.push(gender);
+//   }
+
+//   if (age_group) {
+//     if (age_group.includes("+")) {
+//       const min = parseInt(age_group.replace("+", ""));
+//       where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?";
+//       params.push(min);
+//     } else {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?";
+//       params.push(min, max);
+//     }
+//   }
+
+//   if (medication.length) {
+//     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
+//     medication.forEach(m => params.push(`%${m}%`));
+//   }
+
+//   if (search) {
+//     where += " AND u.name LIKE ?";
+//     params.push(`%${search}%`);
+//   }
+
+//   const sql = `
+//     SELECT 
+//       u.user_id,
+//       u.name,
+//       TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+//       CASE WHEN u.gender = 1 THEN 'Male' WHEN u.gender = 2 THEN 'Female' ELSE 'Other' END as gender,
+//       GROUP_CONCAT(DISTINCT med.medicine_name) as medications
+//     FROM patient_master pm
+//     JOIN user_master u ON u.user_id = pm.user_id
+//     LEFT JOIN medication_master m ON m.user_id = u.user_id
+//     LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//     ${where}
+//     GROUP BY pm.user_id
+//     ORDER BY u.name ASC
+//   `;
+
+//   connection.query(sql, params, (err, rows) => {
+//     if (err) return res.json({ success: false, error: err.message });
+
+//     return res.json({
+//       success: true,
+//       total: rows.length,
+//       patients: rows
+//     });
+//   });
+// };
+
+// // Medication Summary / Analytics
+// const getPatientMedicationSummary = (req, res) => {
+//   const { doctor_id, gender, age_group, medication = [] } = req.body;
+
+//   if (!doctor_id) return res.json({ success: false, msg: "doctor_id required" });
+
+//   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let params = [doctor_id];
+
+//   if (gender !== undefined && gender !== null && gender !== "") {
+//     where += " AND u.gender = ?";
+//     params.push(gender);
+//   }
+
+//   if (age_group) {
+//     if (age_group.includes("+")) {
+//       const min = parseInt(age_group.replace("+", ""));
+//       where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?";
+//       params.push(min);
+//     } else {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += " AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?";
+//       params.push(min, max);
+//     }
+//   }
+
+//   if (medication.length) {
+//     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
+//     medication.forEach(m => params.push(`%${m}%`));
+//   }
+
+//   // Total patients
+//   const totalSql = `
+//     SELECT COUNT(DISTINCT pm.user_id) as total
+//     FROM patient_master pm
+//     JOIN user_master u ON u.user_id = pm.user_id
+//     LEFT JOIN medication_master m ON m.user_id = u.user_id
+//     LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//     ${where}
+//   `;
+
+//   connection.query(totalSql, params, (err, totalResult) => {
+//     if (err) return res.json({ success: false, error: err.message });
+
+//     const totalPatients = totalResult[0]?.total || 0;
+
+//     // Summary per medicine
+//     const summarySql = `
+//       SELECT med.medicine_name, COUNT(DISTINCT pm.user_id) as patient_count
+//       FROM patient_master pm
+//       JOIN user_master u ON u.user_id = pm.user_id
+//       LEFT JOIN medication_master m ON m.user_id = u.user_id
+//       LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//       ${where} AND med.medicine_name IS NOT NULL
+//       GROUP BY med.medicine_name
+//       ORDER BY patient_count DESC
+//     `;
+
+//     connection.query(summarySql, params, (err, summaryResult) => {
+//       if (err) return res.json({ success: false, error: err.message });
+
+//       const summary = summaryResult.map(r => ({
+//         medicine_name: r.medicine_name,
+//         patient_count: r.patient_count,
+//         percentage: totalPatients ? ((r.patient_count / totalPatients) * 100).toFixed(2) + "%" : "0.00%"
+//       }));
+
+//       const graph = summary.map(r => ({ name: r.medicine_name, count: r.patient_count }));
+
+//       // Drilldown: patient names
+//       const drilldownSql = `
+//         SELECT pm.user_id, u.name, med.medicine_name
+//         FROM patient_master pm
+//         JOIN user_master u ON u.user_id = pm.user_id
+//         LEFT JOIN medication_master m ON m.user_id = u.user_id
+//         LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//         ${where} AND med.medicine_name IS NOT NULL
+//       `;
+
+//       connection.query(drilldownSql, params, (err, drillRows) => {
+//         if (err) return res.json({ success: false, error: err.message });
+
+//         return res.json({
+//           success: true,
+//           total_patients: totalPatients,
+//           summary,
+//           graph,
+//           drilldown: drillRows
+//         });
+//       });
+//     });
+//   });
+// };
+
+    const getSubadminMedicationFull = (req, res) => {
+  const { doctor_id, gender, age_group, medication = [], search } = req.body;
+
+  if (!doctor_id) return res.json({ success: false, msg: "doctor_id required" });
+
+  let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let params = [doctor_id];
+
+  if (gender !== undefined && gender !== null && gender !== "") {
+    where += ` AND u.gender = ?`;
+    params.push(gender);
+  }
+
+  if (age_group) {
+    if (age_group.includes("+")) {
+      const min = parseInt(age_group.replace("+", ""));
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+      params.push(min);
+    } else {
+      const [min, max] = age_group.split("-").map(Number);
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      params.push(min, max);
+    }
+  }
+
+  if (medication.length) {
+    where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
+    medication.forEach(m => params.push(`%${m}%`));
+  }
+
+  if (search) {
+    where += ` AND u.name LIKE ?`;
+    params.push(`%${search}%`);
+  }
+
+  const totalSql = `
+    SELECT COUNT(DISTINCT pm.user_id) as total
+    FROM patient_master pm
+    JOIN user_master u ON u.user_id = pm.user_id
+    LEFT JOIN medication_master m ON m.user_id = u.user_id
+    LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+    ${where}
+  `;
+
+  connection.query(totalSql, params, (err, totalResult) => {
+    if (err) return res.json({ success: false, error: err.message });
+
+    const totalPatients = totalResult[0]?.total || 0;
+
+    const demographicsSql = `
+      SELECT 
+        CASE 
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
+          WHEN TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN 31 AND 45 THEN '31-45'
+          ELSE '46+'
+        END as age_group,
+        CASE 
+          WHEN u.gender = 1 THEN 'Male'
+          WHEN u.gender = 2 THEN 'Female'
+          ELSE 'Other'
+        END as gender,
+        COUNT(DISTINCT pm.user_id) as count
+      FROM patient_master pm
+      JOIN user_master u ON u.user_id = pm.user_id
+      LEFT JOIN medication_master m ON m.user_id = u.user_id
+      LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+      ${where}
+      GROUP BY age_group, gender
+      ORDER BY age_group
+    `;
+
+    connection.query(demographicsSql, params, (err, demoRows) => {
+      if (err) return res.json({ success: false, error: err.message });
+
+      const demographics = demoRows.map(r => ({
+        age_group: r.age_group,
+        gender: r.gender,
+        count: r.count,
+        percentage: totalPatients ? ((r.count / totalPatients) * 100).toFixed(2) : "0.00"
+      }));
+
+      const detailsSql = `
+        SELECT 
+          u.user_id,
+          u.name,
+          TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+          CASE WHEN u.gender = 1 THEN 'Male' WHEN u.gender = 2 THEN 'Female' ELSE 'Other' END as gender,
+          GROUP_CONCAT(DISTINCT med.medicine_name) as medications
+        FROM patient_master pm
+        JOIN user_master u ON u.user_id = pm.user_id
+        LEFT JOIN medication_master m ON m.user_id = u.user_id
+        LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+        ${where}
+        GROUP BY pm.user_id
+        ORDER BY u.name ASC
+      `;
+
+      connection.query(detailsSql, params, (err, detailRows) => {
+        if (err) return res.json({ success: false, error: err.message });
+
+        const summarySql = `
+          SELECT med.medicine_name, COUNT(DISTINCT pm.user_id) as patient_count
+          FROM patient_master pm
+          JOIN user_master u ON u.user_id = pm.user_id
+          LEFT JOIN medication_master m ON m.user_id = u.user_id
+          LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+          ${where} AND med.medicine_name IS NOT NULL
+          GROUP BY med.medicine_name
+          ORDER BY patient_count DESC
+        `;
+
+        connection.query(summarySql, params, (err, summaryRows) => {
+          if (err) return res.json({ success: false, error: err.message });
+
+          const summary = summaryRows.map(r => ({
+            medicine_name: r.medicine_name,
+            patient_count: r.patient_count,
+            percentage: totalPatients ? ((r.patient_count / totalPatients) * 100).toFixed(2) + "%" : "0.00%"
+          }));
+
+          const graph = summary.map(r => ({ name: r.medicine_name, count: r.patient_count }));
+
+          const drilldownSql = `
+            SELECT pm.user_id, u.name, med.medicine_name
+            FROM patient_master pm
+            JOIN user_master u ON u.user_id = pm.user_id
+            LEFT JOIN medication_master m ON m.user_id = u.user_id
+            LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+            ${where} AND med.medicine_name IS NOT NULL
+          `;
+
+          connection.query(drilldownSql, params, (err, drillRows) => {
+            if (err) return res.json({ success: false, error: err.message });
+
+            return res.json({
+              success: true,
+              total_patients: totalPatients,
+              demographics,
+              details: detailRows,
+              summary,
+              graph,
+              drilldown: drillRows
+            });
+          });
+        });
+      });
+    });
+  });
+};
+
 
 
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
-  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,
+  getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,getSubadminMedicationFull,
 }
