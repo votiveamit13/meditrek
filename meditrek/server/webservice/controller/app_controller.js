@@ -3957,6 +3957,7 @@ const getTodayMedication = async (request, response) => {
                         avgRes.forEach(r => { avgMap[r.time_slots_id] = r.taken_datetime });
                     }
 
+
                     // FINAL TIME MERGING LOGIC
                     medRes = medRes.map(m => {
     const medTZ = m.med_timezone || "UTC";
@@ -3992,11 +3993,56 @@ const getTodayMedication = async (request, response) => {
                         const t2 = moment(b.time_slot, "hh:mm A").valueOf();
                         return t1 - t2;
                     });
+
+                    const getTimeCategory = (timeString) => {
+    const [time, meridian] = timeString.split(" ");
+    let [hour] = time.split(":").map(Number);
+
+    if (meridian === "PM" && hour !== 12) hour += 12;
+    if (meridian === "AM" && hour === 12) hour = 0;
+
+    if (hour >= 5 && hour < 12) return "morning";
+    if (hour >= 12 && hour < 17) return "afternoon";
+    return "evening";
+};
+
+const categorized = {
+    all: [],
+    morning: [],
+    afternoon: [],
+    evening: []
+};
+
+medRes.forEach(m => {
+    const category = getTimeCategory(m.time_slot);
+
+    categorized.all.push({ ...m, time_category: category });
+    categorized[category].push({ ...m, time_category: category });
+});
+
+let filteredData = [];
+
+switch (parseInt(type, 10)) {
+    case 1:
+        filteredData = categorized.all;
+        break;
+    case 2:
+        filteredData = categorized.morning;
+        break;
+    case 3:
+        filteredData = categorized.afternoon;
+        break;
+    case 4:
+        filteredData = categorized.evening;
+        break;
+    default:
+        filteredData = categorized.all;
+}
                     
                     return response.status(200).json({
                         success:true,
                         msg:'Data Found',
-                        dataArray: medRes
+                        dataArray: filteredData
                     });
 
                 });
