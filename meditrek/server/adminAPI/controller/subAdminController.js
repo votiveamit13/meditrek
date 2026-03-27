@@ -5293,7 +5293,7 @@ const getPatientDemographics = (req, res) => {
 };
 
 const getPatientDemographicsDetails = (req, res) => {
-  const { doctor_id, gender, age_group, search } = req.body;
+  const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5307,7 +5307,7 @@ const getPatientDemographicsDetails = (req, res) => {
   `;
 
   let params = [doctor_id];
-
+const offset = (page - 1) * limit;
   if (gender !== undefined && gender !== null) {
     where += " AND um.gender = ?";
     params.push(gender);
@@ -5338,15 +5338,17 @@ const getPatientDemographicsDetails = (req, res) => {
       CASE 
         WHEN um.gender = 1 THEN 'Male'
         WHEN um.gender = 2 THEN 'Female'
-        ELSE 'Other'
+        WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
       END as gender
     FROM patient_master pm
     JOIN user_master um ON pm.user_id = um.user_id
     ${where}
     ORDER BY um.name ASC
+    LIMIT ? OFFSET ?
   `;
 
-  connection.query(sql, params, (err, rows) => {
+  connection.query(sql, [...params, Number(limit), Number(offset)], (err, rows) => {
     if (err) {
       return res.json({ success: false, msg: "Something went wrong" });
     }
