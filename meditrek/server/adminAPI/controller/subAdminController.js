@@ -944,12 +944,13 @@ const subAdminDashboard = async (req, res) => {
 
               if (lastWeek === 0) {
                 if (currentWeek > 0) {
-                  growth = 100; // full growth 🚀
+                  growth = 100; // full growth 
                 } else {
                   growth = 0;
                 }
               } else {
                 growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
               }
 
               return res.status(200).json({
@@ -1098,6 +1099,7 @@ const medicationDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                growth = Math.min(growth, 100);
             }
               
 
@@ -1236,6 +1238,8 @@ const adverseDashboard = async (req, res) => {
                 growth = currentWeek > 0 ? 100 : 0;
               } else {
                 growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
+
               }
 
               return res.status(200).json({
@@ -1373,6 +1377,8 @@ const labReportDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
+
             }
 
             return res.status(200).json({
@@ -1509,6 +1515,7 @@ const measurementDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                growth = Math.min(growth, 100);
             }
 
             return res.status(200).json({
@@ -5201,7 +5208,7 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 };
 
 const getPatientDemographics = (req, res) => {
-  const { doctor_id, gender, age_group } = req.body;
+  const { doctor_id, gender, age_group,page = 1, limit = 10  } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5209,6 +5216,7 @@ const getPatientDemographics = (req, res) => {
 
   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0`;
   let params = [doctor_id];
+  const offset = (page - 1) * limit;
 
   if (gender !== undefined && gender !== "") {
     where += ` AND um.gender = ?`;
@@ -5251,7 +5259,8 @@ const getPatientDemographics = (req, res) => {
         CASE 
           WHEN um.gender = 1 THEN 'Male'
           WHEN um.gender = 2 THEN 'Female'
-          ELSE 'Other'
+           WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
         END as gender,
         COUNT(*) as count
       FROM patient_master pm
@@ -5259,9 +5268,10 @@ const getPatientDemographics = (req, res) => {
       ${where}
       GROUP BY age_group, gender
       ORDER BY age_group
+      LIMIT ? OFFSET ?
     `;
 
-    connection.query(dataSql, params, (err2, rows) => {
+    connection.query(dataSql,  [...params, Number(limit), Number(offset)], (err2, rows) => {
       if (err2) {
         return res.json({ success: false, error: err2.message });
       }
@@ -5283,7 +5293,7 @@ const getPatientDemographics = (req, res) => {
 };
 
 const getPatientDemographicsDetails = (req, res) => {
-  const { doctor_id, gender, age_group, search } = req.body;
+  const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5297,7 +5307,7 @@ const getPatientDemographicsDetails = (req, res) => {
   `;
 
   let params = [doctor_id];
-
+const offset = (page - 1) * limit;
   if (gender !== undefined && gender !== null) {
     where += " AND um.gender = ?";
     params.push(gender);
@@ -5328,15 +5338,17 @@ const getPatientDemographicsDetails = (req, res) => {
       CASE 
         WHEN um.gender = 1 THEN 'Male'
         WHEN um.gender = 2 THEN 'Female'
-        ELSE 'Other'
+        WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
       END as gender
     FROM patient_master pm
     JOIN user_master um ON pm.user_id = um.user_id
     ${where}
     ORDER BY um.name ASC
+    LIMIT ? OFFSET ?
   `;
 
-  connection.query(sql, params, (err, rows) => {
+  connection.query(sql, [...params, Number(limit), Number(offset)], (err, rows) => {
     if (err) {
       return res.json({ success: false, msg: "Something went wrong" });
     }
