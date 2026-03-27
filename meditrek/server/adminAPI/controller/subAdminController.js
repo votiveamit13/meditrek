@@ -944,12 +944,13 @@ const subAdminDashboard = async (req, res) => {
 
               if (lastWeek === 0) {
                 if (currentWeek > 0) {
-                  growth = 100; // full growth 🚀
+                  growth = 100; // full growth 
                 } else {
                   growth = 0;
                 }
               } else {
                 growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
               }
 
               return res.status(200).json({
@@ -1098,6 +1099,7 @@ const medicationDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                growth = Math.min(growth, 100);
             }
               
 
@@ -1236,6 +1238,8 @@ const adverseDashboard = async (req, res) => {
                 growth = currentWeek > 0 ? 100 : 0;
               } else {
                 growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
+
               }
 
               return res.status(200).json({
@@ -1373,6 +1377,8 @@ const labReportDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                  growth = Math.min(growth, 100);
+
             }
 
             return res.status(200).json({
@@ -1509,6 +1515,7 @@ const measurementDashboard = async (req, res) => {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+                growth = Math.min(growth, 100);
             }
 
             return res.status(200).json({
