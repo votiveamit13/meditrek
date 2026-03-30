@@ -5788,9 +5788,9 @@ const getDiseaseDashboard = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL`;
-  let params = [doctor_id];
   const offset = (page - 1) * limit;
+  let params = [doctor_id];
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL`;
 
   if (gender !== undefined && gender !== "") {
     where += ` AND u.gender = ?`;
@@ -5814,10 +5814,24 @@ const getDiseaseDashboard = (req, res) => {
     disease.forEach(d => params.push(`%${d}%`));
   }
 
-  const totalSql = `
-    SELECT COUNT(DISTINCT p.user_id) as total
-    FROM patient_master p WHERE p.doctor_id = ? AND p.delete_flag = 0
-  `;
+  // Function to 
+  const cleanDiseaseString = (diseaseStr) => {
+    if (!diseaseStr) return "";
+    return diseaseStr
+      .split(/,|\n/) 
+      .map(d => {
+        d = d.replace(/status:\s*true/g, "")
+             .replace(/length:\s*\d+/g, "")
+             .replace(/\s*,\s*,/g, ",")
+             .trim();
+        return d;
+      })
+      .filter(d => d !== "")
+      .join(",");
+  };
+
+  const totalSql = `SELECT COUNT(DISTINCT p.user_id) as total
+                    FROM patient_master p WHERE p.doctor_id = ? AND p.delete_flag = 0`;
 
   connection.query(totalSql, [doctor_id], (err, totalRes) => {
     if (err) return res.json({ success: false, msg: err.message });
@@ -5829,7 +5843,6 @@ const getDiseaseDashboard = (req, res) => {
       JOIN user_master u ON u.user_id = p.user_id
       ${where}
     `;
-
     connection.query(matchedSql, params, (err, matchRes) => {
       if (err) return res.json({ success: false, msg: err.message });
       const matched = matchRes[0].matched;
@@ -5841,11 +5854,11 @@ const getDiseaseDashboard = (req, res) => {
         ${where}
         GROUP BY u.diseases
       `;
-
       connection.query(diseaseSql, params, (err, diseaseRows) => {
         if (err) return res.json({ success: false, msg: err.message });
+
         const disease_distribution = diseaseRows.map(r => ({
-          name: r.name,
+          name: cleanDiseaseString(r.name),
           count: r.count,
           percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
         }));
@@ -5864,7 +5877,6 @@ const getDiseaseDashboard = (req, res) => {
           ${where}
           GROUP BY age_group
         `;
-
         connection.query(ageSql, params, (err, ageRows) => {
           if (err) return res.json({ success: false, msg: err.message });
           const age_breakdown = ageRows.map(r => ({
@@ -5887,7 +5899,6 @@ const getDiseaseDashboard = (req, res) => {
             ${where}
             GROUP BY u.gender
           `;
-
           connection.query(sexSql, params, (err, sexRows) => {
             if (err) return res.json({ success: false, msg: err.message });
             const sex_breakdown = sexRows.map(r => ({
@@ -5915,63 +5926,64 @@ const getDiseaseDashboard = (req, res) => {
               ORDER BY u.name ASC
               LIMIT ? OFFSET ?
             `;
-
             connection.query(patientSql, [...params, Number(limit), Number(offset)], (err, patientRows) => {
-                if (err) return res.json({ success: false, msg: err.message });
+              if (err) return res.json({ success: false, msg: err.message });
 
-                // Fetch medications per patient like getPatientMedicationList
-                const promises = patientRows.map(patient => new Promise((resolve, reject) => {
-                    const checkShare = `
-                      SELECT report_share_id, information_type, createtime 
-                      FROM report_share_master 
-                      WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
-                      ORDER BY createtime DESC
-                    `;
-                    connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
-                        if (err1) return reject(err1);
+              // Clean diseases in patient rows
+              patientRows.forEach(p => {
+                p.diseases = cleanDiseaseString(p.diseases);
+              });
 
-                        const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
-                        if (!latestShare) {
-                            patient.medications = "";
-                            return resolve(patient);
-                        }
+              // Fetch medications per patient
+              const promises = patientRows.map(patient => new Promise((resolve, reject) => {
+                const checkShare = `
+                  SELECT report_share_id, information_type, createtime 
+                  FROM report_share_master 
+                  WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+                  ORDER BY createtime DESC
+                `;
+                connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
+                  if (err1) return reject(err1);
 
-                        const shareTime = latestShare.createtime;
+                  const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
+                  if (!latestShare) {
+                    patient.medications = [];
+                    return resolve(patient);
+                  }
 
-                        const medSql = `
-                          SELECT DISTINCT a.medicine_name
-                          FROM medication_master m
-                          JOIN medicine_master a ON a.medicine_id = m.medicine_id
-                          JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-                          WHERE m.user_id = ? 
-                            AND m.delete_flag = 0 
-                            AND tm.delete_flag = 0 
-                            AND m.createtime <= ?
-                          ORDER BY a.medicine_name ASC
-                        `;
-                        connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
-                            if (err2) return reject(err2);
+                  const shareTime = latestShare.createtime;
+                  const medSql = `
+                    SELECT DISTINCT a.medicine_id, a.medicine_name
+                    FROM medication_master m
+                    JOIN medicine_master a ON a.medicine_id = m.medicine_id
+                    JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+                    WHERE m.user_id = ? 
+                      AND m.delete_flag = 0 
+                      AND tm.delete_flag = 0 
+                      AND m.createtime <= ?
+                    ORDER BY a.medicine_name ASC
+                  `;
+                  connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
+                    if (err2) return reject(err2);
+                    patient.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
+                    resolve(patient);
+                  });
+                });
+              }));
 
-                            // OLD format: comma-separated medicine names
-                            patient.medications = meds.map(m => m.medicine_name).join(",");
-                            resolve(patient);
-                        });
-                    });
-                }));
-
-                Promise.all(promises)
-                    .then(finalPatients => {
-                        return res.json({
-                            success: true,
-                            total_patients: totalPatients,
-                            matched_patients: matched,
-                            disease_distribution,
-                            age_breakdown,
-                            sex_breakdown,
-                            patients: finalPatients
-                        });
-                    })
-                    .catch(err => res.json({ success: false, msg: err.message }));
+              Promise.all(promises)
+                .then(finalPatients => {
+                  return res.json({
+                    success: true,
+                    total_patients: totalPatients,
+                    matched_patients: matched,
+                    disease_distribution,
+                    age_breakdown,
+                    sex_breakdown,
+                    patients: finalPatients
+                  });
+                })
+                .catch(err => res.json({ success: false, msg: err.message }));
             });
           });
         });
