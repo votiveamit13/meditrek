@@ -5536,7 +5536,6 @@ const getPatientDemographicsDetails = (req, res) => {
     params.push(`%${search}%`);
   }
 
-  
   const countSql = `
     SELECT COUNT(DISTINCT pm.user_id) as total
     FROM patient_master pm
@@ -5544,7 +5543,6 @@ const getPatientDemographicsDetails = (req, res) => {
     ${where}
   `;
 
-  // MAIN QUERY (NO extra ? needed now)
   const sql = `
     SELECT 
       um.user_id,
@@ -5556,32 +5554,10 @@ const getPatientDemographicsDetails = (req, res) => {
         WHEN um.gender = 3 THEN 'Other'
         ELSE 'Not Specified'
       END as gender,
-      um.diseases,
-
-     (
-  SELECT GROUP_CONCAT(DISTINCT mm.medicine_name ORDER BY mm.medicine_name SEPARATOR ', ')
-  FROM medication_master md
-
-  JOIN medicine_master mm 
-    ON mm.medicine_id = md.medicine_id
-    AND mm.delete_flag = 0
-
-  JOIN report_share_master rs
-    ON rs.user_id = md.user_id
-    AND rs.doctor_id = pm.doctor_id   
-    AND rs.delete_flag = 0
-    AND rs.share_type = 0
-    AND FIND_IN_SET('1', rs.information_type)
-
-  WHERE md.user_id = um.user_id
-    AND md.delete_flag = 0
-) as medicines
-
+      um.diseases
     FROM patient_master pm
     JOIN user_master um ON pm.user_id = um.user_id
-
     ${where}
-
     ORDER BY um.name ASC
     LIMIT ? OFFSET ?
   `;
@@ -5594,24 +5570,72 @@ const getPatientDemographicsDetails = (req, res) => {
 
     const total = countResult[0].total;
 
-    connection.query(
-      sql,
-      [...params, Number(limit), Number(offset)],
-      (err2, rows) => {
-        if (err2) {
-          console.log(err2);
-          return res.json({ success: false, msg: "Data error" });
-        }
-
-        return res.json({
-          success: true,
-          total,
-          page,
-          limit,
-          patients: rows
-        });
+    connection.query(sql, [...params, Number(limit), Number(offset)], (err2, rows) => {
+      if (err2) {
+        console.log(err2);
+        return res.json({ success: false, msg: "Data error" });
       }
-    );
+
+      
+      const promises = rows.map(patient => new Promise((resolve, reject) => {
+        const checkShare = `
+          SELECT report_share_id, information_type, createtime
+          FROM report_share_master
+          WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+          ORDER BY createtime DESC
+        `;
+        connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
+          if (err1) return reject(err1);
+
+          const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
+          if (!latestShare) {
+            patient.medications = "";
+            return resolve(patient);
+          }
+
+          const shareTime = latestShare.createtime;
+
+          // const medSql = `
+          //   SELECT a.medicine_name
+          //   FROM medication_master m
+          //   JOIN medicine_master a ON a.medicine_id = m.medicine_id
+          //   JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+          //   WHERE m.user_id = ? AND m.delete_flag = 0 AND tm.delete_flag = 0 AND m.createtime <= ?
+          //   ORDER BY m.medication_id DESC, tm.time DESC
+          // `;
+          const medSql = `
+            SELECT DISTINCT a.medicine_name
+            FROM medication_master m
+            JOIN medicine_master a ON a.medicine_id = m.medicine_id
+            JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+            WHERE m.user_id = ? 
+              AND m.delete_flag = 0 
+              AND tm.delete_flag = 0 
+              AND m.createtime <= ?
+            ORDER BY a.medicine_name ASC
+          `;
+
+          connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
+            if (err2) return reject(err2);
+
+            patient.medications = meds.map(m => m.medicine_name).join(",");
+            resolve(patient);
+          });
+        });
+      }));
+
+      Promise.all(promises)
+        .then(finalPatients => {
+          return res.json({
+            success: true,
+            total,
+            page,
+            limit,
+            patients: finalPatients
+          });
+        })
+        .catch(err => res.json({ success: false, msg: err.message }));
+    });
   });
 };
 
