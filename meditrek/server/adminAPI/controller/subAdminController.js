@@ -4939,6 +4939,47 @@ const getAllDiseases = (req, res) => {
     });
   });
 };
+const getDocterAllDiseases = (req, res) => {
+  const { doctor_id } = req.body;
+
+  if (!doctor_id) {
+    return res.json({ success: false, msg: "doctor_id required" });
+  }
+
+  const sql = `
+    SELECT DISTINCT dm.disease_id, dm.disease_name
+    FROM patient_master pm
+
+    JOIN user_master um 
+      ON um.user_id = pm.user_id
+      AND um.delete_flag = 0
+
+    JOIN disease_master dm
+      ON dm.delete_flag = 0
+      AND um.diseases LIKE CONCAT('%disease_id: ', dm.disease_id, '%')
+
+    WHERE pm.doctor_id = ?
+      AND pm.delete_flag = 0
+
+    ORDER BY dm.disease_name ASC
+  `;
+
+  connection.query(sql, [doctor_id], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      total: result.length,
+      diseases: result
+    });
+  });
+};
 
 const getAllMedicines = (req, res) => {
   const sql = `
@@ -4966,6 +5007,93 @@ const getAllMedicines = (req, res) => {
       medicines: result
     });
   });
+};
+const getDocterAllMedicines = async (req, res) => {
+  const doctor_id = req.body.doctor_id;
+
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({
+        success: false,
+        msg: "doctor_id required"
+      });
+    }
+
+    
+    const checksql = `
+      SELECT doctor_id 
+      FROM doctor_master 
+      WHERE doctor_id = ? AND delete_flag = 0
+    `;
+
+    connection.query(checksql, [doctor_id], (err, check) => {
+      if (err) {
+        return res.json({ success: false, msg: "Server error", err: err.message });
+      }
+
+      if (check.length === 0) {
+        return res.json({ success: false, msg: "Doctor not found" });
+      }
+
+      
+      const totalSql = `
+        SELECT COUNT(mm.medication_id) AS totalMedication
+        FROM patient_master pm
+        LEFT JOIN medication_master mm 
+          ON pm.user_id = mm.user_id 
+          AND mm.delete_flag = 0
+        WHERE pm.doctor_id = ? 
+        AND pm.delete_flag = 0
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+        if (err) {
+          return res.json({ success: false, msg: "Error in count", err: err.message });
+        }
+
+        const totalMedication = totalRes[0].totalMedication;
+
+       
+        const medicineListSql = `
+          SELECT DISTINCT mm2.medicine_name
+          FROM patient_master pm
+
+          JOIN medication_master md 
+            ON md.user_id = pm.user_id
+            AND md.delete_flag = 0
+
+          JOIN medicine_master mm2 
+            ON mm2.medicine_id = md.medicine_id
+            AND mm2.delete_flag = 0
+
+          WHERE pm.doctor_id = ?
+            AND pm.delete_flag = 0
+
+          ORDER BY mm2.medicine_name ASC
+        `;
+
+        connection.query(medicineListSql, [doctor_id], (err2, medList) => {
+          if (err2) {
+            return res.json({ success: false, msg: "Error in list", err: err2.message });
+          }
+
+        
+          return res.json({
+            success: true,
+            totalMedication: totalMedication,
+            medicines: medList
+          });
+        });
+      });
+    });
+
+  } catch (error) {
+    return res.json({
+      success: false,
+      msg: "Server error",
+      err: error.message
+    });
+  }
 };
 
 // const getPatientAnalytics = (req, res) => {
@@ -6655,5 +6783,5 @@ const getMedicationReportedHealth = (req, res) => {
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
   getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,getSubadminMedicationFull,getDiseaseDashboard,getMedicationDiseaseDashboard
-,getMedicationReportedHealth
+,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines
 }
