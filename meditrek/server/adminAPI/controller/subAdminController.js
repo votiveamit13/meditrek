@@ -5299,6 +5299,76 @@ const getPatientDemographics = (req, res) => {
   });
 };
 
+// const getPatientDemographicsDetails = (req, res) => {
+//   const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
+
+//   if (!doctor_id) {
+//     return res.json({ success: false, msg: "doctor_id required" });
+//   }
+
+//   let where = `
+//     WHERE pm.doctor_id = ?
+//     AND pm.delete_flag = 0
+//     AND um.dob IS NOT NULL
+//     AND um.dob <= CURDATE()
+//   `;
+
+//   let params = [doctor_id];
+// const offset = (page - 1) * limit;
+//   if (gender !== undefined && gender !== null) {
+//     where += " AND um.gender = ?";
+//     params.push(gender);
+//   }
+
+//   if (age_group) {
+//     if (age_group.includes("+")) {
+//       const min = parseInt(age_group.replace("+", ""));
+//       where += " AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?";
+//       params.push(min);
+//     } else {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += " AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?";
+//       params.push(min, max);
+//     }
+//   }
+
+//   if (search) {
+//     where += " AND um.name LIKE ?";
+//     params.push(`%${search}%`);
+//   }
+
+//   const sql = `
+//     SELECT 
+//       um.user_id,
+//       um.name,
+//       TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) as age,
+//       CASE 
+//         WHEN um.gender = 1 THEN 'Male'
+//         WHEN um.gender = 2 THEN 'Female'
+//         WHEN um.gender = 3 THEN 'Other'
+//           ELSE 'Not Specified'
+//       END as gender
+//     FROM patient_master pm
+//     JOIN user_master um ON pm.user_id = um.user_id
+//     ${where}
+//     ORDER BY um.name ASC
+//     LIMIT ? OFFSET ?
+//   `;
+
+//   connection.query(sql, [...params, Number(limit), Number(offset)], (err, rows) => {
+//     if (err) {
+//       return res.json({ success: false, msg: "Something went wrong" });
+//     }
+
+//     return res.json({
+//       success: true,
+//       total: rows.length,
+//       patients: rows
+//     });
+//   });
+// };
+
+// 2.A)  Disease / Demographics 
 const getPatientDemographicsDetails = (req, res) => {
   const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
 
@@ -5314,7 +5384,8 @@ const getPatientDemographicsDetails = (req, res) => {
   `;
 
   let params = [doctor_id];
-const offset = (page - 1) * limit;
+  const offset = (page - 1) * limit;
+
   if (gender !== undefined && gender !== null) {
     where += " AND um.gender = ?";
     params.push(gender);
@@ -5337,6 +5408,15 @@ const offset = (page - 1) * limit;
     params.push(`%${search}%`);
   }
 
+  
+  const countSql = `
+    SELECT COUNT(DISTINCT pm.user_id) as total
+    FROM patient_master pm
+    JOIN user_master um ON pm.user_id = um.user_id
+    ${where}
+  `;
+
+  // MAIN QUERY (NO extra ? needed now)
   const sql = `
     SELECT 
       um.user_id,
@@ -5346,29 +5426,67 @@ const offset = (page - 1) * limit;
         WHEN um.gender = 1 THEN 'Male'
         WHEN um.gender = 2 THEN 'Female'
         WHEN um.gender = 3 THEN 'Other'
-          ELSE 'Not Specified'
-      END as gender
+        ELSE 'Not Specified'
+      END as gender,
+      um.diseases,
+
+     (
+  SELECT GROUP_CONCAT(DISTINCT mm.medicine_name ORDER BY mm.medicine_name SEPARATOR ', ')
+  FROM medication_master md
+
+  JOIN medicine_master mm 
+    ON mm.medicine_id = md.medicine_id
+    AND mm.delete_flag = 0
+
+  JOIN report_share_master rs
+    ON rs.user_id = md.user_id
+    AND rs.doctor_id = pm.doctor_id   
+    AND rs.delete_flag = 0
+    AND rs.share_type = 0
+    AND FIND_IN_SET('1', rs.information_type)
+
+  WHERE md.user_id = um.user_id
+    AND md.delete_flag = 0
+) as medicines
+
     FROM patient_master pm
     JOIN user_master um ON pm.user_id = um.user_id
+
     ${where}
+
     ORDER BY um.name ASC
     LIMIT ? OFFSET ?
   `;
 
-  connection.query(sql, [...params, Number(limit), Number(offset)], (err, rows) => {
+  connection.query(countSql, params, (err, countResult) => {
     if (err) {
-      return res.json({ success: false, msg: "Something went wrong" });
+      console.log(err);
+      return res.json({ success: false, msg: "Count error" });
     }
 
-    return res.json({
-      success: true,
-      total: rows.length,
-      patients: rows
-    });
+    const total = countResult[0].total;
+
+    connection.query(
+      sql,
+      [...params, Number(limit), Number(offset)],
+      (err2, rows) => {
+        if (err2) {
+          console.log(err2);
+          return res.json({ success: false, msg: "Data error" });
+        }
+
+        return res.json({
+          success: true,
+          total,
+          page,
+          limit,
+          patients: rows
+        });
+      }
+    );
   });
 };
 
-// 2.A)  Disease / Demographics 
 const getDiseaseDashboard = (req, res) => {
   const { doctor_id, disease = [], age_group, gender, page = 1, limit = 10 } = req.body;
 
