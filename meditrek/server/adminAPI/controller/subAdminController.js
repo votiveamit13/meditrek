@@ -4940,7 +4940,7 @@ const getAllDiseases = (req, res) => {
   });
 };
 const getDocterAllDiseases = (req, res) => {
-  const { doctor_id } = req.body;
+  const { doctor_id } = req.query;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -5009,7 +5009,7 @@ const getAllMedicines = (req, res) => {
   });
 };
 const getDocterAllMedicines = async (req, res) => {
-  const doctor_id = req.body.doctor_id;
+  const doctor_id = req.query.doctor_id;
 
   try {
     if (!doctor_id) {
