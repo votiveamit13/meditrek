@@ -6971,15 +6971,20 @@ const getDiseaseMedicineSummary = (req, res) => {
       Promise.all(promises)
         .then(finalPatients => {
 
-          const medicineCountMap = {};
-          finalPatients.forEach(p => {
-            p.medications.forEach(med => {
-              if (!medicineCountMap[med.name]) medicineCountMap[med.name] = 0;
-              medicineCountMap[med.name] += 1;
-            });
-          });
+          const patientsWithMeds = finalPatients.filter(p => p.medications.length > 0);
 
-          const matchedPatients = finalPatients.length;
+const medicineCountMap = {};
+
+patientsWithMeds.forEach(p => {
+  p.medications.forEach(med => {
+    if (!medicineCountMap[med.name]) {
+      medicineCountMap[med.name] = 0;
+    }
+    medicineCountMap[med.name] += 1;
+  });
+});
+
+const matchedPatients = patientsWithMeds.length;
 
           const summary = Object.keys(medicineCountMap).map(name => ({
             medicine_name: name,
