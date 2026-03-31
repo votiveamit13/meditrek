@@ -6412,16 +6412,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
 //   });
 // };
 const getPatientDiseasesMedicineList = (req, res) => {
-  const {
-    doctor_id,
-    gender,
-    age_group,
-    diseases = [],
-    singleOnly,
-    combinedOnly,
-    page = 1,
-    limit = 10
-  } = req.body;
+  const { doctor_id, gender, age_group,diseases , page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -6431,13 +6422,11 @@ const getPatientDiseasesMedicineList = (req, res) => {
   let params = [doctor_id];
   const offset = (page - 1) * limit;
 
-  // ✅ Gender
-  if (gender !== undefined && gender !== null) {
+  if (gender !== undefined) {
     where += ` AND u.gender = ?`;
     params.push(gender);
   }
 
-  // ✅ Age
   if (age_group) {
     if (age_group.includes("+")) {
       const min = age_group.replace("+", "");
@@ -6449,137 +6438,112 @@ const getPatientDiseasesMedicineList = (req, res) => {
       params.push(min, max);
     }
   }
+  if (diseases.length > 0) {
+  if (diseases.length === 1 && req.body.singleOnly) {
+    // ✅ SINGLE ONLY
+    where += ` AND u.diseases LIKE ?`;
+    params.push(`%${diseases[0]}%`);
 
-  // ✅ Disease filters (BACKWARD COMPATIBLE)
-  if (diseases && diseases.length > 0) {
-
-    // SINGLE ONLY
-    if (diseases.length === 1 && singleOnly) {
-      where += ` AND u.diseases LIKE ?`;
-      params.push(`%${diseases[0]}%`);
-
-      where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = 1`;
-    }
-
-    // COMBINED ONLY
-    else if (combinedOnly && diseases.length >= 2) {
-      diseases.forEach(d => {
-        where += ` AND u.diseases LIKE ?`;
-        params.push(`%${d}%`);
-      });
-
-      where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = ?`;
-      params.push(diseases.length);
-    }
-
-    // DEFAULT (ANY match) ✅ OLD BEHAVIOR
-    else {
-      const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
-      where += ` AND (${diseaseConditions})`;
-      diseases.forEach(d => params.push(`%${d}%`));
-    }
+    // ensure ONLY one disease (approx)
+    where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = 1`;
   }
 
-  // ✅ COUNT QUERY (IMPORTANT FIX)
-  const countSql = `
-    SELECT COUNT(DISTINCT p.user_id) as total
+  else if (req.body.combinedOnly && diseases.length >= 2) {
+    // ✅ COMBINED ONLY (must have ALL + exact count)
+
+    const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" AND ");
+    where += ` AND (${diseaseConditions})`;
+    diseases.forEach(d => params.push(`%${d}%`));
+
+    // exact match count
+    where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = ?`;
+    params.push(diseases.length);
+  }
+
+  else {
+    // ✅ DEFAULT (ANY match)
+    const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
+    where += ` AND (${diseaseConditions})`;
+    diseases.forEach(d => params.push(`%${d}%`));
+  }
+}
+
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.name,
+      TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+      CASE 
+        WHEN u.gender = 1 THEN 'Male'
+        WHEN u.gender = 2 THEN 'Female'
+        WHEN u.gender = 3 THEN 'Other'
+        ELSE 'Not Specified'
+      END as gender,
+      u.diseases
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
     ${where}
+    GROUP BY p.user_id
+    ORDER BY u.name ASC
+    LIMIT ? OFFSET ?
   `;
 
-  connection.query(countSql, params, (errCount, countRes) => {
-    if (errCount) {
-      console.log(errCount);
-      return res.json({ success: false, msg: "Count error" });
+  connection.query(sql, [...params, Number(limit), Number(offset)], (err, patients) => {
+    if (err) {
+      console.log(err);
+      return res.json({ success: false, msg: "Error" });
     }
 
-    const total = countRes[0].total;
+    // Fetch medications per patient based on doctor share
+    const promises = patients.map(patient => new Promise((resolve, reject) => {
+      const checkShare = `
+        SELECT report_share_id, information_type, createtime 
+        FROM report_share_master 
+        WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
 
-    // ✅ MAIN QUERY
-    const sql = `
-      SELECT 
-        u.user_id,
-        u.name,
-        TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
-        CASE 
-          WHEN u.gender = 1 THEN 'Male'
-          WHEN u.gender = 2 THEN 'Female'
-          WHEN u.gender = 3 THEN 'Other'
-          ELSE 'Not Specified'
-        END as gender,
-        u.diseases
-      FROM patient_master p
-      JOIN user_master u ON u.user_id = p.user_id
-      ${where}
-      GROUP BY p.user_id
-      ORDER BY u.name ASC
-      LIMIT ? OFFSET ?
-    `;
+      connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
+        if (err1) return reject(err1);
 
-    connection.query(sql, [...params, Number(limit), Number(offset)], (err, patients) => {
-      if (err) {
-        console.log(err);
-        return res.json({ success: false, msg: "Error" });
-      }
+        const latestShare = shareList.find(r => r.information_type.split(",").includes("1")); // "1" = medication
+        if (!latestShare) {
+          patient.medications = [];
+          return resolve(patient);
+        }
 
-      const promises = patients.map(patient => new Promise((resolve, reject) => {
-        const checkShare = `
-          SELECT report_share_id, information_type, createtime 
-          FROM report_share_master 
-          WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
-          ORDER BY createtime DESC
+        const shareTime = latestShare.createtime;
+
+        const medSql = `
+          SELECT DISTINCT a.medicine_id, a.medicine_name
+          FROM medication_master m
+          JOIN medicine_master a ON a.medicine_id = m.medicine_id
+          JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+          WHERE m.user_id = ? 
+            AND m.delete_flag = 0 
+            AND tm.delete_flag = 0 
+            AND m.createtime <= ?
+          ORDER BY a.medicine_name ASC
         `;
 
-        connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
-          if (err1) return reject(err1);
+        connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
+          if (err2) return reject(err2);
 
-          const latestShare = shareList.find(r =>
-            r.information_type.split(",").includes("1")
-          );
-
-          if (!latestShare) {
-            patient.medications = [];
-            return resolve(patient);
-          }
-
-          const shareTime = latestShare.createtime;
-
-          const medSql = `
-            SELECT DISTINCT a.medicine_id, a.medicine_name
-            FROM medication_master m
-            JOIN medicine_master a ON a.medicine_id = m.medicine_id
-            JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-            WHERE m.user_id = ? 
-              AND m.delete_flag = 0 
-              AND tm.delete_flag = 0 
-              AND m.createtime <= ?
-            ORDER BY a.medicine_name ASC
-          `;
-
-          connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
-            if (err2) return reject(err2);
-
-            patient.medications = meds.map(m => ({
-              id: m.medicine_id,
-              name: m.medicine_name
-            }));
-
-            resolve(patient);
-          });
+          patient.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
+          resolve(patient);
         });
-      }));
+      });
+    }));
 
-      Promise.all(promises)
-        .then(finalPatients => {
-          return res.json({
-            success: true,
-            total: total, // ✅ FIXED
-            data: finalPatients
-          });
-        })
-        .catch(err => res.json({ success: false, msg: err.message }));
-    });
+    Promise.all(promises)
+      .then(finalPatients => {
+        return res.json({
+          success: true,
+          total: finalPatients.length,
+          data: finalPatients
+        });
+      })
+      .catch(err => res.json({ success: false, msg: err.message }));
   });
 };
 
