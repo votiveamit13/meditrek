@@ -6412,7 +6412,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
 //   });
 // };
 const getPatientDiseasesMedicineList = (req, res) => {
-  const { doctor_id, gender, age_group,diseases , page = 1, limit = 10 } = req.body;
+  const { doctor_id, gender, age_group,diseases = [] , page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
