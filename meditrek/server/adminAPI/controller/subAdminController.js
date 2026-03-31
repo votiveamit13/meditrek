@@ -6412,7 +6412,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
 //   });
 // };
 const getPatientDiseasesMedicineList = (req, res) => {
-  const { doctor_id, gender, age_group, page = 1, limit = 10 } = req.body;
+  const { doctor_id, gender, age_group,diseases , page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -6438,6 +6438,11 @@ const getPatientDiseasesMedicineList = (req, res) => {
       params.push(min, max);
     }
   }
+  if (diseases.length > 0) {
+  const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
+  where += ` AND (${diseaseConditions})`;
+  diseases.forEach(d => params.push(`%${d}%`));
+}
 
   const sql = `
     SELECT 
