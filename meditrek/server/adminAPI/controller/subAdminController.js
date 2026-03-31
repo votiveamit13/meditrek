@@ -6412,7 +6412,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
 //   });
 // };
 const getPatientDiseasesMedicineList = (req, res) => {
-  const { doctor_id, gender, age_group,diseases , page = 1, limit = 10 } = req.body;
+  const { doctor_id, gender, age_group, diseases = [] , page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -6438,30 +6438,24 @@ const getPatientDiseasesMedicineList = (req, res) => {
       params.push(min, max);
     }
   }
-  if (diseases.length > 0) {
-  if (diseases.length === 1 && req.body.singleOnly) {
-    // ✅ SINGLE ONLY
+  if (Array.isArray(diseases) && diseases.length > 0) {
+  if (diseases.length === 1 && singleOnly) {
     where += ` AND u.diseases LIKE ?`;
     params.push(`%${diseases[0]}%`);
 
-    // ensure ONLY one disease (approx)
     where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = 1`;
   }
 
-  else if (req.body.combinedOnly && diseases.length >= 2) {
-    // ✅ COMBINED ONLY (must have ALL + exact count)
-
+  else if (combinedOnly && diseases.length >= 2) {
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" AND ");
     where += ` AND (${diseaseConditions})`;
     diseases.forEach(d => params.push(`%${d}%`));
 
-    // exact match count
     where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = ?`;
     params.push(diseases.length);
   }
 
   else {
-    // ✅ DEFAULT (ANY match)
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
     where += ` AND (${diseaseConditions})`;
     diseases.forEach(d => params.push(`%${d}%`));
