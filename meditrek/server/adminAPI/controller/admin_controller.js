@@ -6706,7 +6706,36 @@ const deleteInsightsPost = (req, res) => {
       });
     }
   };
+const deleteMedicineBulk = (req, res) => {
+  const { medicine_ids } = req.body;
 
+  if (!medicine_ids || !Array.isArray(medicine_ids) || medicine_ids.length === 0) {
+    return res.json({
+      success: false,
+      msg: "medicine_ids required"
+    });
+  }
+
+  const query = `
+    DELETE FROM medicine_master 
+    WHERE medicine_id IN (?)
+  `;
+
+  connection.query(query, [medicine_ids], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.json({
+        success: false,
+        msg: "Database error"
+      });
+    }
+
+    return res.json({
+      success: true,
+      msg: `${result.affectedRows} medicines deleted successfully`
+    });
+  });
+};
 
 
 module.exports = {
@@ -6843,4 +6872,5 @@ module.exports = {
   getInsightsPosts,
   updateInsightsPost,
   deleteInsightsPost,
+  deleteMedicineBulk,
 };
