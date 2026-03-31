@@ -6254,7 +6254,9 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
     gender,
     age_group,
     disease = [],
-    medication = []
+    medication = [],
+    singleOnly = false,
+  combinedOnly = false,
   } = req.body;
 
   if (!doctor_id) {
@@ -6281,10 +6283,40 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
     }
   }
 
-  if (disease.length) {
-    where += ` AND (` + disease.map(() => `u.diseases LIKE ?`).join(" OR ") + `)`;
+if (Array.isArray(disease) && disease.length > 0) {
+
+  const countCondition = `
+    (
+      LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
+      - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
+    ) / LENGTH('name:')
+  `;
+
+  // ✅ SINGLE ONLY
+  if (disease.length === 1 && singleOnly) {
+    where += ` AND u.diseases LIKE ?`;
+    params.push(`%${disease[0]}%`);
+
+    where += ` AND ${countCondition} = 1`;
+  }
+
+  // ✅ COMBINED ONLY
+  else if (combinedOnly && disease.length >= 2) {
+    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+    where += ` AND (${diseaseConditions})`;
+    disease.forEach(d => params.push(`%${d}%`));
+
+    where += ` AND ${countCondition} = ?`;
+    params.push(disease.length);
+  }
+
+  // ✅ DEFAULT
+  else {
+    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+    where += ` AND (${diseaseConditions})`;
     disease.forEach(d => params.push(`%${d}%`));
   }
+}
 
   if (medication.length) {
     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
@@ -6808,7 +6840,7 @@ if (Array.isArray(diseases) && diseases.length > 0) {
 // };
 
 const getDiseaseMedicineSummary = (req, res) => {
-  const { doctor_id, gender, age_group, disease = [], page = 1, limit = 10 } = req.body;
+  const { doctor_id, gender, age_group, singleOnly = false, combinedOnly = false, disease = [], page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -6835,10 +6867,40 @@ const getDiseaseMedicineSummary = (req, res) => {
     }
   }
 
-  if (disease.length) {
-    where += ` AND (` + disease.map(() => `u.diseases LIKE ?`).join(" OR ") + `)`;
+ if (Array.isArray(disease) && disease.length > 0) {
+
+  const countCondition = `
+    (
+      LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
+      - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
+    ) / LENGTH('name:')
+  `;
+
+  // ✅ SINGLE ONLY
+  if (disease.length === 1 && singleOnly) {
+    where += ` AND u.diseases LIKE ?`;
+    params.push(`%${disease[0]}%`);
+
+    where += ` AND ${countCondition} = 1`;
+  }
+
+  // ✅ COMBINED ONLY
+  else if (combinedOnly && disease.length >= 2) {
+    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+    where += ` AND (${diseaseConditions})`;
+    disease.forEach(d => params.push(`%${d}%`));
+
+    where += ` AND ${countCondition} = ?`;
+    params.push(disease.length);
+  }
+
+  // ✅ DEFAULT
+  else {
+    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+    where += ` AND (${diseaseConditions})`;
     disease.forEach(d => params.push(`%${d}%`));
   }
+}
 
   const totalAllSql = `
     SELECT COUNT(DISTINCT user_id) as total
