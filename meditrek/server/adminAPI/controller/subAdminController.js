@@ -6447,22 +6447,35 @@ const getPatientDiseasesMedicineList = (req, res) => {
       params.push(min, max);
     }
   }
- if (Array.isArray(diseases) && diseases.length > 0) {
+if (Array.isArray(diseases) && diseases.length > 0) {
 
-  // ✅ SINGLE ONLY (1 disease selected)
+  // normalize disease count (handle comma + newline)
+  const countCondition = `
+    (
+      LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
+      - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
+    ) / LENGTH('name:')
+  `;
+
+  // ✅ SINGLE ONLY (exactly 1 disease and matches)
   if (diseases.length === 1 && singleOnly) {
     where += ` AND u.diseases LIKE ?`;
     params.push(`%${diseases[0]}%`);
+
+    where += ` AND ${countCondition} = 1`;
   }
 
-  // ✅ COMBINED ONLY (multiple diseases - must have ALL)
+  // ✅ COMBINED ONLY (exact match, no extra diseases)
   else if (combinedOnly && diseases.length >= 2) {
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" AND ");
     where += ` AND (${diseaseConditions})`;
     diseases.forEach(d => params.push(`%${d}%`));
+
+    where += ` AND ${countCondition} = ?`;
+    params.push(diseases.length);
   }
 
-  // ✅ DEFAULT (any of selected diseases)
+  // ✅ DEFAULT (loose match)
   else {
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
     where += ` AND (${diseaseConditions})`;
