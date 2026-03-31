@@ -6447,23 +6447,22 @@ const getPatientDiseasesMedicineList = (req, res) => {
       params.push(min, max);
     }
   }
-  if (Array.isArray(diseases) && diseases.length > 0) {
+ if (Array.isArray(diseases) && diseases.length > 0) {
+
+  // ✅ SINGLE ONLY (1 disease selected)
   if (diseases.length === 1 && singleOnly) {
     where += ` AND u.diseases LIKE ?`;
     params.push(`%${diseases[0]}%`);
-
-    where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = 1`;
   }
 
+  // ✅ COMBINED ONLY (multiple diseases - must have ALL)
   else if (combinedOnly && diseases.length >= 2) {
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" AND ");
     where += ` AND (${diseaseConditions})`;
     diseases.forEach(d => params.push(`%${d}%`));
-
-    where += ` AND (LENGTH(u.diseases) - LENGTH(REPLACE(u.diseases, 'name:', ''))) = ?`;
-    params.push(diseases.length);
   }
 
+  // ✅ DEFAULT (any of selected diseases)
   else {
     const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" OR ");
     where += ` AND (${diseaseConditions})`;
