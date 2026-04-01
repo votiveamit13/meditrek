@@ -6233,7 +6233,10 @@ const DoctorActivateDeactivateUser = async (request, response) => {
         en: "English",
         es: "Español",
         fr: "Français",
-        ar: "العربية"
+        ar: "العربية",
+        it: "Italian",        
+        de: "Deutsch",        
+        pt: "Português" 
       }
     const { admin_id } = req.query;
 
@@ -6415,7 +6418,10 @@ const DoctorActivateDeactivateUser = async (request, response) => {
         en: "English",
         es: "Español",
         fr: "Français",
-        ar: "العربية"
+        ar: "العربية",
+         it: "Italian",        
+        de: "Deutsch",        
+        pt: "Português" 
       };
     const { admin_id, user_id } = req.query;
 
