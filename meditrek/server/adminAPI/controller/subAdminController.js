@@ -7203,7 +7203,7 @@ const getDiseaseMedicineSummary = (req, res) => {
   });
 };
 // Medication Demographics Summary
-// =========================
+// ========================= 
 // const getPatientMedicationDemographics = (req, res) => {
 //   const { doctor_id, gender, age_group, medication = [] } = req.body;
 
@@ -7800,7 +7800,8 @@ const getSubadminMedicationFull = (req, res) => {
         WHEN u.gender = 2 THEN 'Female'
         WHEN u.gender = 3 THEN 'Other'
         ELSE 'Not Specified'
-      END as gender
+      END as gender,
+      u.diseases
     FROM patient_master pm
     JOIN user_master u ON u.user_id = pm.user_id
     ${where}
@@ -7826,6 +7827,29 @@ const getSubadminMedicationFull = (req, res) => {
       });
 
     const promises = patients.map(patient => new Promise((resolve, reject) => {
+
+      //  FIXED diseases parsing
+      let parsedDiseases = [];
+
+      if (patient.diseases && typeof patient.diseases === "string") {
+        parsedDiseases = patient.diseases.split("},").map(d => {
+          try {
+            const clean = d.replace("{", "").replace("}", "");
+            const parts = clean.split(",");
+            let obj = {};
+            parts.forEach(p => {
+              const [key, val] = p.split(":");
+              obj[key.trim()] = val.trim();
+            });
+            return obj;
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+      } else if (Array.isArray(patient.diseases)) {
+        parsedDiseases = patient.diseases;
+      }
+
       const checkShare = `
         SELECT report_share_id, information_type, createtime 
         FROM report_share_master 
@@ -7839,7 +7863,10 @@ const getSubadminMedicationFull = (req, res) => {
         const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
         if (!latestShare) {
           patient.medications = [];
-          return resolve(patient);
+          return resolve({
+            ...patient,
+            diseases: parsedDiseases
+          });
         }
 
         const shareTime = latestShare.createtime;
@@ -7859,12 +7886,14 @@ const getSubadminMedicationFull = (req, res) => {
         connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
           if (err2) return reject(err2);
 
-          patient.medications = meds.map(m => ({
-            id: m.medicine_id,
-            name: m.medicine_name
-          }));
-
-          resolve(patient);
+          resolve({
+            ...patient,
+            diseases: parsedDiseases,
+            medications: meds.map(m => ({
+              id: m.medicine_id,
+              name: m.medicine_name
+            }))
+          });
         });
       });
     }));
@@ -7896,21 +7925,9 @@ const getSubadminMedicationFull = (req, res) => {
           ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
           : "0.00%";
 
-        let selectedMedCount = 0;
-
-        if (isFilterApplied) {
-          selectedMedCount = finalPatients.reduce((count, p) => {
-            return count + p.medications.filter(m =>
-              medication.some(sel =>
-                m.name.toLowerCase().includes(sel.toLowerCase())
-              )
-            ).length;
-          }, 0);
-        } else {
-          selectedMedCount = finalPatients.reduce((count, p) => {
-            return count + p.medications.length;
-          }, 0);
-        }
+        let selectedMedCount = finalPatients.reduce((count, p) => {
+          return count + (p.medications ? p.medications.length : 0);
+        }, 0);
 
         const demoMap = {};
         finalPatients.forEach(u => {
@@ -7926,19 +7943,21 @@ const getSubadminMedicationFull = (req, res) => {
 
         const medMap = {};
         matchedPatients.forEach(u => {
-          u.medications.forEach(m => {
+          (u.medications || []).forEach(m => {
             if (!medMap[m.name]) medMap[m.name] = 0;
             medMap[m.name] += 1;
           });
         });
 
-        const summary = Object.keys(medMap).map(name => ({
+        const summaryArray = Object.keys(medMap).map(name => ({
           medicine_name: name,
           patient_count: medMap[name],
           percentage: totalPatients
             ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
             : "0.00%"
         }));
+
+        const paginatedSummary = summaryArray.slice(offset, offset + Number(limit));
 
         const graph = Object.keys(medMap).map(name => ({
           name,
@@ -7947,7 +7966,7 @@ const getSubadminMedicationFull = (req, res) => {
 
         const drilldown = [];
         matchedPatients.forEach(u => {
-          u.medications.forEach(m => {
+          (u.medications || []).forEach(m => {
             drilldown.push({
               user_id: u.user_id,
               name: u.name,
@@ -7967,7 +7986,7 @@ const getSubadminMedicationFull = (req, res) => {
           selected_medication_count: selectedMedCount,
           demographics,
           details: paginatedPatients,
-          summary,
+          summary: paginatedSummary,
           graph,
           drilldown: paginatedDrilldown
         });
