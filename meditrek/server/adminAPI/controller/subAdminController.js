@@ -5008,6 +5008,94 @@ const getAllMedicines = (req, res) => {
     });
   });
 };
+// const getDocterAllMedicines = async (req, res) => {
+//   const doctor_id = req.query.doctor_id;
+
+//   try {
+//     if (!doctor_id) {
+//       return res.status(200).json({
+//         success: false,
+//         msg: "doctor_id required"
+//       });
+//     }
+
+    
+//     const checksql = `
+//       SELECT doctor_id 
+//       FROM doctor_master 
+//       WHERE doctor_id = ? AND delete_flag = 0
+//     `;
+
+//     connection.query(checksql, [doctor_id], (err, check) => {
+//       if (err) {
+//         return res.json({ success: false, msg: "Server error", err: err.message });
+//       }
+
+//       if (check.length === 0) {
+//         return res.json({ success: false, msg: "Doctor not found" });
+//       }
+
+      
+//       const totalSql = `
+//         SELECT COUNT(mm.medication_id) AS totalMedication
+//         FROM patient_master pm
+//         LEFT JOIN medication_master mm 
+//           ON pm.user_id = mm.user_id 
+//           AND mm.delete_flag = 0
+//         WHERE pm.doctor_id = ? 
+//         AND pm.delete_flag = 0
+//       `;
+
+//       connection.query(totalSql, [doctor_id], (err, totalRes) => {
+//         if (err) {
+//           return res.json({ success: false, msg: "Error in count", err: err.message });
+//         }
+
+//         const totalMedication = totalRes[0].totalMedication;
+
+       
+//         const medicineListSql = `
+//           SELECT DISTINCT mm2.medicine_name
+//           FROM patient_master pm
+
+//           JOIN medication_master md 
+//             ON md.user_id = pm.user_id
+//             AND md.delete_flag = 0
+
+//           JOIN medicine_master mm2 
+//             ON mm2.medicine_id = md.medicine_id
+//             AND mm2.delete_flag = 0
+
+//           WHERE pm.doctor_id = ?
+//             AND pm.delete_flag = 0
+
+//           ORDER BY mm2.medicine_name ASC
+//         `;
+
+//         connection.query(medicineListSql, [doctor_id], (err2, medList) => {
+//           if (err2) {
+//             return res.json({ success: false, msg: "Error in list", err: err2.message });
+//           }
+
+        
+//           return res.json({
+//             success: true,
+//             totalMedication: totalMedication,
+//             medicines: medList
+//           });
+//         });
+//       });
+//     });
+
+//   } catch (error) {
+//     return res.json({
+//       success: false,
+//       msg: "Server error",
+//       err: error.message
+//     });
+//   }
+// };
+
 const getDocterAllMedicines = async (req, res) => {
   const doctor_id = req.query.doctor_id;
 
@@ -5019,7 +5107,6 @@ const getDocterAllMedicines = async (req, res) => {
       });
     }
 
-    
     const checksql = `
       SELECT doctor_id 
       FROM doctor_master 
@@ -5035,15 +5122,20 @@ const getDocterAllMedicines = async (req, res) => {
         return res.json({ success: false, msg: "Doctor not found" });
       }
 
-      
       const totalSql = `
-        SELECT COUNT(mm.medication_id) AS totalMedication
-        FROM patient_master pm
-        LEFT JOIN medication_master mm 
-          ON pm.user_id = mm.user_id 
-          AND mm.delete_flag = 0
-        WHERE pm.doctor_id = ? 
-        AND pm.delete_flag = 0
+        SELECT COUNT(DISTINCT a.medicine_id) AS totalMedication
+        FROM report_share_master r
+        JOIN medication_master m 
+          ON m.user_id = r.user_id 
+          AND m.delete_flag = 0 
+          AND m.createtime <= r.createtime
+        JOIN medicine_master a 
+          ON a.medicine_id = m.medicine_id
+          AND a.delete_flag = 0
+        WHERE r.doctor_id = ?
+          AND r.share_type = 0
+          AND r.delete_flag = 0
+          AND FIND_IN_SET('1', r.information_type)
       `;
 
       connection.query(totalSql, [doctor_id], (err, totalRes) => {
@@ -5053,23 +5145,21 @@ const getDocterAllMedicines = async (req, res) => {
 
         const totalMedication = totalRes[0].totalMedication;
 
-       
         const medicineListSql = `
-          SELECT DISTINCT mm2.medicine_name
-          FROM patient_master pm
-
-          JOIN medication_master md 
-            ON md.user_id = pm.user_id
-            AND md.delete_flag = 0
-
-          JOIN medicine_master mm2 
-            ON mm2.medicine_id = md.medicine_id
-            AND mm2.delete_flag = 0
-
-          WHERE pm.doctor_id = ?
-            AND pm.delete_flag = 0
-
-          ORDER BY mm2.medicine_name ASC
+          SELECT DISTINCT a.medicine_name
+          FROM report_share_master r
+          JOIN medication_master m 
+            ON m.user_id = r.user_id 
+            AND m.delete_flag = 0 
+            AND m.createtime <= r.createtime
+          JOIN medicine_master a 
+            ON a.medicine_id = m.medicine_id
+            AND a.delete_flag = 0
+          WHERE r.doctor_id = ?
+            AND r.share_type = 0
+            AND r.delete_flag = 0
+            AND FIND_IN_SET('1', r.information_type)
+          ORDER BY a.medicine_name ASC
         `;
 
         connection.query(medicineListSql, [doctor_id], (err2, medList) => {
@@ -5077,7 +5167,6 @@ const getDocterAllMedicines = async (req, res) => {
             return res.json({ success: false, msg: "Error in list", err: err2.message });
           }
 
-        
           return res.json({
             success: true,
             totalMedication: totalMedication,
@@ -8344,9 +8433,10 @@ const patientOffset = (patient_page - 1) * patient_limit;
 
         const isFilterApplied = Array.isArray(medication) && medication.length > 0;
 
-        const totalPatients = isFilterApplied
-          ? matchedPatients.length
-          : finalPatients.length;
+        // const totalPatients = isFilterApplied
+        //   ? matchedPatients.length
+        //   : finalPatients.length;
+        const totalPatients = finalPatients.length;
 
         const matchedCount = matchedPatients.length;
 
