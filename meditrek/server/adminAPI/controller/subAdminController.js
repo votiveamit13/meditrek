@@ -7580,6 +7580,7 @@ const getSubadminMedicationFull = (req, res) => {
 
   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
+
   const offset = (page - 1) * limit;
 
   if (gender !== undefined && gender !== null && gender !== "") {
@@ -7617,14 +7618,24 @@ const getSubadminMedicationFull = (req, res) => {
     ${where}
     GROUP BY pm.user_id
     ORDER BY u.name ASC
-    LIMIT ? OFFSET ?
   `;
 
-  connection.query(patientSql, [...params, Number(limit), Number(offset)], (err, patients) => {
+  connection.query(patientSql, params, (err, patients) => {
     if (err) return res.json({ success: false, msg: err.message });
 
     if (patients.length === 0)
-      return res.json({ success: true, total_patients: 0, matched_patients: 0, percentage: "0.00%", selected_medication_count: 0, demographics: [], details: [], summary: [], graph: [], drilldown: [] });
+      return res.json({
+        success: true,
+        total_patients: 0,
+        matched_patients: 0,
+        percentage: "0.00%",
+        selected_medication_count: 0,
+        demographics: [],
+        details: [],
+        summary: [],
+        graph: [],
+        drilldown: []
+      });
 
     const promises = patients.map(patient => new Promise((resolve, reject) => {
       const checkShare = `
@@ -7660,7 +7671,11 @@ const getSubadminMedicationFull = (req, res) => {
         connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
           if (err2) return reject(err2);
 
-          patient.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
+          patient.medications = meds.map(m => ({
+            id: m.medicine_id,
+            name: m.medicine_name
+          }));
+
           resolve(patient);
         });
       });
@@ -7669,7 +7684,6 @@ const getSubadminMedicationFull = (req, res) => {
     Promise.all(promises)
       .then(finalPatients => {
 
-        
         let matchedPatients = finalPatients;
 
         if (Array.isArray(medication) && medication.length > 0) {
@@ -7682,22 +7696,31 @@ const getSubadminMedicationFull = (req, res) => {
           );
         }
 
-        const totalPatients = finalPatients.length;
+        const isFilterApplied = Array.isArray(medication) && medication.length > 0;
+
+        const totalPatients = isFilterApplied
+          ? matchedPatients.length
+          : finalPatients.length;
+
         const matchedCount = matchedPatients.length;
+
         const percentage = totalPatients
           ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
           : "0.00%";
 
-        // selected medication count
         let selectedMedCount = 0;
 
-        if (Array.isArray(medication) && medication.length > 0) {
+        if (isFilterApplied) {
           selectedMedCount = finalPatients.reduce((count, p) => {
             return count + p.medications.filter(m =>
               medication.some(sel =>
                 m.name.toLowerCase().includes(sel.toLowerCase())
               )
             ).length;
+          }, 0);
+        } else {
+          selectedMedCount = finalPatients.reduce((count, p) => {
+            return count + p.medications.length;
           }, 0);
         }
 
@@ -7714,7 +7737,7 @@ const getSubadminMedicationFull = (req, res) => {
         }));
 
         const medMap = {};
-        finalPatients.forEach(u => {
+        matchedPatients.forEach(u => {
           u.medications.forEach(m => {
             if (!medMap[m.name]) medMap[m.name] = 0;
             medMap[m.name] += 1;
@@ -7724,15 +7747,29 @@ const getSubadminMedicationFull = (req, res) => {
         const summary = Object.keys(medMap).map(name => ({
           medicine_name: name,
           patient_count: medMap[name],
-          percentage: totalPatients ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%" : "0.00%"
+          percentage: totalPatients
+            ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
+            : "0.00%"
         }));
 
-        const graph = Object.keys(medMap).map(name => ({ name, count: medMap[name] }));
+        const graph = Object.keys(medMap).map(name => ({
+          name,
+          count: medMap[name]
+        }));
 
         const drilldown = [];
-        finalPatients.forEach(u => {
-          u.medications.forEach(m => drilldown.push({ user_id: u.user_id, name: u.name, medicine_name: m.name }));
+        matchedPatients.forEach(u => {
+          u.medications.forEach(m => {
+            drilldown.push({
+              user_id: u.user_id,
+              name: u.name,
+              medicine_name: m.name
+            });
+          });
         });
+
+        const paginatedPatients = matchedPatients.slice(offset, offset + Number(limit));
+        const paginatedDrilldown = drilldown.slice(offset, offset + Number(limit));
 
         return res.json({
           success: true,
@@ -7741,10 +7778,10 @@ const getSubadminMedicationFull = (req, res) => {
           percentage,
           selected_medication_count: selectedMedCount,
           demographics,
-          details: matchedPatients, //  only matched
+          details: paginatedPatients,
           summary,
           graph,
-          drilldown
+          drilldown: paginatedDrilldown
         });
       })
       .catch(err => res.json({ success: false, msg: err.message }));
