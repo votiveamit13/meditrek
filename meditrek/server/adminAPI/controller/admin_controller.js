@@ -6234,7 +6234,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
         es: "Español",
         fr: "Français",
         ar: "العربية",
-        it: "Italian",        
+        it: "Italiano",        
         de: "Deutsch",        
         pt: "Português" 
       }
@@ -6419,7 +6419,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
         es: "Español",
         fr: "Français",
         ar: "العربية",
-         it: "Italian",        
+         it: "Italiano",        
         de: "Deutsch",        
         pt: "Português" 
       };
