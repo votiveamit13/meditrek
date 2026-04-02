@@ -8934,7 +8934,17 @@ const getMedicationDiseaseDashboard = (req, res) => {
     const totalPatients = totalRes[0].total;
 
     const matchSql = `
-      SELECT DISTINCT p.user_id, u.diseases
+      SELECT DISTINCT 
+        p.user_id, 
+        u.name,
+        TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+        CASE 
+          WHEN u.gender = 1 THEN 'Male'
+          WHEN u.gender = 2 THEN 'Female'
+          WHEN u.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
+        END as gender,
+        u.diseases
       FROM patient_master p
       JOIN user_master u ON u.user_id = p.user_id
       ${where}
@@ -8983,12 +8993,10 @@ const getMedicationDiseaseDashboard = (req, res) => {
 
       let finalRows = await Promise.all(promises);
 
-      // ✅ DISEASE FILTER LOGIC (same as before)
       const countDisease = (dStr) => !dStr ? 0 : (dStr.match(/name:/g) || []).length;
       if (singleOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) === 1);
       if (combinedOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) >= 2);
 
-      // ✅ MEDICATION FILTER LOGIC
       if (Array.isArray(medication) && medication.length > 0) {
 
         const countMedication = (medList) => {
@@ -8997,20 +9005,16 @@ const getMedicationDiseaseDashboard = (req, res) => {
         };
 
         if (singleOnly) {
-          // exactly 1 medication matching selected filter
           finalRows = finalRows.filter(p => countMedication(p.medications) === 1);
         } else if (combinedOnly) {
-          // 2 or more medications matching selected filter
           finalRows = finalRows.filter(p => countMedication(p.medications) >= 2);
         } else {
-          // default loose match
           finalRows = finalRows.filter(p => countMedication(p.medications) > 0);
         }
       }
 
       const matchedPatients = finalRows.length;
 
-      // ✅ DISEASE DISTRIBUTION
       let diseaseMap = {};
       finalRows.forEach(row => {
         if (!row.diseases) return;
