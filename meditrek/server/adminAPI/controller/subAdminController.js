@@ -9342,8 +9342,9 @@ const getMedicationReportedHealth = (req, res) => {
   const {
     doctor_id,
     medication = [],
-    gender,
     age_group,
+    page = 1,
+    limit = 10
   } = req.body;
 
   if (!doctor_id) {
@@ -9353,10 +9354,7 @@ const getMedicationReportedHealth = (req, res) => {
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
   let params = [doctor_id];
 
-  if (gender !== undefined && gender !== "") {
-    where += ` AND u.gender = ?`;
-    params.push(gender);
-  }
+  const offset = (page - 1) * limit;
 
   if (age_group) {
     if (age_group.includes("+")) {
@@ -9370,20 +9368,21 @@ const getMedicationReportedHealth = (req, res) => {
     }
   }
 
-  // 
+  if (Array.isArray(medication) && medication.length > 0) {
+    const medCond = medication.map(() => `med.medicine_name LIKE ?`).join(" OR ");
+    where += ` AND (${medCond})`;
+    medication.forEach(m => params.push(`%${m}%`));
+  }
+
   const baseJoin = `
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
-
     JOIN medication_master m 
       ON m.user_id = u.user_id AND m.delete_flag = 0
-
     JOIN medicine_master med 
       ON med.medicine_id = m.medicine_id
-
     LEFT JOIN adverse_reaction_master arm 
-  ON arm.user_id = u.user_id AND arm.delete_flag = 0
-
+      ON arm.user_id = u.user_id AND arm.delete_flag = 0
     LEFT JOIN symptoms_master sm 
       ON sm.symptom_id = arm.symptom_id AND sm.delete_flag = 0
   `;
@@ -9406,66 +9405,21 @@ const getMedicationReportedHealth = (req, res) => {
         m.user_id,
         u.name,
         TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
-        CASE 
-          WHEN u.gender = 1 THEN 'Male'
-          WHEN u.gender = 2 THEN 'Female'
-          WHEN u.gender = 3 THEN 'Other'
-          ELSE 'Not Specified'
-        END as gender,
         u.diseases,
         sm.symptom_name
       ${baseJoin}
       ${where}
+      GROUP BY m.user_id, m.medicine_id, sm.symptom_name
       ORDER BY med.medicine_name ASC
+      LIMIT ? OFFSET ?
     `;
 
-    connection.query(sql, params, async (err2, rows) => {
+    connection.query(sql, [...params, Number(limit), Number(offset)], (err2, rows) => {
       if (err2) return res.json({ success: false, error: err2.message });
-
-      
-      const filteredRows = [];
-
-      const promises = rows.map(r => new Promise((resolve) => {
-        const checkShare = `
-          SELECT createtime 
-          FROM report_share_master 
-          WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
-            AND FIND_IN_SET('1', information_type)
-          ORDER BY createtime DESC
-          LIMIT 1
-        `;
-
-        connection.query(checkShare, [r.user_id, doctor_id], (e, share) => {
-          if (!share.length) return resolve();
-
-          const shareTime = share[0].createtime;
-
-          const medCheck = `
-            SELECT 1 
-            FROM medication_master m
-            WHERE m.user_id = ? 
-              AND m.medicine_id = ?
-              AND m.delete_flag = 0
-              AND m.createtime <= ?
-            LIMIT 1
-          `;
-
-          connection.query(
-            medCheck,
-            [r.user_id, r.medicine_id, shareTime],
-            (e2, ok) => {
-              if (ok.length) filteredRows.push(r);
-              resolve();
-            }
-          );
-        });
-      }));
-
-      await Promise.all(promises);
 
       let result = {};
 
-      filteredRows.forEach(r => {
+      rows.forEach(r => {
         const med = r.medicine_name;
 
         if (!result[med]) {
@@ -9489,7 +9443,6 @@ const getMedicationReportedHealth = (req, res) => {
             user_id: r.user_id,
             name: r.name,
             age: r.age,
-            gender: r.gender,
             diseases: r.diseases,
             medications: {
               id: r.medicine_id,
@@ -9529,7 +9482,6 @@ const getMedicationReportedHealth = (req, res) => {
           user_id: p.user_id,
           patient_name: p.name,
           age: p.age,
-          gender: p.gender,
           diseases: p.diseases,
           medications: p.medications,
           symptoms: Array.from(p.symptoms).join(", ")
@@ -9550,6 +9502,8 @@ const getMedicationReportedHealth = (req, res) => {
       return res.json({
         success: true,
         total_patients: totalPatients,
+        page: Number(page),
+        limit: Number(limit),
         data: finalData
       });
     });
