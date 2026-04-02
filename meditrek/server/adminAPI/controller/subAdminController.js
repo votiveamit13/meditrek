@@ -8890,7 +8890,7 @@ const getMedicationDiseaseDashboard = (req, res) => {
   const {
     doctor_id,
     medication = [],
-    diseases = [], 
+    diseases = [],
     age_group,
     gender,
     exclude_disease = [],
@@ -8986,7 +8986,11 @@ const getMedicationDiseaseDashboard = (req, res) => {
           connection.query(medSql, [row.user_id, shareTime], (err2, meds) => {
             if (err2) return reject(err2);
 
-            row.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
+            row.medications = meds.map(m => ({
+              id: m.medicine_id,
+              name: m.medicine_name
+            }));
+
             resolve(row);
           });
         });
@@ -8994,72 +8998,111 @@ const getMedicationDiseaseDashboard = (req, res) => {
 
       let finalRows = await Promise.all(promises);
 
-      // const countDisease = (dStr) => !dStr ? 0 : (dStr.match(/name:/g) || []).length;
-      // if (singleOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) === 1);
-      // if (combinedOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) >= 2);
-      // helper to extract disease names
-const extractDiseases = (dStr) => {
-  if (!dStr) return [];
-  const matches = dStr.match(/name:\s*([^,}]+)/g) || [];
-  return matches.map(d => d.replace("name:", "").trim());
-};
+      // ============================
+      // ✅ HELPERS (SAFE)
+      // ============================
 
-// SINGLE ONLY
-if (singleOnly && Array.isArray(diseases) && diseases.length === 1) {
-  finalRows = finalRows.filter(p => {
-    const patientDiseases = extractDiseases(p.diseases);
-    return (
-      patientDiseases.length === 1 &&
-      patientDiseases.includes(diseases[0])
-    );
-  });
-}
+      const extractDiseases = (dStr) => {
+        if (!dStr) return [];
+        const matches = dStr.match(/name:\s*([^,}]+)/g) || [];
+        return matches.map(d => d.replace("name:", "").trim().toLowerCase());
+      };
 
-// COMBINED ONLY (EXACT MATCH ✅)
-if (combinedOnly && Array.isArray(diseases) && diseases.length >= 2) {
-  finalRows = finalRows.filter(p => {
-    const patientDiseases = extractDiseases(p.diseases);
+      const extractMedNames = (medList) => {
+        if (!medList) return [];
+        return medList.map(m => m.name.toLowerCase());
+      };
 
-    const hasAll = diseases.every(d =>
-      patientDiseases.includes(d)
-    );
+      const selectedDiseases = (diseases || []).map(d => d.toLowerCase());
+      const selectedMeds = (medication || []).map(m => m.toLowerCase());
 
-    const exactMatch =
-      patientDiseases.length === diseases.length;
+      // ============================
+      // ✅ DISEASE FILTER (FIXED)
+      // ============================
 
-    return hasAll && exactMatch;
-  });
-}
+      if (singleOnly && selectedDiseases.length === 1) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
+          return (
+            patientDiseases.length === 1 &&
+            patientDiseases.includes(selectedDiseases[0])
+          );
+        });
+      }
 
-// DEFAULT (loose match)
-if (!singleOnly && !combinedOnly && Array.isArray(diseases) && diseases.length > 0) {
-  finalRows = finalRows.filter(p => {
-    const patientDiseases = extractDiseases(p.diseases);
-    return diseases.some(d =>
-      patientDiseases.includes(d)
-    );
-  });
-}
+      else if (combinedOnly && selectedDiseases.length >= 2) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
 
-      if (Array.isArray(medication) && medication.length > 0) {
+          const hasAll = selectedDiseases.every(d =>
+            patientDiseases.includes(d)
+          );
 
-        const countMedication = (medList) => {
-          if (!medList || !medList.length) return 0;
-          return medList.filter(m => medication.some(sel => m.name.toLowerCase().includes(sel.toLowerCase()))).length;
-        };
+          const exactMatch =
+            patientDiseases.length === selectedDiseases.length;
 
-        if (singleOnly) {
-          finalRows = finalRows.filter(p => countMedication(p.medications) === 1);
-        } else if (combinedOnly) {
-          finalRows = finalRows.filter(p => countMedication(p.medications) >= 2);
-        } else {
-          finalRows = finalRows.filter(p => countMedication(p.medications) > 0);
+          return hasAll && exactMatch;
+        });
+      }
+
+      else if (selectedDiseases.length > 0) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
+          return selectedDiseases.some(d =>
+            patientDiseases.includes(d)
+          );
+        });
+      }
+
+      // ============================
+      // ✅ MEDICATION FILTER (ALIGNED)
+      // ============================
+
+      if (selectedMeds.length > 0) {
+
+        if (singleOnly && selectedMeds.length === 1) {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+            return (
+              meds.length === 1 &&
+              meds.some(m => m.includes(selectedMeds[0]))
+            );
+          });
+        }
+
+        else if (combinedOnly && selectedMeds.length >= 2) {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+
+            const matched = selectedMeds.filter(sel =>
+              meds.some(m => m.includes(sel))
+            );
+
+            return (
+              matched.length === selectedMeds.length &&
+              meds.length === selectedMeds.length
+            );
+          });
+        }
+
+        else {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+            return selectedMeds.some(sel =>
+              meds.some(m => m.includes(sel))
+            );
+          });
         }
       }
+
+      // ============================
+      // ✅ DISTRIBUTION
+      // ============================
 
       const matchedPatients = finalRows.length;
 
       let diseaseMap = {};
+
       finalRows.forEach(row => {
         if (!row.diseases) return;
 
@@ -9068,6 +9111,7 @@ if (!singleOnly && !combinedOnly && Array.isArray(diseases) && diseases.length >
           const match = d.match(/name:\s*([^,}]+)/);
           if (match) {
             const name = match[1].trim();
+
             if (exclude_disease.includes(name)) return;
 
             if (!diseaseMap[name]) diseaseMap[name] = 0;
@@ -9089,6 +9133,7 @@ if (!singleOnly && !combinedOnly && Array.isArray(diseases) && diseases.length >
 
       let top_disease = "";
       let max = 0;
+
       disease_distribution.forEach(d => {
         if (d.patient_count > max) {
           max = d.patient_count;
