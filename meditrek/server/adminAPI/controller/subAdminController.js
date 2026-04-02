@@ -5614,7 +5614,6 @@ const getPatientAnalyticsCustomTable = (req, res) => {
     disease = [],
     medication = [],
     symptoms = [],
-    columns = [],
     page = 1,
     limit = 10
   } = req.body;
@@ -5625,173 +5624,143 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
   let params = [doctor_id];
-  const offset = (page - 1) * limit;
 
-  if (gender !== undefined && gender !== null && gender !== "") {
+  // ---------------- FILTERS ----------------
+
+  if (gender !== undefined && gender !== "") {
     where += ` AND u.gender = ?`;
     params.push(Number(gender));
   }
 
-  if (age_group && age_group !== "") {
+  if (age_group) {
     if (age_group.includes("-")) {
       const [min, max] = age_group.split("-").map(Number);
-      where += ` AND u.dob IS NOT NULL 
-        AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      params.push(min, max);
     } else if (age_group === "60+") {
-      where += ` AND u.dob IS NOT NULL 
-        AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60`;
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60`;
     }
   }
 
   if (disease.length > 0) {
-    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
-    where += ` AND (${diseaseConditions})`;
+    const cond = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+    where += ` AND (${cond})`;
     disease.forEach(d => params.push(`%${d}%`));
   }
 
   if (symptoms.length > 0) {
-    const symConditions = symptoms.map(() => `sm.symptom_name LIKE ?`).join(" OR ");
-    where += ` AND (${symConditions})`;
+    const cond = symptoms.map(() => `sm.symptom_name LIKE ?`).join(" OR ");
+    where += ` AND (${cond})`;
     symptoms.forEach(s => params.push(`%${s}%`));
   }
 
-  const sql = `
-    SELECT 
-      u.user_id,
-      u.name,
-      IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
-      u.gender,
-      u.diseases,
-      GROUP_CONCAT(DISTINCT sm.symptom_name) AS reported_symptoms
+  if (medication.length > 0) {
+    const cond = medication.map(() => `med.medicine_name LIKE ?`).join(" OR ");
+    where += ` AND (${cond})`;
+    medication.forEach(m => params.push(`%${m}%`));
+  }
+
+  // ---------------- BASE QUERY ----------------
+
+  const baseQuery = `
     FROM patient_master p
     LEFT JOIN user_master u ON u.user_id = p.user_id
     LEFT JOIN adverse_reaction_master arm 
       ON arm.user_id = u.user_id AND arm.delete_flag = 0
     LEFT JOIN symptoms_master sm 
       ON sm.symptom_id = arm.symptom_id AND sm.delete_flag = 0
+    LEFT JOIN medication_master m 
+      ON m.user_id = u.user_id AND m.delete_flag = 0
+    LEFT JOIN medicine_master med 
+      ON med.medicine_id = m.medicine_id
     ${where}
     GROUP BY u.user_id
-    ORDER BY u.name ASC
-    LIMIT ? OFFSET ?
   `;
 
-  connection.query(sql, [...params, Number(limit), Number(offset)], (err, users) => {
-    if (err) {
-      return res.json({ success: false, error: err.message });
-    }
+  // ---------------- TOTAL COUNT ----------------
 
-    const promises = users.map(user => new Promise((resolve, reject) => {
+  const countSql = `
+    SELECT COUNT(*) as total FROM (
+      SELECT u.user_id
+      ${baseQuery}
+    ) as t
+  `;
 
-      const checkShare = `
-        SELECT report_share_id, information_type, createtime 
-        FROM report_share_master 
-        WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
-        ORDER BY createtime DESC
-      `;
+  connection.query(countSql, params, (err, countRes) => {
+    if (err) return res.json({ success: false, error: err.message });
 
-      connection.query(checkShare, [user.user_id, doctor_id], (err1, shareList) => {
-        if (err1) return reject(err1);
+    const total = countRes[0]?.total || 0;
 
-        const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
+    // ---------------- PAGINATED DATA ----------------
 
-        let row = {};
-        row.user_id = user.user_id;
+    const offset = (page - 1) * limit;
 
-        if (columns.includes("name")) row.patient_name = user.name;
-        if (columns.includes("age")) row.age = user.age;
+    const dataSql = `
+      SELECT 
+        u.user_id,
+        u.name,
+        IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
+        u.gender,
+        u.diseases,
+        GROUP_CONCAT(DISTINCT sm.symptom_name) AS reported_symptoms,
+        JSON_ARRAYAGG(
+  DISTINCT JSON_OBJECT(
+    'id', med.medicine_id,
+    'name', med.medicine_name
+  )
+) AS medications
+      ${baseQuery}
+      ORDER BY u.name ASC
+      LIMIT ? OFFSET ?
+    `;
 
-        if (columns.includes("gender")) {
-          row.gender =
-            user.gender == 1
-              ? "Male"
-              : user.gender == 2
-              ? "Female"
-              : user.gender == 3
-              ? "Other"
-              : "Not Specified";
+    connection.query(
+      dataSql,
+      [...params, Number(limit), Number(offset)],
+      (err2, users) => {
+        if (err2) {
+          return res.json({ success: false, error: err2.message });
         }
 
-        if (columns.includes("diseases")) {
-          let cleanDiseases = [];
+        // ---------------- FORMAT RESPONSE ----------------
 
-          if (user.diseases) {
-            let matches = user.diseases.match(/name:\s*([^,}]+)/g);
-            if (matches) {
-              matches.forEach(m => {
-                cleanDiseases.push(m.split(":")[1].trim());
-              });
-            }
-          }
+        const patients = users.map(user => {
+          // ✅ Diseases parsing
+          const diseaseMatches = user.diseases?.match(/name:\s*([^,}]+)/g) || [];
+          const diseases = diseaseMatches.map(m => m.split(":")[1].trim());
 
-          row.diseases = cleanDiseases.join(", ");
-        }
+          return {
+            user_id: user.user_id,
+            name: user.name,
+            age: user.age,
+            gender:
+              user.gender == 1 ? "Male" :
+              user.gender == 2 ? "Female" :
+              user.gender == 3 ? "Other" :
+              "Not Specified",
 
-        if (columns.includes("reported_symptoms")) {
-          row.reported_symptoms = user.reported_symptoms || "";
-        }
+            diseases,
 
-        if (columns.includes("medications")) {
+            reported_symptoms: user.reported_symptoms
+              ? user.reported_symptoms.split(",")
+              : [],
 
-          if (!latestShare) {
-            row.medications = [];
-            return resolve(row);
-          }
-
-          const shareTime = latestShare.createtime;
-
-          const medSql = `
-            SELECT DISTINCT a.medicine_id, a.medicine_name
-            FROM medication_master m
-            JOIN medicine_master a ON a.medicine_id = m.medicine_id
-            JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-            WHERE m.user_id = ? 
-              AND m.delete_flag = 0 
-              AND tm.delete_flag = 0 
-              AND m.createtime <= ?
-            ORDER BY a.medicine_name ASC
-          `;
-
-          connection.query(medSql, [user.user_id, shareTime], (err2, meds) => {
-            if (err2) return reject(err2);
-
-            row.medications = meds.map(m => ({
-              id: m.medicine_id,
-              name: m.medicine_name
-            }));
-
-            resolve(row);
-          });
-
-        } else {
-          resolve(row);
-        }
-
-      });
-
-    }));
-
-    Promise.all(promises)
-      .then(patientList => {
-
-        let filteredPatients = patientList;
-
-        if (Array.isArray(medication) && medication.length > 0) {
-          filteredPatients = patientList.filter(p =>
-            (p.medications || []).some(m =>
-              medication.some(sel =>
-                m.name.toLowerCase().includes(sel.toLowerCase())
-              )
-            )
-          );
-        }
+            medications: user.medications
+  ? JSON.parse(user.medications)
+  : []
+          };
+        });
 
         return res.json({
           success: true,
-          total_patients: filteredPatients.length,
-          patients: filteredPatients
+          total,
+          matched_patients: total,
+          page: Number(page),
+          limit: Number(limit),
+          patients
         });
-      })
-      .catch(err => res.json({ success: false, error: err.message }));
+      }
+    );
   });
 };
 // 1 Patient info (Demographics of Patient)
