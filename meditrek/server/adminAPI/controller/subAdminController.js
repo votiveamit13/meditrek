@@ -8890,6 +8890,7 @@ const getMedicationDiseaseDashboard = (req, res) => {
   const {
     doctor_id,
     medication = [],
+    diseases = [], 
     age_group,
     gender,
     exclude_disease = [],
@@ -8993,9 +8994,52 @@ const getMedicationDiseaseDashboard = (req, res) => {
 
       let finalRows = await Promise.all(promises);
 
-      const countDisease = (dStr) => !dStr ? 0 : (dStr.match(/name:/g) || []).length;
-      if (singleOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) === 1);
-      if (combinedOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) >= 2);
+      // const countDisease = (dStr) => !dStr ? 0 : (dStr.match(/name:/g) || []).length;
+      // if (singleOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) === 1);
+      // if (combinedOnly) finalRows = finalRows.filter(p => countDisease(p.diseases) >= 2);
+      // helper to extract disease names
+const extractDiseases = (dStr) => {
+  if (!dStr) return [];
+  const matches = dStr.match(/name:\s*([^,}]+)/g) || [];
+  return matches.map(d => d.replace("name:", "").trim());
+};
+
+// SINGLE ONLY
+if (singleOnly && Array.isArray(diseases) && diseases.length === 1) {
+  finalRows = finalRows.filter(p => {
+    const patientDiseases = extractDiseases(p.diseases);
+    return (
+      patientDiseases.length === 1 &&
+      patientDiseases.includes(diseases[0])
+    );
+  });
+}
+
+// COMBINED ONLY (EXACT MATCH ✅)
+if (combinedOnly && Array.isArray(diseases) && diseases.length >= 2) {
+  finalRows = finalRows.filter(p => {
+    const patientDiseases = extractDiseases(p.diseases);
+
+    const hasAll = diseases.every(d =>
+      patientDiseases.includes(d)
+    );
+
+    const exactMatch =
+      patientDiseases.length === diseases.length;
+
+    return hasAll && exactMatch;
+  });
+}
+
+// DEFAULT (loose match)
+if (!singleOnly && !combinedOnly && Array.isArray(diseases) && diseases.length > 0) {
+  finalRows = finalRows.filter(p => {
+    const patientDiseases = extractDiseases(p.diseases);
+    return diseases.some(d =>
+      patientDiseases.includes(d)
+    );
+  });
+}
 
       if (Array.isArray(medication) && medication.length > 0) {
 
