@@ -9501,8 +9501,100 @@ const getMedicationReportedHealth = (req, res) => {
   });
 };
 
+const getDoctorAllSymptoms = async (req, res) => {
+  const doctor_id = req.query.doctor_id;
+
+  try {
+    if (!doctor_id) {
+      return res.status(200).json({
+        success: false,
+        msg: "doctor_id required"
+      });
+    }
+
+    // Check if doctor exists
+    const checksql = `
+      SELECT doctor_id 
+      FROM doctor_master 
+      WHERE doctor_id = ? AND delete_flag = 0
+    `;
+
+    connection.query(checksql, [doctor_id], (err, check) => {
+      if (err) {
+        return res.json({ success: false, msg: "Server error", err: err.message });
+      }
+
+      if (check.length === 0) {
+        return res.json({ success: false, msg: "Doctor not found" });
+      }
+
+      // Total shared symptoms
+      const totalSql = `
+        SELECT COUNT(DISTINCT sm.symptom_id) AS totalSymptoms
+        FROM report_share_master r
+        JOIN adverse_reaction_master arm
+          ON arm.user_id = r.user_id
+          AND arm.delete_flag = 0
+          AND arm.createtime <= r.createtime
+        JOIN symptoms_master sm
+          ON sm.symptom_id = arm.symptom_id
+          AND sm.delete_flag = 0
+        WHERE r.doctor_id = ?
+          AND r.share_type = 0
+          AND r.delete_flag = 0
+          AND FIND_IN_SET('1', r.information_type)
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+        if (err) {
+          return res.json({ success: false, msg: "Error in count", err: err.message });
+        }
+
+        const totalSymptoms = totalRes[0].totalSymptoms;
+
+        // List of shared symptoms
+        const symptomListSql = `
+          SELECT DISTINCT sm.symptom_name
+          FROM report_share_master r
+          JOIN adverse_reaction_master arm
+            ON arm.user_id = r.user_id
+            AND arm.delete_flag = 0
+            AND arm.createtime <= r.createtime
+          JOIN symptoms_master sm
+            ON sm.symptom_id = arm.symptom_id
+            AND sm.delete_flag = 0
+          WHERE r.doctor_id = ?
+            AND r.share_type = 0
+            AND r.delete_flag = 0
+            AND FIND_IN_SET('1', r.information_type)
+          ORDER BY sm.symptom_name ASC
+        `;
+
+        connection.query(symptomListSql, [doctor_id], (err2, symptomList) => {
+          if (err2) {
+            return res.json({ success: false, msg: "Error in list", err: err2.message });
+          }
+
+          return res.json({
+            success: true,
+            totalSymptoms: totalSymptoms,
+            symptoms: symptomList
+          });
+        });
+      });
+    });
+
+  } catch (error) {
+    return res.json({
+      success: false,
+      msg: "Server error",
+      err: error.message
+    });
+  }
+};
+
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
   getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,getSubadminMedicationFull,getDiseaseDashboard,getMedicationDiseaseDashboard
-,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines
+,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms 
 }
