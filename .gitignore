@@ -39,7 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-meditrek_app/server/.env
-meditrek_app/server/node_modules
+meditrek/server/.env
+meditrek/server/node_modules
 *.zip
-meditrek_app/server/webservice/helpers/serviceAccountKey.json
+meditrek/server/webservice/helpers/serviceAccountKey.json

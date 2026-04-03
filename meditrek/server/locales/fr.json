@@ -1,3 +1,11 @@
 {
-  "language_updated": "Langue mise à jour avec succès"
+  "language_updated": "Langue mise à jour avec succès",
+  "otp_sent_to_email": "Code OTP envoyé par e-mail",
+  "login_successful": "Connexion réussie",
+  "internal_server_error": "Erreur Interne du Serveur",
+  "user_not_found": "Utilisateur non trouvé",
+  "signin_successful": "Connexion réussie",
+  "your_account_has_been_deactivated": "Votre compte a été désactivé",
+  "password_is_incorrect": "Le mot de passe est incorrect",
+  "invalid_otp": "Code OTP invalide"
 }
