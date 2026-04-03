@@ -6479,13 +6479,63 @@ const DoctorActivateDeactivateUser = async (request, response) => {
     );
   };
 
+  // const updateUserLanguage = (req, res) => {
+  //   const { user_id, language_code } = req.body;
+
+  //   if (!user_id || !language_code) {
+  //     return res.json({ 
+  //       success: false, 
+  //       msg: "user_id & language_code required" 
+  //     });
+  //   }
+
+  //   connection.query(
+  //     "UPDATE user_master SET current_language = ? WHERE user_id = ?",
+  //     [language_code, user_id],
+  //     (err) => {
+
+  //       if (err) {
+  //         return res.json({ 
+  //           success: false, 
+  //           error: err.message 
+  //         });
+  //       }
+
+  //       //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
+  //       connection.query(
+  //         "SELECT current_language FROM user_master WHERE user_id = ?",
+  //         [user_id],
+  //         (err2, result) => {
+
+  //           if (err2) {
+  //             return res.json({ 
+  //               success: false, 
+  //               error: err2.message 
+  //             });
+  //           }
+
+  //           res.json({
+  //             success: true,
+  //             msg: "Language updated successfully",
+  //             current_language: result[0]?.current_language
+  //           });
+  //         }
+  //       );
+
+  //     }
+  //   );
+  // };
+
   const updateUserLanguage = (req, res) => {
     const { user_id, language_code } = req.body;
 
+    req.setLocale(language_code);
+    const message = res.__('language_updated');
+
     if (!user_id || !language_code) {
-      return res.json({ 
-        success: false, 
-        msg: "user_id & language_code required" 
+      return res.json({
+        success: false,
+        msg: "user_id & language_code required"
       });
     }
 
@@ -6495,28 +6545,27 @@ const DoctorActivateDeactivateUser = async (request, response) => {
       (err) => {
 
         if (err) {
-          return res.json({ 
-            success: false, 
-            error: err.message 
+          return res.json({
+            success: false,
+            error: err.message
           });
         }
 
-        //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
         connection.query(
           "SELECT current_language FROM user_master WHERE user_id = ?",
           [user_id],
           (err2, result) => {
 
             if (err2) {
-              return res.json({ 
-                success: false, 
-                error: err2.message 
+              return res.json({
+                success: false,
+                error: err2.message
               });
             }
 
             res.json({
               success: true,
-              msg: "Language updated successfully",
+              msg: message,
               current_language: result[0]?.current_language
             });
           }

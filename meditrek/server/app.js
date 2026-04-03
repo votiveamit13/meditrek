@@ -14,8 +14,22 @@ const { cronJobFunction } = require('./webservice/controller/app_controller');
 
 
 
-const app = express();
 
+const app = express();
+const i18n = require('i18n');
+const path = require('path');
+
+
+i18n.configure({
+  locales: ['en', 'fr', 'de', 'es', 'pt', 'ar', 'it'],
+  directory: path.join(__dirname, 'locales'),
+  defaultLocale: 'en',
+  queryParameter: 'lang',
+  autoReload: true,
+  syncFiles: true
+});
+
+app.use(i18n.init);
 app.use(cors());
 
 
