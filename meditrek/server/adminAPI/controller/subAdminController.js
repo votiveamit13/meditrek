@@ -8697,7 +8697,7 @@ const getSubadminMedicationFull = (req, res) => {
           ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
           : "0.00%";
 
-        // ✅ NEW: DB BASED TOTAL MEDICINE COUNT
+        // 
         const totalMedSql = `
           SELECT COUNT(DISTINCT a.medicine_id) AS total
           FROM report_share_master r
@@ -8719,7 +8719,7 @@ const getSubadminMedicationFull = (req, res) => {
 
           const selectedMedCount = totalRes[0].total;
 
-          // 🔽 BELOW CODE SAME AS OLD (UNCHANGED)
+          
 
           const demoMap = {};
           finalPatients.forEach(u => {
@@ -8770,7 +8770,7 @@ const getSubadminMedicationFull = (req, res) => {
             total_patients: totalPatients,
             matched_patients: matchedCount,
             percentage,
-            selected_medication_count: selectedMedCount, // ✅ fixed
+            selected_medication_count: selectedMedCount, 
             summary_total: summaryArray.length,
             patient_total: matchedPatients.length,
             demographics,
