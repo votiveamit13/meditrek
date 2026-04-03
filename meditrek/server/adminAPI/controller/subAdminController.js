@@ -8593,115 +8593,195 @@ const getSubadminMedicationFull = (req, res) => {
   connection.query(patientSql, params, (err, patients) => {
     if (err) return res.json({ success: false, msg: err.message });
 
+    if (patients.length === 0) {
+      return res.json({
+        success: true,
+        total_patients: 0,
+        matched_patients: 0,
+        percentage: "0.00%",
+        selected_medication_count: 0,
+        demographics: [],
+        details: [],
+        summary: [],
+        graph: [],
+        drilldown: []
+      });
+    }
+
     const promises = patients.map(patient => new Promise((resolve, reject) => {
+
+      let parsedDiseases = [];
+
+      if (patient.diseases && typeof patient.diseases === "string") {
+        parsedDiseases = patient.diseases.split("},").map(d => {
+          try {
+            const clean = d.replace("{", "").replace("}", "");
+            const parts = clean.split(",");
+            let obj = {};
+            parts.forEach(p => {
+              const [key, val] = p.split(":");
+              obj[key.trim()] = val.trim();
+            });
+            return obj;
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+      }
 
       const checkShare = `
         SELECT report_share_id, information_type, createtime 
         FROM report_share_master 
         WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+        ORDER BY createtime DESC
       `;
 
       connection.query(checkShare, [patient.user_id, doctor_id], (err1, shareList) => {
         if (err1) return reject(err1);
 
-        const validShares = shareList.filter(r =>
-          r.information_type.split(",").includes("1")
-        );
+        const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
 
-        if (validShares.length === 0) {
-          return resolve({ ...patient, medications: [] });
+        if (!latestShare) {
+          patient.medications = [];
+          return resolve({ ...patient, diseases: parsedDiseases });
         }
 
-        const maxShareTime = validShares.reduce((max, r) =>
-          r.createtime > max ? r.createtime : max
-        , validShares[0].createtime);
+        const shareTime = latestShare.createtime;
 
         const medSql = `
           SELECT DISTINCT a.medicine_id, a.medicine_name
           FROM medication_master m
           JOIN medicine_master a ON a.medicine_id = m.medicine_id
+          JOIN time_slots_master tm ON tm.medication_id = m.medication_id
           WHERE m.user_id = ? 
             AND m.delete_flag = 0 
+            AND tm.delete_flag = 0 
             AND m.createtime <= ?
+          ORDER BY a.medicine_name ASC
         `;
 
-        connection.query(medSql, [patient.user_id, maxShareTime], (err2, meds) => {
+        connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
           if (err2) return reject(err2);
 
-          resolve({ ...patient, medications: meds });
+          resolve({
+            ...patient,
+            diseases: parsedDiseases,
+            medications: meds.map(m => ({
+              id: m.medicine_id,
+              name: m.medicine_name
+            }))
+          });
         });
       });
     }));
 
-    Promise.all(promises).then(finalPatients => {
+    Promise.all(promises)
+      .then(finalPatients => {
 
-      let matchedPatients = finalPatients;
+        let matchedPatients = finalPatients;
 
-      if (Array.isArray(medication) && medication.length > 0) {
-        matchedPatients = finalPatients.filter(p =>
-          (p.medications || []).some(m =>
-            medication.some(sel =>
-              m.medicine_name.toLowerCase().includes(sel.toLowerCase())
+        if (Array.isArray(medication) && medication.length > 0) {
+          matchedPatients = finalPatients.filter(p =>
+            (p.medications || []).some(m =>
+              medication.some(sel =>
+                m.name.toLowerCase().includes(sel.toLowerCase())
+              )
             )
-          )
-        );
-      }
+          );
+        }
 
-      const totalPatients = finalPatients.length;
-      const matchedCount = matchedPatients.length;
+        const totalPatients = finalPatients.length;
+        const matchedCount = matchedPatients.length;
 
-      const percentage = totalPatients
-        ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
-        : "0.00%";
+        const percentage = totalPatients
+          ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
+          : "0.00%";
 
-      //  OLD LOGIC (summary_total SAME)
-      const uniqueMeds = new Set();
-      matchedPatients.forEach(p => {
-        (p.medications || []).forEach(m => uniqueMeds.add(m.medicine_id));
-      });
+        // ✅ NEW: DB BASED TOTAL MEDICINE COUNT
+        const totalMedSql = `
+          SELECT COUNT(DISTINCT a.medicine_id) AS total
+          FROM report_share_master r
+          JOIN medication_master m 
+            ON m.user_id = r.user_id 
+            AND m.delete_flag = 0 
+            AND m.createtime <= r.createtime
+          JOIN medicine_master a 
+            ON a.medicine_id = m.medicine_id
+            AND a.delete_flag = 0
+          WHERE r.doctor_id = ?
+            AND r.share_type = 0
+            AND r.delete_flag = 0
+            AND FIND_IN_SET('1', r.information_type)
+        `;
 
-      const summary_total = uniqueMeds.size;
-      const patient_total = matchedCount;
+        connection.query(totalMedSql, [doctor_id], (err2, totalRes) => {
+          if (err2) return res.json({ success: false, msg: err2.message });
 
-      //  NEW FIX (doctor API count)
-      const medCountSql = `
-        SELECT COUNT(DISTINCT a.medicine_id) AS totalMedication
-        FROM report_share_master r
-        JOIN medication_master m 
-          ON m.user_id = r.user_id 
-          AND m.delete_flag = 0 
-          AND m.createtime <= r.createtime
-        JOIN medicine_master a 
-          ON a.medicine_id = m.medicine_id
-          AND a.delete_flag = 0
-        WHERE r.doctor_id = ?
-          AND r.share_type = 0
-          AND r.delete_flag = 0
-          AND FIND_IN_SET('1', r.information_type)
-      `;
+          const selectedMedCount = totalRes[0].total;
 
-      connection.query(medCountSql, [doctor_id], (errMed, medRes) => {
-        if (errMed) return res.json({ success: false, msg: errMed.message });
+          // 🔽 BELOW CODE SAME AS OLD (UNCHANGED)
 
-        const selectedMedCount = medRes[0].totalMedication;
+          const demoMap = {};
+          finalPatients.forEach(u => {
+            const key = `${u.age}-${u.gender}`;
+            if (!demoMap[key]) demoMap[key] = { age_group: u.age, gender: u.gender, count: 0 };
+            demoMap[key].count += 1;
+          });
 
-        return res.json({
-          success: true,
-          total_patients: totalPatients,
-          matched_patients: matchedCount,
-          percentage,
-          selected_medication_count: selectedMedCount, 
-          summary_total, 
-          patient_total, 
-          demographics: [],
-          details: matchedPatients.slice(patientOffset, patientOffset + Number(patient_limit)),
-          summary: [],   
-          graph: [],
-          drilldown: []
+          const demographics = Object.values(demoMap).map(d => ({
+            ...d,
+            percentage: totalPatients ? ((d.count / totalPatients) * 100).toFixed(2) : "0.00"
+          }));
+
+          const medMap = {};
+          matchedPatients.forEach(u => {
+            (u.medications || []).forEach(m => {
+              if (!medMap[m.name]) medMap[m.name] = 0;
+              medMap[m.name] += 1;
+            });
+          });
+
+          const summaryArray = Object.keys(medMap).map(name => ({
+            medicine_name: name,
+            patient_count: medMap[name],
+            percentage: totalPatients
+              ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
+              : "0.00%"
+          }));
+
+          const graph = Object.keys(medMap).map(name => ({
+            name,
+            count: medMap[name]
+          }));
+
+          const drilldown = [];
+          matchedPatients.forEach(u => {
+            (u.medications || []).forEach(m => {
+              drilldown.push({
+                user_id: u.user_id,
+                name: u.name,
+                medicine_name: m.name
+              });
+            });
+          });
+
+          return res.json({
+            success: true,
+            total_patients: totalPatients,
+            matched_patients: matchedCount,
+            percentage,
+            selected_medication_count: selectedMedCount, // ✅ fixed
+            summary_total: summaryArray.length,
+            patient_total: matchedPatients.length,
+            demographics,
+            details: matchedPatients.slice(patientOffset, patientOffset + Number(patient_limit)),
+            summary: summaryArray.slice(summaryOffset, summaryOffset + Number(summary_limit)),
+            graph,
+            drilldown: drilldown.slice(patientOffset, patientOffset + Number(patient_limit))
+          });
         });
-      });
-
-    }).catch(err => res.json({ success: false, msg: err.message }));
+      })
+      .catch(err => res.json({ success: false, msg: err.message }));
   });
 };
 // 3 B)
