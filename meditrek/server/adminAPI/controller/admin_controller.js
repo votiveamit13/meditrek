@@ -6530,7 +6530,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
     const { user_id, language_code } = req.body;
 
     req.setLocale(language_code);
-    const message = res.__('language_updated');
+    const languageMessage = res.__('language_updated');
 
     if (!user_id || !language_code) {
       return res.json({
@@ -6565,7 +6565,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
 
             res.json({
               success: true,
-              msg: message,
+              msg: languageMessage,
               current_language: result[0]?.current_language
             });
           }

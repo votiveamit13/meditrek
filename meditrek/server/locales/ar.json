@@ -1,3 +1,11 @@
 {
-  "language_updated": "تم تحديث اللغة بنجاح"
+	"language_updated": "تم تحديث اللغة بنجاح",
+	"otp_sent_to_email": "تم إرسال رمز التحقق لمرة واحدة إلى البريد الإلكتروني",
+	"login_successful": "تم تسجيل الدخول بنجاح",
+	"internal_server_error": "خطأ داخلي في الخادم",
+	"user_not_found": "المستخدم غير موجود",
+	"signin_successful": "تم تسجيل الدخول بنجاح",
+	"your_account_has_been_deactivated": "تم تعطيل حسابك",
+	"password_is_incorrect": "كلمة المرور غير صحيحة",
+	"invalid_otp": "رمز التحقق لمرة واحدة غير صالح"
 }

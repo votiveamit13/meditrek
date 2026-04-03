@@ -2633,7 +2633,7 @@ const otpStore = require('../../otpStore');
 
 const signIn = async (request, response) => {
 
-    const { email, password, player_id, device_type, login_type } = request.body;
+    const { email, password, player_id, device_type, login_type, language_code } = request.body;
 
     if (!email || !password) {
         return response.status(200).json({
@@ -2659,6 +2659,16 @@ const signIn = async (request, response) => {
         });
     }
 
+    if (!language_code) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "language_code",
+        });
+    }
+
+    request.setLocale(language_code);
+
     try {
 
         const emailNormalized = email.trim().toLowerCase();
@@ -2676,7 +2686,7 @@ const signIn = async (request, response) => {
             if (err) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
                     key: err.message,
                 });
             }
@@ -2684,7 +2694,7 @@ const signIn = async (request, response) => {
             if (results.length === 0) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.userNotFound
+                    msg: request.__('user_not_found'),
                 });
             }
 
@@ -2694,7 +2704,7 @@ const signIn = async (request, response) => {
                 const userDetails = await getUserDetails(results[0].user_id);
                 return response.status(200).json({
                     success: true,
-                    msg: languageMessage.signInSuccess,
+                    msg: request.__('signin_successful'),
                     userDataArray: userDetails,
                 });
             }
@@ -2703,7 +2713,7 @@ const signIn = async (request, response) => {
                 const userDetails = await getUserDetails(results[0].user_id);
                 return response.status(200).json({
                     success: true,
-                    msg: languageMessage.signInSuccess,
+                    msg: request.__('signin_successful'),
                     userDataArray: userDetails,
                 });
             }
@@ -2718,7 +2728,7 @@ const signIn = async (request, response) => {
             if (user.active_flag === 0) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.accountdeactivated,
+                    msg: request.__('your_account_has_been_deactivated'),
                     active_flag: user.active_flag,
                 });
             }
@@ -2728,7 +2738,7 @@ const signIn = async (request, response) => {
             if (hashedPassword !== user.password) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.IncorrectPassword
+                    msg: request.__('password_is_incorrect')
                 });
             }
 
@@ -2749,7 +2759,7 @@ const signIn = async (request, response) => {
 
             return response.status(200).json({
                 success: true,
-                msg: "OTP sent to email",
+                msg: request.__('otp_sent_to_email'),
                 email: emailNormalized,
                 user_id: user.user_id,
                 otp: otp
@@ -2760,7 +2770,7 @@ const signIn = async (request, response) => {
     } catch (err) {
         return response.status(200).json({
             success: false,
-            msg: languageMessage.internalServerError,
+            msg: request.__('internal_server_error'),
             key: err.message,
         });
     }
@@ -2774,19 +2784,29 @@ const verifyUserLoginOtp = async (req, res) => {
             ? req.body.email.trim().toLowerCase()
             : "";
 
-        const { otp } = req.body;
+        const { otp, language_code } = req.body;
+
+        if (!language_code) {
+            return res.status(200).json({
+                success: false,
+                msg: languageMessage.msg_empty_param,
+                key: "language_code",
+            });
+        }
+
+        res.setLocale(language_code);
 
         if (!otpStore[emailNormalized]) {
             return res.status(200).json({
                 success: false,
-                msg: "Invalid OTP"
+                msg: res.__('invalid_otp')
             });
         }
 
         if (String(otpStore[emailNormalized]) !== String(otp)) {
             return res.status(200).json({
                 success: false,
-                msg: "Invalid OTP"
+                msg: res.__('invalid_otp')
             });
         }
 
@@ -2802,7 +2822,7 @@ const verifyUserLoginOtp = async (req, res) => {
             if (err || result.length === 0) {
                 return res.status(200).json({
                     success: false,
-                    msg: "User not found"
+                    msg: res.__('user_not_found')
                 });
             }
 
@@ -2820,7 +2840,7 @@ const verifyUserLoginOtp = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                msg: "Login successful",
+                msg: res.__('login_successful'),
                 token,
                 userDataArray: userDetails
             });
