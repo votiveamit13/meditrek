@@ -44,6 +44,7 @@ const parisTime = moment().tz(process.env.TIME_ZONE || 'Europe/Paris');
 const formattedDate = parisTime.format('YYYY-MM-DD HH:mm:ss');
 
 const query = util.promisify(connection.query).bind(connection);
+const { getUserLanguage } = require('../helpers/languageHelper');
 
 
 
@@ -187,13 +188,6 @@ const signUp = async (req, res) => {
 
             return res.status(400).json({ success: false, msg: languageMessage.msg_empty_param });
 
-        }
-        if (!language_code) {
-            return response.status(200).json({
-                success: false,
-                msg: languageMessage.msg_empty_param,
-                key: "language_code",
-            });
         }
 
         req.setLocale(language_code);
@@ -628,9 +622,11 @@ const userOtpVerify = async (req, res) => {
 
     if (!otp) return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "otp" });
 
-    if (!language_code) return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "language_code" });
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
-    req.setLocale(language_code);
+    req.setLocale(finalLanguage);
 
     try {
 
@@ -708,15 +704,11 @@ const userResendOtp = async (req, res) => {
 
         }
 
-        if (!language_code) {
-            return response.status(200).json({
-                success: false,
-                msg: languageMessage.msg_empty_param,
-                key: "language_code",
-            });
-        }
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ user_id });
 
-        req.setLocale(language_code);
+        req.setLocale(finalLanguage);
 
         // Generate new OTP
 
@@ -1138,7 +1130,7 @@ const deleteAccount = async (request, response) => {
 
 const editProfile = async (request, response) => {
 
-    let { user_id, f_name, l_name, mobile, email, gender, date, diseases, weight, height, delete_image } = request.body;
+    let { user_id, f_name, l_name, mobile, email, gender, date, diseases, weight, height, delete_image,language_code } = request.body;
 
     if (!user_id) {
 
@@ -1200,6 +1192,12 @@ const editProfile = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    req.setLocale(finalLanguage);
+
     try {
 
         const query1 = "SELECT mobile, active_flag, image,delete_flag FROM user_master WHERE user_id = ?  AND user_type=1";
@@ -1210,25 +1208,25 @@ const editProfile = async (request, response) => {
 
             if (err) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
             }
 
             if (result.length === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
             }
 
             if (result[0]?.active_flag === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_status: 0 });
 
             }
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -1248,7 +1246,7 @@ const editProfile = async (request, response) => {
 
                 if (err) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                 }
 
@@ -1346,7 +1344,7 @@ const editProfile = async (request, response) => {
 
                 if (updateFields.length === 0) {
 
-                    return response.status(200).json({ success: false, msg: "No fields provided to update" });
+                    return response.status(200).json({ success: false, msg: request.__('no_fields_provided_to_update') });
 
                 }
 
@@ -1358,13 +1356,13 @@ const editProfile = async (request, response) => {
 
                     if (err) {
 
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err });
+                        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err });
 
                     }
 
                     const userDetails = await getUserDetails(user_id);
 
-                    return response.status(200).json({ success: true, msg: languageMessage.profileUpdatedSuccess, userDataArray: userDetails });
+                    return response.status(200).json({ success: true, msg: request.__('user_profile_updated_successfully'), userDataArray: userDetails });
 
                 });
 
@@ -1374,7 +1372,7 @@ const editProfile = async (request, response) => {
 
     } catch (err) {
 
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
     }
 
@@ -1396,16 +1394,12 @@ const forgotPassword = async (req, res) => {
 
         }
 
-        if (!language_code) {
-            return response.status(200).json({
-                success: false,
-                msg: languageMessage.msg_empty_param,
-                key: "language_code",
-            });
-        }
 
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ email });
 
-        req.setLocale(language_code);
+        req.setLocale(finalLanguage);
 
 
         // Fetch user
@@ -1670,15 +1664,11 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
     }
 
-    if (!language_code) {
-        return response.status(200).json({
-            success: false,
-            msg: languageMessage.msg_empty_param,
-            key: "language_code",
-        });
-    }
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
-    request.setLocale(language_code);
+    req.setLocale(finalLanguage);
 
     try {
 
@@ -1776,15 +1766,11 @@ const resetPassword = async (request, response) => {
 
     }
 
-    if (!language_code) {
-        return response.status(200).json({
-            success: false,
-            msg: languageMessage.msg_empty_param,
-            key: "language_code",
-        });
-    }
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
-    request.setLocale(language_code);
+    req.setLocale(finalLanguage);
 
     try {
 
@@ -1928,15 +1914,11 @@ const changePassword = async (request, response) => {
 
     }
 
-    if (!language_code) {
-        return response.status(200).json({
-            success: false,
-            msg: languageMessage.msg_empty_param,
-            key: "language_code",
-        });
-    }
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
-    request.setLocale(language_code);
+    req.setLocale(finalLanguage);
 
     try {
 
@@ -2716,15 +2698,11 @@ const signIn = async (request, response) => {
         });
     }
 
-    if (!language_code) {
-        return response.status(200).json({
-            success: false,
-            msg: languageMessage.msg_empty_param,
-            key: "language_code",
-        });
-    }
+    const finalLanguage = language_code && language_code.trim() !== ""
+    ? language_code
+    : await getUserLanguage({ email });
 
-    request.setLocale(language_code);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -2842,14 +2820,6 @@ const verifyUserLoginOtp = async (req, res) => {
             : "";
 
         const { otp, language_code } = req.body;
-
-        if (!language_code) {
-            return res.status(200).json({
-                success: false,
-                msg: languageMessage.msg_empty_param,
-                key: "language_code",
-            });
-        }
 
         res.setLocale(language_code);
 
@@ -4148,6 +4118,72 @@ function generateOTP(length = 6) {
 
 }
 
+const getUserLanguages = (req, res) => {
+    const languageMap = {
+        en: "English",
+        es: "Español",
+        fr: "Français",
+        ar: "العربية",
+         it: "Italiano",        
+        de: "Deutsch",        
+        pt: "Português" 
+      };
+    const { admin_id, user_id } = req.query;
+
+    if (!admin_id || !user_id) {
+      return res.json({ success: false, msg: "admin_id & user_id required" });
+    }
+
+    // Step 1: Get admin languages
+    connection.query(
+      `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
+      FROM admin_selected_languages asl
+      JOIN languages_master lm ON lm.id = asl.language_id
+      WHERE asl.admin_id = ?
+      ORDER BY lm.is_default DESC`,
+      [admin_id],
+      (err, rows) => {
+
+        if (err) {
+          return res.json({ success: false, error: err.message });
+        }
+
+        // Step 2: Get user's current language
+        connection.query(
+          "SELECT current_language FROM user_master WHERE user_id = ?",
+          [user_id],
+          (err2, userData) => {
+
+            if (err2) {
+              return res.json({ success: false, error: err2.message });
+            }
+
+            const userLang = userData[0]?.current_language;
+
+            const defaultLang = rows.find(r => r.is_default == 1);
+
+            res.json({
+              success: true,
+              data: {
+                current_language: userLang || defaultLang?.language_code,
+                // language: rows.map(r => ({
+                //   id: r.id,
+                //   language_name: r.language_name,
+                //   language_code: r.language_code
+                // }))
+                language: rows.map(r => ({
+                  id: r.id,
+                  language_name: languageMap[r.language_code] || r.language_name,
+                  language_code: r.language_code
+                }))
+              }
+            });
+          }
+        );
+      }
+    );
+  };
+
 
 
 
@@ -4188,6 +4224,7 @@ module.exports = {
 
     getHomePageStatus,
     
-    updateTimezone
+    updateTimezone,
+    getUserLanguages
 
 }
