@@ -2787,6 +2787,85 @@ const addAdverseReaction = async (request, response) => {
     });
 
 };
+// const addAdverseReaction = async (request, response) => {
+//     const { 
+//         user_id, 
+//         medicine_id, 
+//         symptom_id, 
+//         type, 
+//         dosage, 
+//         medication_start_date, 
+//         reaction_date, 
+//         details 
+//     } = request.body;
+
+//     if (!user_id || !medicine_id || !symptom_id || !type || !dosage || !medication_start_date || !reaction_date || !details) {
+//         return response.status(200).json({
+//             success: false,
+//             msg: languageMessage.msg_empty_param
+//         });
+//     }
+
+//     // Validate user
+//     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? ";
+//     connection.query(userQuery, [user_id], (err, result) => {
+//         if (err) {
+//             return response.status(200).json({
+//                 success: false,
+//                 msg: languageMessage.internalServerError,
+//                 key: err.message
+//             });
+//         }
+
+//         if (result.length === 0 || result[0].active_flag === 0) {
+//             return response.status(200).json({
+//                 success: false,
+//                 msg: languageMessage.userNotFound
+//             });
+//         }
+
+//         if (result[0]?.delete_flag == 1) {
+//             return response.status(200).json({ 
+//                 success: false, 
+//                 msg: languageMessage.msgUserDeleted, 
+//                 active_flag: 0 
+//             });
+//         }
+
+//         // Insert without createtime → DB will automatically store current timestamp
+//         const insertQuery = `
+//             INSERT INTO adverse_reaction_master 
+//             (user_id, medicine_id, symptom_id, type, dosage, medication_start_date, reaction_date, details)
+//             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+//         `;
+
+//         const insertValues = [
+//             user_id,
+//             medicine_id,
+//             symptom_id,
+//             type,
+//             dosage,
+//             medication_start_date,
+//             reaction_date,
+//             details
+//         ];
+
+//         connection.query(insertQuery, insertValues, (err, insertResult) => {
+//             if (err) {
+//                 return response.status(200).json({
+//                     success: false,
+//                     msg: languageMessage.internalServerError,
+//                     key: err.message
+//                 });
+//             }
+
+//             return response.status(200).json({
+//                 success: true,
+//                 msg: languageMessage.dataInserted
+//             });
+//         });
+//     });
+// };
 
 //end
 

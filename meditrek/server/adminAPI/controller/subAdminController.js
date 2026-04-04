@@ -4080,6 +4080,173 @@ return response.status(200).json({
 
 
 //  get adverse of patient 
+// const getAdverseofPatient = async (request, response) => {
+//   const { user_id, doctor_id } = request.query;
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+
+
+//   if (!doctor_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.msg_empty_param,
+//       key: "doctor_id",
+//     });
+//   }
+
+
+//   try {
+//     //      Check if user exists
+//     const patientSql =
+//       "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//     connection.query(patientSql, [user_id], (err, patient) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           err: err.message,
+//         });
+//       }
+
+//       if (patient.length <= 0) {
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessages.msgDataNotFound,
+//           patient: [],
+//         });
+//       }
+
+//       //      Check report sharing info
+//       const checkShare = `
+//         SELECT report_share_id, information_type, createtime 
+//         FROM report_share_master 
+//         WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+//         ORDER BY createtime DESC
+//       `;
+//       connection.query(checkShare, [user_id, doctor_id], (err1, shareList) => {
+//         if (err1) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             err: err1.message,
+//           });
+//         }
+
+//         if (shareList.length === 0) {
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessages.msgDataNotFound,
+//             adverse_arr: [],
+//           });
+//         }
+
+//         //      Find latest share entry that contains "4" (adverse reactions)
+//         const latestShare = shareList.find((r) =>
+//           r.information_type.split(",").includes("4")
+//         );
+
+//         if (!latestShare) {
+//           return response.status(200).json({
+//             success: true,
+//             msg: "Adverse reactions not shared",
+//             adverse_arr: [],
+//           });
+//         }
+
+//         const shareTime = latestShare.createtime;
+
+//         //      Fetch adverse reactions up to share createtime
+//         const getadverse = `
+//           SELECT 
+//             a.adverse_reaction_id,
+//             a.type,
+//             a.user_id,
+//             m.medicine_name,
+//             a.dosage,
+//             mm.category_name,
+//             a.details,
+//             s.symptom_name,
+//             a.medication_start_date,
+//             a.reaction_date, 
+//             a.createtime 
+//           FROM adverse_reaction_master AS a 
+//           LEFT JOIN medicine_master as m ON m.medicine_id=a.medicine_id 
+//           LEFT JOIN medicine_category_master as mm ON mm.medicine_category_id=a.medicine_category_id 
+//           LEFT JOIN symptoms_master as s ON s.symptom_id=a.symptom_id 
+//           WHERE a.user_id=? AND a.delete_flag=0 AND a.createtime <= ?
+//           ORDER BY a.adverse_reaction_id DESC
+//         `;
+
+//         connection.query(getadverse, [user_id, shareTime], async (err2, rows) => {
+//           if (err2) {
+//             return response.status(200).json({
+//               success: false,
+//               msg: languageMessages.internalServerError,
+//               err: err2.message,
+//             });
+//           }
+
+//           const adverse_arr = [];
+//           if (rows.length <= 0) {
+//             return response.status(200).json({
+//               success: true,
+//               msg: languageMessages.msgDataNotFound,
+//               adverse_arr,
+//             });
+//           }
+
+//           let s_no = 0;
+//           rows.forEach((element) => {
+//             s_no++;
+            
+//             const mTime = moment
+//             .utc(element.createtime)
+//             .tz("Europe/Paris");
+            
+//             adverse_arr.push({
+//               sr_no: s_no,
+//               adverse_reaction_id: element.adverse_reaction_id,
+//               user_id: element.user_id,
+//               medicine_name: element.medicine_name,
+//               dosage: element.dosage,
+//               category_name:
+//                 element.type === 1
+//                   ? "Pill"
+//                   : element.type === 2
+//                   ? "Syrup"
+//                   : element.type === 3
+//                   ? "Injection"
+//                   : "Others",
+//               symptom_name: element.symptom_name,
+//               medication_start_date: moment(element.medication_start_date).format("DD-MM-YYYY"),
+//               reaction_date: moment(element.reaction_date).format("DD-MM-YYYY"),
+//               instruction: element.details,
+//               createtime: mTime.format("DD-MM-YYYY hh:mm A"),
+//             });
+//           });
+
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessages.msgDataFound,
+//             adverse_arr,
+//           });
+//         });
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message,
+//     });
+//   }
+// };
 const getAdverseofPatient = async (request, response) => {
   const { user_id, doctor_id } = request.query;
 
@@ -4091,7 +4258,6 @@ const getAdverseofPatient = async (request, response) => {
     });
   }
 
-
   if (!doctor_id) {
     return response.status(200).json({
       success: false,
@@ -4100,11 +4266,9 @@ const getAdverseofPatient = async (request, response) => {
     });
   }
 
-
   try {
-    //      Check if user exists
-    const patientSql =
-      "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
+    // Check if user exists
+    const patientSql = "SELECT user_id, email FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(patientSql, [user_id], (err, patient) => {
       if (err) {
         return response.status(200).json({
@@ -4118,11 +4282,11 @@ const getAdverseofPatient = async (request, response) => {
         return response.status(200).json({
           success: true,
           msg: languageMessages.msgDataNotFound,
-          patient: [],
+          adverse_arr: [],
         });
       }
 
-      //      Check report sharing info
+      // Check report sharing info
       const checkShare = `
         SELECT report_share_id, information_type, createtime 
         FROM report_share_master 
@@ -4146,8 +4310,8 @@ const getAdverseofPatient = async (request, response) => {
           });
         }
 
-        //      Find latest share entry that contains "4" (adverse reactions)
-        const latestShare = shareList.find((r) =>
+        // Find latest share entry containing "4" (adverse reactions)
+        const latestShare = shareList.find(r =>
           r.information_type.split(",").includes("4")
         );
 
@@ -4161,11 +4325,10 @@ const getAdverseofPatient = async (request, response) => {
 
         const shareTime = latestShare.createtime;
 
-        //      Fetch adverse reactions up to share createtime
-        const getadverse = `
+        // 4Fetch adverse reactions up to share createtime
+        const getAdverse = `
           SELECT 
             a.adverse_reaction_id,
-            a.type,
             a.user_id,
             m.medicine_name,
             a.dosage,
@@ -4173,17 +4336,17 @@ const getAdverseofPatient = async (request, response) => {
             a.details,
             s.symptom_name,
             a.medication_start_date,
-            a.reaction_date, 
-            a.createtime 
-          FROM adverse_reaction_master AS a 
-          LEFT JOIN medicine_master as m ON m.medicine_id=a.medicine_id 
-          LEFT JOIN medicine_category_master as mm ON mm.medicine_category_id=a.medicine_category_id 
-          LEFT JOIN symptoms_master as s ON s.symptom_id=a.symptom_id 
-          WHERE a.user_id=? AND a.delete_flag=0 AND a.createtime <= ?
+            a.reaction_date,
+            a.createtime
+          FROM adverse_reaction_master AS a
+          LEFT JOIN medicine_master AS m ON m.medicine_id = a.medicine_id
+          LEFT JOIN medicine_category_master AS mm ON mm.medicine_category_id = a.medicine_category_id
+          LEFT JOIN symptoms_master AS s ON s.symptom_id = a.symptom_id
+          WHERE a.user_id = ? AND a.delete_flag = 0 AND a.createtime <= ?
           ORDER BY a.adverse_reaction_id DESC
         `;
 
-        connection.query(getadverse, [user_id, shareTime], async (err2, rows) => {
+        connection.query(getAdverse, [user_id, shareTime], (err2, rows) => {
           if (err2) {
             return response.status(200).json({
               success: false,
@@ -4192,43 +4355,30 @@ const getAdverseofPatient = async (request, response) => {
             });
           }
 
-          const adverse_arr = [];
           if (rows.length <= 0) {
             return response.status(200).json({
               success: true,
               msg: languageMessages.msgDataNotFound,
-              adverse_arr,
+              adverse_arr: [],
             });
           }
 
-          let s_no = 0;
-          rows.forEach((element) => {
-            s_no++;
-            
-            const mTime = moment
-            .utc(element.createtime)
-            .tz("Europe/Paris");
-            
-            adverse_arr.push({
-              sr_no: s_no,
+          //  Format adverse reactions like medication API
+          const adverse_arr = rows.map((element, index) => {
+            const mTime = moment.utc(element.createtime).tz("Europe/Paris");
+            return {
+              sr_no: index + 1,
               adverse_reaction_id: element.adverse_reaction_id,
               user_id: element.user_id,
               medicine_name: element.medicine_name,
               dosage: element.dosage,
-              category_name:
-                element.type === 1
-                  ? "Pill"
-                  : element.type === 2
-                  ? "Syrup"
-                  : element.type === 3
-                  ? "Injection"
-                  : "Others",
+              category_name: element.category_name || "Others",
               symptom_name: element.symptom_name,
               medication_start_date: moment(element.medication_start_date).format("DD-MM-YYYY"),
               reaction_date: moment(element.reaction_date).format("DD-MM-YYYY"),
               instruction: element.details,
               createtime: mTime.format("DD-MM-YYYY hh:mm A"),
-            });
+            };
           });
 
           return response.status(200).json({
