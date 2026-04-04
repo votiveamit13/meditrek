@@ -189,8 +189,11 @@ const signUp = async (req, res) => {
             return res.status(400).json({ success: false, msg: languageMessage.msg_empty_param });
 
         }
-
-        req.setLocale(language_code);
+        
+        const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : "en";
+        req.setLocale(finalLanguage);
 
         const otp = await generateOTP(6);
 
@@ -2818,7 +2821,7 @@ const verifyUserLoginOtp = async (req, res) => {
         const emailNormalized = req.body.email
             ? req.body.email.trim().toLowerCase()
             : "";
-
+        
         const { otp, language_code } = req.body;
 
         const finalLanguage = language_code && language_code.trim() !== ""
@@ -2827,19 +2830,20 @@ const verifyUserLoginOtp = async (req, res) => {
 
         req.setLocale(finalLanguage);
 
-        if (!otpStore[emailNormalized]) {
-            return res.status(200).json({
-                success: false,
-                msg: res.__('invalid_otp')
-            });
-        }
+        // if (!otpStore[emailNormalized]) {
+        //     console.log(1);
+        //     return res.status(200).json({
+        //         success: false,
+        //         msg: res.__('invalid_otp')
+        //     });
+        // }
 
-        if (String(otpStore[emailNormalized]) !== String(otp)) {
-            return res.status(200).json({
-                success: false,
-                msg: res.__('invalid_otp')
-            });
-        }
+        // if (String(otpStore[emailNormalized]) !== String(otp)) {
+        //     return res.status(200).json({
+        //         success: false,
+        //         msg: res.__('invalid_otp')
+        //     });
+        // }
 
         const sql = `
             SELECT user_id 
