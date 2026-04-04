@@ -1918,7 +1918,7 @@ const changePassword = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -2821,7 +2821,11 @@ const verifyUserLoginOtp = async (req, res) => {
 
         const { otp, language_code } = req.body;
 
-        res.setLocale(language_code);
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ emailNormalized });
+
+        req.setLocale(finalLanguage);
 
         if (!otpStore[emailNormalized]) {
             return res.status(200).json({

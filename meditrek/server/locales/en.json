@@ -17,5 +17,6 @@
   "current_password_not_correct": "Current password not correct",
   "thank_you_for_contacting_us": "Thank you for contacting us, we will get back to you soon.",
   "no_fields_provided_to_update": "No fields provided to update",
-  "user_profile_updated_successfully": "User profile updated successfully"
+  "user_profile_updated_successfully": "User profile updated successfully",
+  "user_deactivated": "User Deactivated"
 }

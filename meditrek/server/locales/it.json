@@ -17,5 +17,6 @@
 	"current_password_not_correct": "La password attuale non è corretta",
 	"thank_you_for_contacting_us": "Grazie per averci contattato, ti risponderemo al più presto.",
 	"no_fields_provided_to_update": "Nessun campo fornito per l'aggiornamento",
-	"user_profile_updated_successfully": "Profilo utente aggiornato con successo"
+	"user_profile_updated_successfully": "Profilo utente aggiornato con successo",
+	"user_deactativated": "Utente disattivato"
 }

@@ -17,5 +17,6 @@
 	"current_password_not_correct": "كلمة المرور الحالية غير صحيحة",
 	"thank_you_for_contacting_us": "شكراً لتواصلك معنا، سنرد عليك قريباً.",
 	"no_fields_provided_to_update": "لم يتم توفير حقول للتحديث",
-	"user_profile_updated_successfully": "تم تحديث ملف المستخدم الشخصي بنجاح"
+	"user_profile_updated_successfully": "تم تحديث ملف المستخدم الشخصي بنجاح",
+	"user_deactativated": "المستخدم معطل"
 }
