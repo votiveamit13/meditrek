@@ -2645,7 +2645,9 @@ async function sendDoctorEmail(toEmail, doctorName, password) {
 async function sendOtpEmail(toEmail, userName, otp) {
 
   const app_name = "Meditrek";
-  const app_logo = "https://meditrekaccess.com/meditrek/server/uploads/td_logo.png";
+//   const app_logo = "https://meditrekaccess.com/meditrek/server/uploads/td_logo.png";
+     const app_logo = "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png";
+
 
   let transporter = nodemailer.createTransport({
     host: "mail.meditrekaccess.com",
