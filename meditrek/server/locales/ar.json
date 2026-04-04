@@ -14,5 +14,5 @@
 	"otp_verified_successfully": "تم التحقق من رمز التحقق لمرة واحدة بنجاح",
 	"user_deactivated": "المستخدم معطل",
 	"password_updated_successfully": "تم تحديث كلمة المرور بنجاح",
-	"current_password_not_correct": "كلمة المرور الحالية غير صحيحة",
+	"current_password_not_correct": "كلمة المرور الحالية غير صحيحة"
 }
