@@ -14,5 +14,5 @@
 	"otp_verified_successfully": "OTP verificada correctamente",
 	"user_deactivated": "Usuario Desactivado",
 	"password_updated_successfully": "Contraseña actualizada correctamente",
-	"current_password_not_correct": "La contraseña actual no es correcta",
+	"current_password_not_correct": "La contraseña actual no es correcta"
 }
