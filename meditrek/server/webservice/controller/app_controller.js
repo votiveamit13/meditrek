@@ -1605,7 +1605,7 @@ const DeleteMedication = async (request, response) => {
 
 const addMedicalReport = async (request, response) => {
 
-    const { user_id, report_category_id, document_size } = request.body;
+    const { user_id, report_category_id, document_size,language_code } = request.body;
 
 
 
@@ -1642,6 +1642,13 @@ const addMedicalReport = async (request, response) => {
     }
 
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
+
+
 
     // Validate user
 
@@ -1659,7 +1666,7 @@ const addMedicalReport = async (request, response) => {
 
                 success: false,
 
-                msg: languageMessage.internalServerError,
+                msg: request.__('internal_server_error'),
 
                 key: err.message
 
@@ -1675,7 +1682,7 @@ const addMedicalReport = async (request, response) => {
 
                 success: false,
 
-                msg: languageMessage.userNotFound
+                msg: request.__('user_not_found')
 
             });
 
@@ -1689,7 +1696,7 @@ const addMedicalReport = async (request, response) => {
 
                 success: false,
 
-                msg: languageMessage.userDeleted,
+                msg: request.__('user_deactativated'),
 
                 active_flag: 0
 
