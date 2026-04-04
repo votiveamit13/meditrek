@@ -7,5 +7,13 @@
   "signin_successful": "Connexion réussie",
   "your_account_has_been_deactivated": "Votre compte a été désactivé",
   "password_is_incorrect": "Le mot de passe est incorrect",
-  "invalid_otp": "Code OTP invalide"
+  "invalid_otp": "Code OTP invalide",
+  "email_already_registered": "E-mail déjà enregistré",
+  "otp_sent_successfully": "Code OTP envoyé avec succès",
+  "your_account_is_not_registered_with_us": "Votre compte n'est pas enregistré chez nous",
+  "otp_verified_successfully": "Code OTP vérifié avec succès",
+  "user_deactivated": "Utilisateur désactivé",
+  "password_updated_successfully": "Mot de passe mis à jour avec succès",
+  "current_password_not_correct": "Le mot de passe actuel n'est pas correct"
+
 }

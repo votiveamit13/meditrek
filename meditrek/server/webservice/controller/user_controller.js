@@ -177,7 +177,7 @@ const signUp = async (req, res) => {
 
             f_name, l_name, mobile, email, password,
 
-            player_id, device_type, device_id, diseases, date
+            player_id, device_type, device_id, diseases, date,language_code
 
         } = req.body;
 
@@ -188,8 +188,15 @@ const signUp = async (req, res) => {
             return res.status(400).json({ success: false, msg: languageMessage.msg_empty_param });
 
         }
+        if (!language_code) {
+            return response.status(200).json({
+                success: false,
+                msg: languageMessage.msg_empty_param,
+                key: "language_code",
+            });
+        }
 
-
+        req.setLocale(language_code);
 
         const otp = await generateOTP(6);
 
@@ -211,7 +218,7 @@ const signUp = async (req, res) => {
 
         if (existingUser.length > 0 && existingUser[0].otp_verify === 1) {
 
-            return res.status(409).json({ success: false, msg: ["Email already registered"] });
+            return res.status(409).json({ success: false, msg: req.__('email_already_registered') });
 
         }
 
@@ -233,7 +240,7 @@ const signUp = async (req, res) => {
 
                 success: true,
 
-                msg: languageMessage.otpSuccess,
+                msg: req.__('otp_sent_successfully'),
 
                 userDataArray: userDetails ?? 'NA',
 
@@ -283,7 +290,7 @@ const signUp = async (req, res) => {
 
             success: true,
 
-            msg: languageMessage.otpSuccess,
+            msg: req.__('otp_sent_successfully'),
 
             userDataArray: userDetails ?? 'NA',
 
@@ -299,7 +306,7 @@ const signUp = async (req, res) => {
 
             success: false,
 
-            msg: languageMessage.internalServerError,
+            msg: req.__('internal_server_error'),
 
             key: err.message
 
@@ -613,7 +620,7 @@ const signUp = async (req, res) => {
 
 const userOtpVerify = async (req, res) => {
 
-    let { user_id, otp } = req.body;
+    let { user_id, otp,language_code } = req.body;
 
 
 
@@ -621,13 +628,15 @@ const userOtpVerify = async (req, res) => {
 
     if (!otp) return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "otp" });
 
+    if (!language_code) return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "language_code" });
 
+    req.setLocale(language_code);
 
     try {
 
         const result = await query("SELECT mobile, active_flag, otp, delete_flag FROM user_master WHERE user_id=?", [user_id]);
 
-        if (result.length === 0) return res.status(200).json({ success: false, msg: languageMessage.userNotFound });
+        if (result.length === 0) return res.status(200).json({ success: false, msg: req.__('user_not_found') });
 
 
 
@@ -635,13 +644,13 @@ const userOtpVerify = async (req, res) => {
 
 
 
-        if (user.active_flag === 0) return res.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+        if (user.active_flag === 0) return res.status(200).json({ success: false, msg: req.__('your_account_has_been_deactivated'), active_status: 0 });
 
-        if (user.delete_flag == 1) return res.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+        if (user.delete_flag == 1) return res.status(200).json({ success: false, msg: req.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
 
 
-        if (String(user.otp) !== String(otp)) return res.status(200).json({ success: false, msg: languageMessage.invalidOtp });
+        if (String(user.otp) !== String(otp)) return res.status(200).json({ success: false, msg: req.__('invalid_otp') });
 
 
 
@@ -671,11 +680,11 @@ const userOtpVerify = async (req, res) => {
 
 
 
-        return res.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, userDataArray: userDetails });
+        return res.status(200).json({ success: true, msg: req.__('otp_verified_successfully'), userDataArray: userDetails });
 
     } catch (err) {
 
-        return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return res.status(200).json({ success: false, msg: req.__('internal_server_error'), key: err.message });
 
     }
 
@@ -691,7 +700,7 @@ const userResendOtp = async (req, res) => {
 
     try {
 
-        const { user_id } = req.body;
+        const { user_id, language_code } = req.body;
 
         if (!user_id) {
 
@@ -699,7 +708,15 @@ const userResendOtp = async (req, res) => {
 
         }
 
+        if (!language_code) {
+            return response.status(200).json({
+                success: false,
+                msg: languageMessage.msg_empty_param,
+                key: "language_code",
+            });
+        }
 
+        req.setLocale(language_code);
 
         // Generate new OTP
 
@@ -721,7 +738,7 @@ const userResendOtp = async (req, res) => {
 
         if (users.length === 0) {
 
-            return res.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return res.status(200).json({ success: false, msg: req.__('user_not_found') });
 
         }
 
@@ -733,7 +750,7 @@ const userResendOtp = async (req, res) => {
 
         if (user.active_flag === 0) {
 
-            return res.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            return res.status(200).json({ success: false, msg: req.__('your_account_has_been_deactivated'), active_status: 0 });
 
         }
 
@@ -761,7 +778,7 @@ const userResendOtp = async (req, res) => {
 
         // Respond first
 
-        res.status(200).json({ success: true, msg: languageMessage.otpSuccess, userDataArray: userDetails });
+        res.status(200).json({ success: true, msg: req.__('otp_sent_successfully'), userDataArray: userDetails });
         let app_logo = "https://meditrekaccess.com/logo.png"
 
 
@@ -777,7 +794,7 @@ const userResendOtp = async (req, res) => {
 
         console.error("Resend OTP Error:", err);
 
-        return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return res.status(200).json({ success: false, msg: req.__('internal_server_error'), key: err.message });
 
     }
 
@@ -1371,7 +1388,7 @@ const forgotPassword = async (req, res) => {
 
     try {
 
-        const { email } = req.body;
+        const { email, language_code } = req.body;
 
         if (!email) {
 
@@ -1379,6 +1396,16 @@ const forgotPassword = async (req, res) => {
 
         }
 
+        if (!language_code) {
+            return response.status(200).json({
+                success: false,
+                msg: languageMessage.msg_empty_param,
+                key: "language_code",
+            });
+        }
+
+
+        req.setLocale(language_code);
 
 
         // Fetch user
@@ -1393,7 +1420,7 @@ const forgotPassword = async (req, res) => {
 
                 if (err) {
 
-                    return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    return res.status(200).json({ success: false, msg: req.__('internal_server_error'), key: err.message });
 
                 }
 
@@ -1401,7 +1428,7 @@ const forgotPassword = async (req, res) => {
 
                 if (result.length === 0) {
 
-                    return res.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                    return res.status(200).json({ success: false, msg: req.__('user_not_found') });
 
                 }
 
@@ -1413,7 +1440,7 @@ const forgotPassword = async (req, res) => {
 
                 if (user.active_flag === 0) {
 
-                    return res.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_flag: user.active_flag });
+                    return res.status(200).json({ success: false, msg: req.__('your_account_has_been_deactivated'), active_flag: user.active_flag });
 
                 }
 
@@ -1421,7 +1448,7 @@ const forgotPassword = async (req, res) => {
 
                 if (user.delete_flag == 1) {
 
-                    return res.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                    return res.status(200).json({ success: false, msg: req.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
                 }
 
@@ -1445,7 +1472,7 @@ const forgotPassword = async (req, res) => {
 
                         if (err) {
 
-                            return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                            return res.status(200).json({ success: false, msg: req.__('internal_server_error'), key: err.message });
 
                         }
 
@@ -1479,7 +1506,7 @@ const forgotPassword = async (req, res) => {
 
                             success: true,
 
-                            msg: languageMessage.otpSuccess,
+                            msg: req.__('otp_sent_successfully'),
 
                             userDataArray: userDetails
                         });
@@ -1489,7 +1516,7 @@ const forgotPassword = async (req, res) => {
         );
     } catch (err) {
 
-        return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return res.status(200).json({ success: false, msg: req.__('internal_server_error'), key: err.message });
 
     }
 
@@ -1629,9 +1656,9 @@ const forgotPasswordResendOtp = async (request, response) => {
 
 const forgotPasswordVerifyOtp = async (request, response) => {
 
-    let { user_id, otp } = request.body;
+    let { user_id, otp, language_code } = request.body;
 
-    if (!user_id) {
+    if (!user_id ) {
 
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
 
@@ -1643,6 +1670,16 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
     }
 
+    if (!language_code) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "language_code",
+        });
+    }
+
+    request.setLocale(language_code);
+
     try {
 
         const query1 = "SELECT mobile, active_flag, otp,delete_flag FROM user_master WHERE user_id = ? ";
@@ -1653,25 +1690,25 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
             if (err) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
             }
 
             if (result.length === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
             }
 
             if (result[0]?.active_flag === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('user_deactivated'), active_flag: 0 });
 
             }
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -1679,7 +1716,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
             if (userOpt !== otp) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.invalidOtp });
+                return response.status(200).json({ success: false, msg: request.__('invalid_otp') });
 
             }
 
@@ -1697,7 +1734,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
                 if (err) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                 }
 
@@ -1705,7 +1742,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
                     const userDetails = await getUserDetails(user_id);
 
-                    return response.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, userDataArray: userDetails });
+                    return response.status(200).json({ success: true, msg: request.__('otp_verified_successfully'), userDataArray: userDetails });
 
                 }
 
@@ -1715,7 +1752,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
     } catch (err) {
 
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
     }
 
@@ -1727,7 +1764,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
 
 const resetPassword = async (request, response) => {
 
-    const { user_id, newPassword } = request.body;
+    const { user_id, newPassword, language_code } = request.body;
 
     if (!user_id || !newPassword) {
 
@@ -1738,6 +1775,16 @@ const resetPassword = async (request, response) => {
             .json({ success: false, msg: languageMessage.msg_empty_param });
 
     }
+
+    if (!language_code) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "language_code",
+        });
+    }
+
+    request.setLocale(language_code);
 
     try {
 
@@ -1753,7 +1800,7 @@ const resetPassword = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     key: err.message,
 
@@ -1767,7 +1814,7 @@ const resetPassword = async (request, response) => {
 
                     .status(200)
 
-                    .json({ success: false, msg: languageMessage.userNotFound });
+                    .json({ success: false, msg: request.__('user_not_found') });
 
             }
 
@@ -1777,7 +1824,7 @@ const resetPassword = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.accountdeactivated,
+                    msg: request.__('your_account_has_been_deactivated'),
 
                     active_flag: result[0].active_flag,
 
@@ -1787,7 +1834,7 @@ const resetPassword = async (request, response) => {
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -1813,7 +1860,7 @@ const resetPassword = async (request, response) => {
 
                         success: false,
 
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
 
                         key: err.message,
 
@@ -1827,7 +1874,7 @@ const resetPassword = async (request, response) => {
 
                         .status(200)
 
-                        .json({ success: false, msg: languageMessage.userNotFound });
+                        .json({ success: false, msg: request.__('user_not_found') });
 
                 }
 
@@ -1837,7 +1884,7 @@ const resetPassword = async (request, response) => {
 
                     success: true,
 
-                    msg: languageMessage.passUpdatedSuccess,
+                    msg: request.__('password_updated_successfully'),
 
                     userDataArray: userDetails
 
@@ -1853,7 +1900,7 @@ const resetPassword = async (request, response) => {
 
             success: false,
 
-            msg: languageMessage.internalServerError,
+            msg: request.__('internal_server_error'),
 
             key: err.message,
 
@@ -1869,7 +1916,7 @@ const resetPassword = async (request, response) => {
 
 const changePassword = async (request, response) => {
 
-    const { user_id, oldPassword, newPassword } = request.body;
+    const { user_id, oldPassword, newPassword, language_code } = request.body;
 
     if (!user_id || !oldPassword || !newPassword) {
 
@@ -1880,6 +1927,16 @@ const changePassword = async (request, response) => {
             .json({ success: false, msg: languageMessage.msg_empty_param });
 
     }
+
+    if (!language_code) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.msg_empty_param,
+            key: "language_code",
+        });
+    }
+
+    request.setLocale(language_code);
 
     try {
 
@@ -1897,7 +1954,7 @@ const changePassword = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     key: err.message,
 
@@ -1911,7 +1968,7 @@ const changePassword = async (request, response) => {
 
                     .status(200)
 
-                    .json({ success: false, msg: languageMessage.userNotFound });
+                    .json({ success: false, msg: request.__('user_not_found') });
 
             }
 
@@ -1921,7 +1978,7 @@ const changePassword = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.accountdeactivated,
+                    msg: request.__('your_account_has_been_deactivated'),
 
                     active_flag: result[0].active_flag,
 
@@ -1931,7 +1988,7 @@ const changePassword = async (request, response) => {
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -1945,7 +2002,7 @@ const changePassword = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.newOldPasswordNotCorrect,
+                    msg: request.__('current_password_not_correct'),
 
                 });
 
@@ -1973,7 +2030,7 @@ const changePassword = async (request, response) => {
 
                         success: false,
 
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
 
                         key: err.message,
 
@@ -1987,7 +2044,7 @@ const changePassword = async (request, response) => {
 
                         .status(200)
 
-                        .json({ success: false, msg: languageMessage.userNotFound });
+                        .json({ success: false, msg: request.__('user_not_found') });
 
                 }
 
@@ -1997,7 +2054,7 @@ const changePassword = async (request, response) => {
 
                     success: true,
 
-                    msg: languageMessage.passUpdatedSuccess,
+                    msg: request.__('password_updated_successfully'),
 
                     userDataArray: userDetails,
 
@@ -2013,7 +2070,7 @@ const changePassword = async (request, response) => {
 
             success: false,
 
-            msg: languageMessage.internalServerError,
+            msg: request.__('internal_server_error'),
 
             key: err.message,
 
