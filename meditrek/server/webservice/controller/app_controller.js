@@ -17,6 +17,7 @@ const parisTime = moment().tz(process.env.TIME_ZONE || 'Europe/Paris');
 // Format it as 'YYYY-MM-DD HH:mm:ss'
 const formattedDate = parisTime.format('YYYY-MM-DD HH:mm:ss');
 const createtime = moment().tz(process.env.TIME_ZONE || 'Europe/Paris').format("YYYY-MM-DD HH:mm:ss");
+const { getUserLanguage } = require('../helpers/languageHelper');
 
 
 
@@ -27,7 +28,7 @@ const createtime = moment().tz(process.env.TIME_ZONE || 'Europe/Paris').format("
 
 const sendContactUs = async (request, response) => {
 
-    const { user_id, f_name, email, message } = request.body;
+    const { user_id, f_name, email, message, language_code } = request.body;
 
 
 
@@ -71,7 +72,11 @@ const sendContactUs = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    req.setLocale(finalLanguage);
 
     try {
 
@@ -93,7 +98,7 @@ const sendContactUs = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     key: err.message,
 
@@ -107,7 +112,7 @@ const sendContactUs = async (request, response) => {
 
                     .status(200)
 
-                    .json({ success: false, msg: languageMessage.userNotFound });
+                    .json({ success: false, msg: request.__('user_not_found') });
 
             }
 
@@ -117,7 +122,7 @@ const sendContactUs = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.accountdeactivated,
+                    msg: request.__('your_account_has_been_deactivated'),
 
                     active_flag: result[0].active_flag,
 
@@ -127,7 +132,7 @@ const sendContactUs = async (request, response) => {
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -165,7 +170,7 @@ const sendContactUs = async (request, response) => {
 
                         success: false,
 
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
 
                         key: err.message,
 
@@ -179,7 +184,7 @@ const sendContactUs = async (request, response) => {
 
                 return response.status(200).json({
 
-                    success: true, msg: languageMessage.sendContactUs, userDataArray: userDetails,
+                    success: true, msg: request.__('thank_you_for_contacting_us'), userDataArray: userDetails,
 
                 });
 
@@ -195,7 +200,7 @@ const sendContactUs = async (request, response) => {
 
             success: false,
 
-            msg: languageMessage.internalServerError,
+            msg: request.__('internal_server_error'),
 
             key: err.message,
 

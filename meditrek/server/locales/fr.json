@@ -14,6 +14,9 @@
   "otp_verified_successfully": "Code OTP vérifié avec succès",
   "user_deactivated": "Utilisateur désactivé",
   "password_updated_successfully": "Mot de passe mis à jour avec succès",
-  "current_password_not_correct": "Le mot de passe actuel n'est pas correct"
+  "current_password_not_correct": "Le mot de passe actuel n'est pas correct",
+  "thank_you_for_contacting_us": "Merci de nous avoir contactés, nous vous répondrons bientôt.",
+  "no_fields_provided_to_update": "Aucun champ fourni pour la mise à jour",
+  "user_profile_updated_successfully": "Profil utilisateur mis à jour avec succès"
 
 }

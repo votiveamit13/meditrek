@@ -14,5 +14,8 @@
 	"otp_verified_successfully": "OTP verificada com sucesso",
 	"user_deactivated": "Usuário desativado",
 	"password_updated_successfully": "Senha atualizada com sucesso",
-	"current_password_not_correct": "A senha atual não está correta"
+	"current_password_not_correct": "A senha atual não está correta",
+	"thank_you_for_contacting_us": "Obrigado por entrar em contato conosco, responderemos em breve.",
+	"no_fields_provided_to_update": "Nenhum campo fornecido para atualização",
+	"user_profile_updated_successfully": "Perfil do usuário atualizado com sucesso"
 }
