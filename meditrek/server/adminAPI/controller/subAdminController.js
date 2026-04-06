@@ -10590,8 +10590,51 @@ const getDoctorAllSymptoms = async (req, res) => {
     });
   }
 };
+
+const getAppContent = (req, res) => {
+  const { type } = req.query;
+
+  if (!type) {
+    return res.status(200).json({
+      success: false,
+      msg: "Content type is required"
+    });
+  }
+
+  const sql = `
+    SELECT content 
+    FROM content_master 
+    WHERE content_type = ? 
+    AND delete_flag = 0
+    LIMIT 1
+  `;
+
+  connection.query(sql, [type], (err, result) => {
+    if (err) {
+      return res.status(200).json({
+        success: false,
+        msg: "Database error",
+        error: err
+      });
+    }
+
+    if (result.length > 0) {
+      return res.status(200).json({
+        success: true,
+        data: result[0].content
+      });
+    } else {
+      return res.status(200).json({
+        success: false,
+        msg: "No content found"
+      });
+    }
+  });
+};
+
+
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
   getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,getSubadminMedicationFull,getDiseaseDashboard,getMedicationDiseaseDashboard
-,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms 
+,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms, getAppContent 
 }
