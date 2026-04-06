@@ -28,5 +28,9 @@
   "provide_date_as_comma_separated": "Veuillez fournir les dates au format YYYY-MM-DD comme valeurs séparées par des virgules pour le planning mensuel",
   "medication_taken_successfully": "Médicament pris avec succès",
   "medication_not_taken": "Médicament non pris",
-  "time_updated_successfully": "Heure mise à jour avec succès"
+  "time_updated_successfully": "Heure mise à jour avec succès",
+  "data_not_found": "Données non trouvées",
+  "medication_updated_successfully": "Médicament mis à jour avec succès",
+  "data_updated_successfully": "Données mises à jour avec succès",
+  
 }

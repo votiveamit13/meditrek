@@ -28,5 +28,9 @@
 	"provide_date_as_comma_separated": "يرجى تقديم تاريخ (تواريخ) بتنسيق YYYY-MM-DD كقيم مفصولة بفواصل لجدول الشهر",
 	"medication_taken_successfully": "تم تناول الدواء بنجاح",
 	"medication_not_taken": "لم يتم تناول الدواء",
-	"time_updated_successfully": "تم تحديث الوقت بنجاح"
+	"time_updated_successfully": "تم تحديث الوقت بنجاح",
+	"data_not_found": "البيانات غير موجودة",
+	"medication_updated_successfully": "تم تحديث الدواء بنجاح",
+	"data_updated_successfully": "تم تحديث البيانات بنجاح",
+	"report_shared_successfully": "تمت مشاركة التقرير بنجاح"
 }

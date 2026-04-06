@@ -2889,7 +2889,7 @@ const addAdverseReaction = async (request, response) => {
 
 const editAdverseReaction = async (request, response) => {
 
-    const { adverse_reaction_id, user_id, medicine_id, symptom_id, type, dosage, medication_start_date, reaction_date, details } = request.body;
+    const { adverse_reaction_id, user_id, medicine_id, symptom_id, type, dosage, medication_start_date, reaction_date, details, language_code } = request.body;
 
 
 
@@ -2905,7 +2905,11 @@ const editAdverseReaction = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     // Validate user
 
@@ -2923,7 +2927,7 @@ const editAdverseReaction = async (request, response) => {
 
                 success: false,
 
-                msg: languageMessage.internalServerError,
+                msg: request.__('internal_server_error'),
 
                 key: err.message
 
@@ -2939,7 +2943,7 @@ const editAdverseReaction = async (request, response) => {
 
                 success: false,
 
-                msg: languageMessage.userNotFound
+                msg: request.__('user_not_found')
 
             });
 
@@ -2947,7 +2951,7 @@ const editAdverseReaction = async (request, response) => {
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -3000,7 +3004,7 @@ const editAdverseReaction = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     key: err.message
 
@@ -3016,7 +3020,7 @@ const editAdverseReaction = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.dataNotFound
+                    msg: request.__('data_not_found')
 
                 });
 
@@ -3769,7 +3773,8 @@ const editMedication = async (request, response) => {
       remainder_quantity,
       instruction,
       toggle_status,
-      medicine_type_name
+      medicine_type_name,
+      language_code
     } = request.body;
   
     //   Validate required params
@@ -3779,22 +3784,28 @@ const editMedication = async (request, response) => {
         msg: languageMessage.msg_empty_param
       });
     }
-  
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
+
     //   Validate user
     const userQuery = "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], async (err, result) => {
       if (err) {
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
       }
   
       if (result.length === 0) {
-        return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+        return response.status(200).json({ success: false, msg: request.__('user_not_found') });
       }
   
       if (result[0]?.active_flag === 0 || result[0]?.delete_flag == 1) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.accountdeactivated,
+          msg: request.__('your_account_has_been_deactivated'),
           active_flag: 0
         });
       }
@@ -3802,10 +3813,10 @@ const editMedication = async (request, response) => {
       const checkSql = "SELECT medication_id FROM medication_master WHERE user_id = ? AND medication_id = ? AND delete_flag = 0";
       connection.query(checkSql, [user_id, medication_id], async (err, check) => {
         if (err) {
-          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+          return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
         }
         if (check.length === 0) {
-          return response.status(200).json({ success: false, msg: languageMessage.dataNotFound, key: "medication" });
+          return response.status(200).json({ success: false, msg: request.__('data_not_found'), key: "medication" });
         }
   
         //   Prepare weekday/schedule_date based on schedule type
@@ -3821,7 +3832,7 @@ const editMedication = async (request, response) => {
           if (!weekday || weekday.trim() === "") {
             return response.status(200).json({
               success: false,
-              msg: "Please provide weekday(s) as comma-separated values for weekly schedule"
+              msg: request.__('provide_weekday_as_comma_separated')
             });
           }
           finalWeekday = weekday.trim();
@@ -3832,7 +3843,7 @@ const editMedication = async (request, response) => {
           if (!schedule_date || schedule_date.trim() === "") {
             return response.status(200).json({
               success: false,
-              msg: languageMessage.msg_empty_param, key:'schedule_date'
+              msg: request.__('provide_date_as_comma_separated')
             });
           }
           finalWeekday = 0;
@@ -3880,7 +3891,7 @@ const editMedication = async (request, response) => {
   
         connection.query(updateQuery, updateValues, async (err) => {
           if (err) {
-            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
           }
   
           //   Handle time slots (delete old + insert new)
@@ -3938,24 +3949,24 @@ if (remainder_time && typeof remainder_time === 'string') {
       const updateTimeSlotSql = "UPDATE time_slots_master SET delete_flag = 1, updatetime = ? WHERE medication_id = ?";
       connection.query(updateTimeSlotSql, [formattedDate, medication_id], (err) => {
         if (err) {
-          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+          return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
         }
   
         // Insert new time slots
         const timeSlotInsertSql = `INSERT INTO time_slots_master (medication_id, time) VALUES ?`;
         connection.query(timeSlotInsertSql, [timeSlotValues], (err) => {
           if (err) {
-            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
           }
   
-          return response.status(200).json({ success: true, msg: languageMessage.medicationUpdated });
+          return response.status(200).json({ success: true, msg: request.__('medication_updated_successfully') });
         });
       });
     } else {
-      return response.status(200).json({ success: true, msg: languageMessage.medicationUpdated });
+      return response.status(200).json({ success: true, msg: request.__('medication_updated_successfully') });
     }
   } else {
-    return response.status(200).json({ success: true, msg: languageMessage.medicationUpdated });
+    return response.status(200).json({ success: true, msg: request.__('medication_updated_successfully') });
   }
         });
       });

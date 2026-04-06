@@ -27,5 +27,9 @@
   "provide_date_as_comma_separated": "Please provide date(s) in YYYY-MM-DD format as comma-separated values for monthly schedule",
   "medication_taken_successfully": "Medication Taken Successfully",
   "medication_not_taken": "Medication not taken",
-  "time_updated_successfully": "Time updated successfully"
+  "time_updated_successfully": "Time updated successfully",
+  "data_not_found": "Data not Found",
+  "medication_updated_successfully": "Medication Updated Successfully",
+  "data_updated_successfully": "Data Updated Successfully",
+  "report_shared_successfully": "Report shared successfully"
 }
