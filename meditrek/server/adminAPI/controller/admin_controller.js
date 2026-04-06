@@ -6529,7 +6529,6 @@ const DoctorActivateDeactivateUser = async (request, response) => {
   const updateUserLanguage = (req, res) => {
     const { user_id, language_code } = req.body;
 
-    req.setLocale(language_code);
     const languageMessage = res.__('language_updated');
 
     if (!user_id || !language_code) {
@@ -6538,6 +6537,8 @@ const DoctorActivateDeactivateUser = async (request, response) => {
         msg: "user_id & language_code required"
       });
     }
+
+    req.setLocale(language_code);
 
     connection.query(
       "UPDATE user_master SET current_language = ? WHERE user_id = ?",

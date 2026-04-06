@@ -1671,7 +1671,7 @@ const forgotPasswordVerifyOtp = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
