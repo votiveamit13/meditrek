@@ -6924,11 +6924,19 @@ const getDiseaseDashboard = (req, res) => {
       connection.query(diseaseSql, params, (err, diseaseRows) => {
         if (err) return res.json({ success: false, msg: err.message });
 
-        const disease_distribution = diseaseRows.map(r => ({
-          name: cleanDiseaseString(r.name),
-          count: r.count,
-          percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
-        }));
+        // const disease_distribution = diseaseRows.map(r => ({
+        //   name: cleanDiseaseString(r.name),
+        //   count: r.count,
+        //   percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
+        // }));
+        let disease_distribution = diseaseRows.map(r => ({
+        name: cleanDiseaseString(r.name),
+        count: r.count,
+        percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
+      }));
+
+      // Sort descending by count
+      disease_distribution.sort((a, b) => b.count - a.count);
 
         const ageSql = `
           SELECT 
