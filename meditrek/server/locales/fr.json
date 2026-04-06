@@ -32,5 +32,6 @@
   "data_not_found": "Données non trouvées",
   "medication_updated_successfully": "Médicament mis à jour avec succès",
   "data_updated_successfully": "Données mises à jour avec succès",
-  
+  "data_inserted_successfully": "Données insérées avec succès",
+  "report_shared_successfully": "Rapport partagé avec succès",
 }

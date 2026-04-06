@@ -32,5 +32,7 @@
 	"data_not_found": "البيانات غير موجودة",
 	"medication_updated_successfully": "تم تحديث الدواء بنجاح",
 	"data_updated_successfully": "تم تحديث البيانات بنجاح",
-	"report_shared_successfully": "تمت مشاركة التقرير بنجاح"
+	"report_shared_successfully": "تمت مشاركة التقرير بنجاح",
+	"data_inserted_successfully": "تم إدراج البيانات بنجاح",
+	"information_shared_successfully": "تمت مشاركة المعلومات بنجاح"
 }

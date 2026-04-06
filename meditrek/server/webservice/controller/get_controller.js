@@ -5667,7 +5667,7 @@ function calcTemperatureAverage(records) {
 
 //   share information 
 const shareInfoToDoctor = async (req, res) => {
-  const { user_id, doctor_id, information_type } = req.body;
+  const { user_id, doctor_id, information_type, language_code } = req.body;
 
   try {
     if (!user_id) {
@@ -5685,6 +5685,12 @@ const shareInfoToDoctor = async (req, res) => {
         key: "doctor_id"
       });
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    req.setLocale(finalLanguage);
 
     // Normalize information_type → "1,2,3"
     let infoTypeStr = "";
@@ -5714,21 +5720,21 @@ const shareInfoToDoctor = async (req, res) => {
       if (err) {
         return res.status(200).json({
           success: false,
-          msg: languageMessage.internalServerError
+          msg: req.__('internal_server_error')
         });
       }
 
       if (user.length === 0) {
         return res.status(200).json({
           success: false,
-          msg: languageMessage.userNotFound
+          msg: req.__('user_not_found')
         });
       }
 
       if (user[0].active_flag === 0) {
         return res.status(200).json({
           success: false,
-          msg: languageMessage.msgAccountdeactivated,
+          msg: req.__('your_account_has_been_deactivated'),
           active_flag: 0
         });
       }
@@ -5746,14 +5752,14 @@ const shareInfoToDoctor = async (req, res) => {
           if (err2) {
             return res.status(200).json({
               success: false,
-              msg: languageMessage.internalServerError,
+              msg: req.__('internal_server_error'),
               error: err2.message
             });
           }
 
           return res.status(200).json({
             success: true,
-            msg: languageMessage.InformatonShared
+            msg: req.__('information_shared_successfully')
           });
         }
       );
@@ -5762,7 +5768,7 @@ const shareInfoToDoctor = async (req, res) => {
   } catch (error) {
     return res.status(200).json({
       success: false,
-      msg: languageMessage.internalServerError,
+      msg: req.__('internal_server_error'),
       error: error.message
     });
   }
