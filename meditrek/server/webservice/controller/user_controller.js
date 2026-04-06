@@ -2830,20 +2830,20 @@ const verifyUserLoginOtp = async (req, res) => {
 
         req.setLocale(finalLanguage);
 
-        // if (!otpStore[emailNormalized]) {
-        //     console.log(1);
-        //     return res.status(200).json({
-        //         success: false,
-        //         msg: res.__('invalid_otp')
-        //     });
-        // }
+        if (!otpStore[emailNormalized]) {
+            console.log(1);
+            return res.status(200).json({
+                success: false,
+                msg: res.__('invalid_otp')
+            });
+        }
 
-        // if (String(otpStore[emailNormalized]) !== String(otp)) {
-        //     return res.status(200).json({
-        //         success: false,
-        //         msg: res.__('invalid_otp')
-        //     });
-        // }
+        if (String(otpStore[emailNormalized]) !== String(otp)) {
+            return res.status(200).json({
+                success: false,
+                msg: res.__('invalid_otp')
+            });
+        }
 
         const sql = `
             SELECT user_id 
@@ -4192,6 +4192,55 @@ const getUserLanguages = (req, res) => {
     );
   };
 
+const updateUserLanguage = (req, res) => {
+
+    const { user_id, language_code } = req.body;
+
+    if (!user_id || !language_code) {
+    return res.json({
+        success: false,
+        msg: "user_id & language_code required"
+    });
+    }
+
+    req.setLocale(language_code);
+
+    connection.query(
+    "UPDATE user_master SET current_language = ? WHERE user_id = ?",
+    [language_code, user_id],
+    (err) => {
+
+        if (err) {
+        return res.json({
+            success: false,
+            error: err.message
+        });
+        }
+
+        connection.query(
+        "SELECT current_language FROM user_master WHERE user_id = ?",
+        [user_id],
+        (err2, result) => {
+
+            if (err2) {
+            return res.json({
+                success: false,
+                error: err2.message
+            });
+            }
+
+            res.json({
+            success: true,
+            msg: res.__('language_updated'),
+            current_language: result[0]?.current_language
+            });
+        }
+        );
+
+    }
+    );
+};
+
 
 
 
@@ -4203,6 +4252,7 @@ module.exports = {
     userOtpVerify,
     verifyUserLoginOtp,
     userResendOtp,
+    updateUserLanguage,
 
     deleteAccount,
 
