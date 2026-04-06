@@ -34,5 +34,8 @@
 	"data_updated_successfully": "Daten erfolgreich aktualisiert",
 	"report_shared_successfully": "Bericht erfolgreich geteilt",
 	"data_inserted_successfully": "Daten erfolgreich eingefügt",
-	"information_shared_successfully": "Informationen erfolgreich geteilt"
+	"information_shared_successfully": "Informationen erfolgreich geteilt",
+	"doctor_deleted_successfully": "Arzt erfolgreich gelöscht",
+	"doctor_has_not_been_deleted_please_try_again": "Arzt wurde nicht gelöscht, bitte versuchen Sie es erneut",
+	"data_deleted_successfully": "Daten erfolgreich gelöscht"
 }
