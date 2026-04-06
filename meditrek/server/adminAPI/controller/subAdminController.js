@@ -5915,6 +5915,90 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 };
 // 1 Patient info (Demographics of Patient)
 
+// const getPatientDemographics = (req, res) => {
+//   const { doctor_id, gender, age_group,page = 1, limit = 10  } = req.body;
+
+//   if (!doctor_id) {
+//     return res.json({ success: false, msg: "doctor_id required" });
+//   }
+
+//   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0`;
+//   let params = [doctor_id];
+//   const offset = (page - 1) * limit;
+
+//   if (gender !== undefined && gender !== "") {
+//     where += ` AND um.gender = ?`;
+//     params.push(Number(gender));
+//   }
+
+//   if (age_group && age_group !== "") {
+//     if (age_group.includes("-")) {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+//     } else if (age_group === "46+") {
+//       where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= 46`;
+//     }
+//   }
+
+  
+//   const totalSql = `
+//     SELECT COUNT(*) as total
+//     FROM patient_master pm
+//     JOIN user_master um ON pm.user_id = um.user_id
+//     ${where}
+//   `;
+
+//   connection.query(totalSql, params, (err, totalResult) => {
+//     if (err) {
+//       return res.json({ success: false, error: err.message });
+//     }
+
+//     const total = totalResult[0]?.total || 0;
+
+    
+//     const dataSql = `
+//       SELECT 
+//         CASE 
+//           WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
+//           WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
+//           WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 45 THEN '31-45'
+//           ELSE '46+'
+//         END as age_group,
+//         CASE 
+//           WHEN um.gender = 1 THEN 'Male'
+//           WHEN um.gender = 2 THEN 'Female'
+//            WHEN um.gender = 3 THEN 'Other'
+//           ELSE 'Not Specified'
+//         END as gender,
+//         COUNT(*) as count
+//       FROM patient_master pm
+//       JOIN user_master um ON pm.user_id = um.user_id
+//       ${where}
+//       GROUP BY age_group, gender
+//       ORDER BY age_group
+//       LIMIT ? OFFSET ?
+//     `;
+
+//     connection.query(dataSql,  [...params, Number(limit), Number(offset)], (err2, rows) => {
+//       if (err2) {
+//         return res.json({ success: false, error: err2.message });
+//       }
+
+//       const data = rows.map(r => ({
+//         age_group: r.age_group,
+//         gender: r.gender,
+//         count: r.count,
+//         percentage: total > 0 ? ((r.count / total) * 100).toFixed(2) : "0.00"
+//       }));
+
+//       return res.json({
+//         success: true,
+//         total_patients: total,
+//         data
+//       });
+//     });
+//   });
+// };
 const getPatientDemographics = (req, res) => {
   const { doctor_id, gender, age_group,page = 1, limit = 10  } = req.body;
 
@@ -5931,15 +6015,22 @@ const getPatientDemographics = (req, res) => {
     params.push(Number(gender));
   }
 
-  if (age_group && age_group !== "") {
-    if (age_group.includes("-")) {
-      const [min, max] = age_group.split("-").map(Number);
-      where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
-    } else if (age_group === "46+") {
-      where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= 46`;
-    }
+  // if (age_group && age_group !== "") {
+  //   if (age_group.includes("-")) {
+  //     const [min, max] = age_group.split("-").map(Number);
+  //     where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+  //   } else if (age_group === "46+") {
+  //     where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= 46`;
+  //   }
+  // }
+if (age_group && age_group !== "") {
+  if (age_group.includes("-")) {
+    const [min, max] = age_group.split("-").map(Number);
+    where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+  } else if (age_group === "85+") {
+    where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= 85`;
   }
-
+}
   
   const totalSql = `
     SELECT COUNT(*) as total
@@ -5961,8 +6052,11 @@ const getPatientDemographics = (req, res) => {
         CASE 
           WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
           WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
-          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 45 THEN '31-45'
-          ELSE '46+'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 44 THEN '31-44'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 45 AND 64 THEN '45-64'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 65 AND 74 THEN '65-74'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 75 AND 84 THEN '75-84'
+          ELSE '85+'
         END as age_group,
         CASE 
           WHEN um.gender = 1 THEN 'Male'
@@ -5975,8 +6069,15 @@ const getPatientDemographics = (req, res) => {
       JOIN user_master um ON pm.user_id = um.user_id
       ${where}
       GROUP BY age_group, gender
-      ORDER BY age_group
-      LIMIT ? OFFSET ?
+      ORDER BY  CASE 
+    WHEN age_group = '0-18' THEN 1
+    WHEN age_group = '19-30' THEN 2
+    WHEN age_group = '31-44' THEN 3
+    WHEN age_group = '45-64' THEN 4
+    WHEN age_group = '65-74' THEN 5
+    WHEN age_group = '75-84' THEN 6
+    WHEN age_group = '85+' THEN 7 End
+      
     `;
 
     connection.query(dataSql,  [...params, Number(limit), Number(offset)], (err2, rows) => {
@@ -5999,7 +6100,6 @@ const getPatientDemographics = (req, res) => {
     });
   });
 };
-
 // const getPatientDemographicsDetails = (req, res) => {
 //   const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
 
