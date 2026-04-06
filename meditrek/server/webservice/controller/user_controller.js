@@ -1199,7 +1199,7 @@ const editProfile = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -1773,7 +1773,7 @@ const resetPassword = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -2784,7 +2784,12 @@ const signIn = async (request, response) => {
 
             const userName = user.name || "User";
 
-            otpStore[emailNormalized] = otp;
+            //otpStore[emailNormalized] = otp;
+
+            await query(
+                "UPDATE user_master SET otp = ? WHERE user_id = ?",
+                [otp, user.user_id]
+            );
 
             await mailer(
                 emailNormalized,
@@ -2814,15 +2819,96 @@ const signIn = async (request, response) => {
     }
 };
 
+// const verifyUserLoginOtp = async (req, res) => {
+
+    //     try {
+
+    //         const emailNormalized = req.body.email
+    //             ? req.body.email.trim().toLowerCase()
+    //             : "";
+            
+    //         const { otp, language_code } = req.body;
+
+    //         const finalLanguage = language_code && language_code.trim() !== ""
+    //             ? language_code
+    //             : await getUserLanguage({ emailNormalized });
+
+    //         req.setLocale(finalLanguage);
+
+    //         if (!otpStore[emailNormalized]) {
+    //             console.log(1);
+    //             return res.status(200).json({
+    //                 success: false,
+    //                 msg: res.__('invalid_otp')
+    //             });
+    //         }
+
+    //         if (String(otpStore[emailNormalized]) !== String(otp)) {
+    //             return res.status(200).json({
+    //                 success: false,
+    //                 msg: res.__('invalid_otp')
+    //             });
+    //         }
+
+    //         const sql = `
+    //             SELECT user_id 
+    //             FROM user_master 
+    //             WHERE LOWER(email) = ? AND delete_flag = 0
+    //             LIMIT 1
+    //         `;
+
+    //         connection.query(sql, [emailNormalized], async (err, result) => {
+
+    //             if (err || result.length === 0) {
+    //                 return res.status(200).json({
+    //                     success: false,
+    //                     msg: res.__('user_not_found')
+    //                 });
+    //             }
+
+    //             const user_id = result[0].user_id;
+
+    //             const token = jwt.sign(
+    //                 { user_id },
+    //                 process.env.SECRET_KEY,
+    //                 { expiresIn: "7d" }
+    //             );
+
+    //             delete otpStore[emailNormalized];
+
+    //             const userDetails = await getUserDetails(user_id);
+
+    //             return res.status(200).json({
+    //                 success: true,
+    //                 msg: res.__('login_successful'),
+    //                 token,
+    //                 userDataArray: userDetails
+    //             });
+
+    //         });
+
+    //     } catch (error) {
+    //         return res.status(200).json({
+    //             success: false,
+    //             msg: error.message
+    //         });
+    //     }
+    // };
+
 const verifyUserLoginOtp = async (req, res) => {
-
     try {
-
         const emailNormalized = req.body.email
             ? req.body.email.trim().toLowerCase()
             : "";
-        
+
         const { otp, language_code } = req.body;
+
+        if (!emailNormalized || !otp) {
+            return res.status(200).json({
+                success: false,
+                msg: "Email and OTP are required"
+            });
+        }
 
         const finalLanguage = language_code && language_code.trim() !== ""
             ? language_code
@@ -2830,56 +2916,52 @@ const verifyUserLoginOtp = async (req, res) => {
 
         req.setLocale(finalLanguage);
 
-        if (!otpStore[emailNormalized]) {
-            console.log(1);
+        // Get user + OTP from DB
+        const users = await query(
+            `SELECT user_id, otp 
+             FROM user_master 
+             WHERE LOWER(email) = ? AND delete_flag = 0 
+             LIMIT 1`,
+            [emailNormalized]
+        );
+
+        if (users.length === 0) {
+            return res.status(200).json({
+                success: false,
+                msg: res.__('user_not_found')
+            });
+        }
+
+        const user = users[0];
+
+        // Match OTP
+        if (String(user.otp) !== String(otp)) {
             return res.status(200).json({
                 success: false,
                 msg: res.__('invalid_otp')
             });
         }
 
-        if (String(otpStore[emailNormalized]) !== String(otp)) {
-            return res.status(200).json({
-                success: false,
-                msg: res.__('invalid_otp')
-            });
-        }
+        // Generate token
+        const token = jwt.sign(
+            { user_id: user.user_id },
+            process.env.SECRET_KEY,
+            { expiresIn: "7d" }
+        );
 
-        const sql = `
-            SELECT user_id 
-            FROM user_master 
-            WHERE LOWER(email) = ? AND delete_flag = 0
-            LIMIT 1
-        `;
+        // Clear OTP after success
+        await query(
+            "UPDATE user_master SET otp = NULL WHERE user_id = ?",
+            [user.user_id]
+        );
 
-        connection.query(sql, [emailNormalized], async (err, result) => {
+        const userDetails = await getUserDetails(user.user_id);
 
-            if (err || result.length === 0) {
-                return res.status(200).json({
-                    success: false,
-                    msg: res.__('user_not_found')
-                });
-            }
-
-            const user_id = result[0].user_id;
-
-            const token = jwt.sign(
-                { user_id },
-                process.env.SECRET_KEY,
-                { expiresIn: "7d" }
-            );
-
-            delete otpStore[emailNormalized];
-
-            const userDetails = await getUserDetails(user_id);
-
-            return res.status(200).json({
-                success: true,
-                msg: res.__('login_successful'),
-                token,
-                userDataArray: userDetails
-            });
-
+        return res.status(200).json({
+            success: true,
+            msg: res.__('login_successful'),
+            token,
+            userDataArray: userDetails
         });
 
     } catch (error) {
@@ -3853,7 +3935,7 @@ const updateTimezone = async (req, res) => {
 
 const getHomePageStatus = async (request, response) => {
 
-    const { user_id, status, time_slots_id, time } = request.body;
+    const { user_id, status, time_slots_id, time, language_code } = request.body;
 
     // const timeZone = 'Asia/Kolkata';
 
@@ -3872,17 +3954,22 @@ const getHomePageStatus = async (request, response) => {
         if (!time_slots_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'time_slots_id' });
 
 
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ user_id });
+
+        request.setLocale(finalLanguage);
 
         // Check user status
         const userQuery = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
 
         connection.query(userQuery, [user_id], (err, userRes) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            if (userRes.length === 0) return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            if (userRes.length === 0) return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
-            if (userRes[0].active_flag == 0) return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            if (userRes[0].active_flag == 0) return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_status: 0 });
 
 
 
@@ -3904,7 +3991,7 @@ const getHomePageStatus = async (request, response) => {
 
                 if (err || medRes.length === 0) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err?.message || "Medication not found" });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err?.message || "Medication not found" });
 
                 }
 
@@ -3938,7 +4025,7 @@ const getHomePageStatus = async (request, response) => {
                     `;
 
                     connection.query(avgInsert, [delayStatus, medicine_id, user_id, time_slots_id, utcNow, utcNow, utcNow], (err) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                         // Update time slot taken_status
                         const updateSlot = `
@@ -3946,7 +4033,7 @@ const getHomePageStatus = async (request, response) => {
                             WHERE time_slots_id = ? AND delete_flag = 0
                         `;
                         connection.query(updateSlot, [utcNow, time_slots_id], (err) => {
-                            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                             // decrease quantity
                             const updateQty = `
@@ -3955,9 +4042,9 @@ const getHomePageStatus = async (request, response) => {
                                 WHERE medication_id = ? AND delete_flag = 0 AND remaining_quantity > 0
                             `;
                             connection.query(updateQty, [medication_id], (err) => {
-                                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
-                                return response.status(200).json({ success: true, msg: languageMessage.medicationTaken });
+                                return response.status(200).json({ success: true, msg: request.__('medication_taken_successfully') });
                             });
                         });
                     });
@@ -3973,9 +4060,9 @@ const getHomePageStatus = async (request, response) => {
                         VALUES (?, ?, ?, ?, ?, ?)
                     `;
                     connection.query(skipQuery, [status, medicine_id, user_id, time_slots_id, utcNow, utcNow], (err) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
-                        return response.status(200).json({ success: true, msg: languageMessage.medicationNotTaken });
+                        return response.status(200).json({ success: true, msg: request.__('medication_not_taken') });
                     });
 
                 } else if (status == 3) {
@@ -3987,7 +4074,7 @@ const getHomePageStatus = async (request, response) => {
         if (tzErr) {
             return response.status(200).json({
                 success: false,
-                msg: languageMessage.internalServerError,
+                msg: request.__('internal_server_error'),
                 key: tzErr.message
             });
         }
@@ -4011,7 +4098,7 @@ const getHomePageStatus = async (request, response) => {
             if (err) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
                     key: err.message
                 });
             }
@@ -4027,7 +4114,7 @@ const getHomePageStatus = async (request, response) => {
                 if (err) {
                     return response.status(200).json({
                         success: false,
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
                         key: err.message
                     });
                 }
@@ -4045,14 +4132,14 @@ const getHomePageStatus = async (request, response) => {
                     if (err) {
                         return response.status(200).json({
                             success: false,
-                            msg: languageMessage.internalServerError,
+                            msg: request.__('internal_server_error'),
                             key: err.message
                         });
                     }
 
                     return response.status(200).json({
                         success: true,
-                        msg: languageMessage.TimeUpdated
+                        msg: request.__('time_updated_successfully')
                     });
                 });
 
