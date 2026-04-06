@@ -18,6 +18,15 @@
   "thank_you_for_contacting_us": "Merci de nous avoir contactés, nous vous répondrons bientôt.",
   "no_fields_provided_to_update": "Aucun champ fourni pour la mise à jour",
   "user_profile_updated_successfully": "Profil utilisateur mis à jour avec succès",
-  "user_deactativated": "Utilisateur désactivé"
-
+  "user_deactativated": "Utilisateur désactivé",
+  "report_added_successfully": "Rapport ajouté avec succès",
+  "doctor_not_found": "Médecin non trouvé",
+  "reports_has_not_been_shared_please_try_again": "Les rapports n'ont pas été partagés, veuillez réessayer",
+  "reports_shared_successfully": "Rapports partagés avec succès",
+  "medication_created_successfully": "Médicament créé avec succès",
+  "provide_weekday_as_comma_separated": "Veuillez fournir les jours de la semaine comme valeurs séparées par des virgules pour le planning hebdomadaire",
+  "provide_date_as_comma_separated": "Veuillez fournir les dates au format YYYY-MM-DD comme valeurs séparées par des virgules pour le planning mensuel",
+  "medication_taken_successfully": "Médicament pris avec succès",
+  "medication_not_taken": "Médicament non pris",
+  "time_updated_successfully": "Heure mise à jour avec succès"
 }

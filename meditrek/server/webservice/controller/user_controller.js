@@ -1199,7 +1199,7 @@ const editProfile = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -3853,7 +3853,7 @@ const updateTimezone = async (req, res) => {
 
 const getHomePageStatus = async (request, response) => {
 
-    const { user_id, status, time_slots_id, time } = request.body;
+    const { user_id, status, time_slots_id, time, language_code } = request.body;
 
     // const timeZone = 'Asia/Kolkata';
 
@@ -3872,17 +3872,22 @@ const getHomePageStatus = async (request, response) => {
         if (!time_slots_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'time_slots_id' });
 
 
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ user_id });
+
+        request.setLocale(finalLanguage);
 
         // Check user status
         const userQuery = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
 
         connection.query(userQuery, [user_id], (err, userRes) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            if (userRes.length === 0) return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            if (userRes.length === 0) return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
-            if (userRes[0].active_flag == 0) return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            if (userRes[0].active_flag == 0) return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_status: 0 });
 
 
 
@@ -3904,7 +3909,7 @@ const getHomePageStatus = async (request, response) => {
 
                 if (err || medRes.length === 0) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err?.message || "Medication not found" });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err?.message || "Medication not found" });
 
                 }
 
@@ -3938,7 +3943,7 @@ const getHomePageStatus = async (request, response) => {
                     `;
 
                     connection.query(avgInsert, [delayStatus, medicine_id, user_id, time_slots_id, utcNow, utcNow, utcNow], (err) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                         // Update time slot taken_status
                         const updateSlot = `
@@ -3946,7 +3951,7 @@ const getHomePageStatus = async (request, response) => {
                             WHERE time_slots_id = ? AND delete_flag = 0
                         `;
                         connection.query(updateSlot, [utcNow, time_slots_id], (err) => {
-                            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                             // decrease quantity
                             const updateQty = `
@@ -3955,9 +3960,9 @@ const getHomePageStatus = async (request, response) => {
                                 WHERE medication_id = ? AND delete_flag = 0 AND remaining_quantity > 0
                             `;
                             connection.query(updateQty, [medication_id], (err) => {
-                                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
-                                return response.status(200).json({ success: true, msg: languageMessage.medicationTaken });
+                                return response.status(200).json({ success: true, msg: request.__('medication_taken_successfully') });
                             });
                         });
                     });
@@ -3973,9 +3978,9 @@ const getHomePageStatus = async (request, response) => {
                         VALUES (?, ?, ?, ?, ?, ?)
                     `;
                     connection.query(skipQuery, [status, medicine_id, user_id, time_slots_id, utcNow, utcNow], (err) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
-                        return response.status(200).json({ success: true, msg: languageMessage.medicationNotTaken });
+                        return response.status(200).json({ success: true, msg: request.__('medication_not_taken') });
                     });
 
                 } else if (status == 3) {
@@ -3987,7 +3992,7 @@ const getHomePageStatus = async (request, response) => {
         if (tzErr) {
             return response.status(200).json({
                 success: false,
-                msg: languageMessage.internalServerError,
+                msg: request.__('internal_server_error'),
                 key: tzErr.message
             });
         }
@@ -4011,7 +4016,7 @@ const getHomePageStatus = async (request, response) => {
             if (err) {
                 return response.status(200).json({
                     success: false,
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
                     key: err.message
                 });
             }
@@ -4027,7 +4032,7 @@ const getHomePageStatus = async (request, response) => {
                 if (err) {
                     return response.status(200).json({
                         success: false,
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
                         key: err.message
                     });
                 }
@@ -4045,14 +4050,14 @@ const getHomePageStatus = async (request, response) => {
                     if (err) {
                         return response.status(200).json({
                             success: false,
-                            msg: languageMessage.internalServerError,
+                            msg: request.__('internal_server_error'),
                             key: err.message
                         });
                     }
 
                     return response.status(200).json({
                         success: true,
-                        msg: languageMessage.TimeUpdated
+                        msg: request.__('time_updated_successfully')
                     });
                 });
 

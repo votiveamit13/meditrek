@@ -18,5 +18,15 @@
 	"thank_you_for_contacting_us": "شكراً لتواصلك معنا، سنرد عليك قريباً.",
 	"no_fields_provided_to_update": "لم يتم توفير حقول للتحديث",
 	"user_profile_updated_successfully": "تم تحديث ملف المستخدم الشخصي بنجاح",
-	"user_deactativated": "المستخدم معطل"
+	"user_deactativated": "المستخدم معطل",
+	"report_added_successfully": "تم إضافة التقرير بنجاح",
+	"doctor_not_found": "الطبيب غير موجود",
+	"reports_has_not_been_shared_please_try_again": "لم يتم مشاركة التقارير، يرجى المحاولة مرة أخرى",
+	"reports_shared_successfully": "تمت مشاركة التقارير بنجاح",
+	"medication_created_successfully": "تم إنشاء الدواء بنجاح",
+	"provide_weekday_as_comma_separated": "يرجى تقديم يوم (أيام) الأسبوع كقيم مفصولة بفواصل لجدول الأسبوع",
+	"provide_date_as_comma_separated": "يرجى تقديم تاريخ (تواريخ) بتنسيق YYYY-MM-DD كقيم مفصولة بفواصل لجدول الشهر",
+	"medication_taken_successfully": "تم تناول الدواء بنجاح",
+	"medication_not_taken": "لم يتم تناول الدواء",
+	"time_updated_successfully": "تم تحديث الوقت بنجاح"
 }

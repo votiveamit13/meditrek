@@ -18,5 +18,14 @@
   "thank_you_for_contacting_us": "Thank you for contacting us, we will get back to you soon.",
   "no_fields_provided_to_update": "No fields provided to update",
   "user_profile_updated_successfully": "User profile updated successfully",
-  "user_deactivated": "User Deactivated"
+  "report_added_successfully": "Report Added Successfully",
+  "doctor_not_found": "Doctor not found",
+  "reports_has_not_been_shared_please_try_again": "Reports has not been shared, please try again",
+  "reports_shared_successfully": "Reports shared successfully",
+  "medication_created_successfully": "Medication Created Successfully",
+  "provide_weekday_as_comma_separated": "Please provide weekday(s) as comma-separated values for weekly schedule",
+  "provide_date_as_comma_separated": "Please provide date(s) in YYYY-MM-DD format as comma-separated values for monthly schedule",
+  "medication_taken_successfully": "Medication Taken Successfully",
+  "medication_not_taken": "Medication not taken",
+  "time_updated_successfully": "Time updated successfully"
 }

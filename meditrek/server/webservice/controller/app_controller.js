@@ -76,7 +76,7 @@ const sendContactUs = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -1706,7 +1706,7 @@ const addMedicalReport = async (request, response) => {
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -1743,7 +1743,7 @@ const addMedicalReport = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     key: err.message
 
@@ -1757,7 +1757,7 @@ const addMedicalReport = async (request, response) => {
 
                 success: true,
 
-                msg: languageMessage.reportAdded,
+                msg: request.__('report_added_successfully'),
 
                 insertId: insertResult.insertId
 
@@ -3529,7 +3529,8 @@ const AddMedication = async (request, response) => {
       instruction,
       toggle_status,
       medicine_type_name,
-      timezone
+      timezone,
+      language_code
     } = request.body;
   
     // Required param check
@@ -3540,7 +3541,11 @@ const AddMedication = async (request, response) => {
       });
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
   
     // Validate user
     const userQuery = `SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?`;
@@ -3548,7 +3553,7 @@ const AddMedication = async (request, response) => {
       if (err) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.internalServerError,
+          msg: request.__('internal_server_error'),
           key: err.message
         });
       }
@@ -3556,14 +3561,14 @@ const AddMedication = async (request, response) => {
       if (result.length === 0) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.userNotFound
+          msg: request.__('user_not_found')
         });
       }
   
       if (result[0]?.active_flag === 0 || result[0]?.delete_flag == 1) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.userDeleted,
+          msg: request.__('user_deactivated'),
           active_flag: 0
         });
       }
@@ -3581,7 +3586,7 @@ const AddMedication = async (request, response) => {
         if (!weekday || weekday.trim() === "") {
           return response.status(200).json({
             success: false,
-            msg: "Please provide weekday(s) as comma-separated values for weekly schedule"
+            msg: request.__('provide_weekday_as_comma_separated')
           });
         }
         finalWeekday = weekday.trim(); // e.g. "1,3,5"
@@ -3592,7 +3597,7 @@ const AddMedication = async (request, response) => {
         if (!schedule_date || schedule_date.trim() === "") {
           return response.status(200).json({
             success: false,
-            msg: "Please provide date(s) in YYYY-MM-DD format as comma-separated values for monthly schedule"
+            msg: request.__('provide_date_as_comma_separated')
           });
         }
         finalWeekday = 0;
@@ -3646,7 +3651,7 @@ const AddMedication = async (request, response) => {
         if (err) {
           return response.status(200).json({
             success: false,
-            msg: languageMessage.internalServerError,
+            msg: request.__('internal_server_error'),
             key: err.message
           });
         }
@@ -3715,28 +3720,28 @@ const AddMedication = async (request, response) => {
                     if (err) {
                         return response.status(200).json({
                             success: false,
-                            msg: languageMessage.internalServerError,
+                            msg: request.__('internal_server_error'),
                             key: err.message
                         });
                     }
         
                     return response.status(200).json({
                         success: true,
-                        msg: languageMessage.medicationCreated,
+                        msg: request.__('medication_created_successfully'),
                         insertId: medicationId
                     });
                 });
             } else {
                 return response.status(200).json({
                     success: true,
-                    msg: languageMessage.medicationCreated,
+                    msg: request.__('medication_created_successfully'),
                     insertId: medicationId
                 });
             }
         } else {
             return response.status(200).json({
                 success: true,
-                msg: languageMessage.medicationCreated,
+                msg: request.__('medication_created_successfully'),
                 insertId: medicationId
             });
         }
@@ -4155,7 +4160,7 @@ switch (parseInt(type, 10)) {
 
 //  share report to doctor   
 const shareReportToDoctor = async ( request, response) =>{
-    const { user_id, doctor_id, medical_report_id} = request.body;
+    const { user_id, doctor_id, medical_report_id,language_code} = request.body;
     try{
          if(!user_id){
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id'});
@@ -4165,36 +4170,42 @@ const shareReportToDoctor = async ( request, response) =>{
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'doctor_id'});
          }
 
+         const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ user_id });
+
+        request.setLocale(finalLanguage);
+
          const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
          connection.query(checkUser, [user_id], async( err, res) =>{
             if(err){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message});
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message});
             }
             if(res.length == 0){
-                return response.status(200).json({ success : false, msg: languageMessage.userNotFound});
+                return response.status(200).json({ success : false, msg: request.__('user_not_found')});
             }
             if(res[0].active_flag == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_flag : 0});
+                return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_flag : 0});
             }
 
             const checkDoctor = 'SELECT doctor_id FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0';
             connection.query(checkDoctor, [doctor_id], async( err, res) =>{
                 if(err){
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message});
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message});
                 }
                 if(res.length == 0){
-                    return response.status(200).json({ success : false, msg: languageMessage.doctorNotFound});
+                    return response.status(200).json({ success : false, msg: request.__('doctor_not_found')});
                 }
 
             const insert = 'INSERT INTO report_share_master(user_id, medical_report_id, doctor_id, share_type, createtime, updatetime) VALUES(?, ?, ?, 1, ?, ?)';
             connection.query(insert,[ user_id, medical_report_id, doctor_id, formattedDate, formattedDate], async (err, res) =>{
                 if(err){
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message});
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message});
                 }
                 if(res.affectedRows == 0){
-                    return response.status(200).json({ success : false, msg: languageMessage.ReportNotShared});
+                    return response.status(200).json({ success : false, msg: request.__('reports_has_not_been_shared_please_try_again')});
                 }
-                return response.status(200).json({ success: true, msg: languageMessage.ReportShared});
+                return response.status(200).json({ success: true, msg: request.__('report_shared_successfully')});
             });
             });
          })
@@ -4202,7 +4213,7 @@ const shareReportToDoctor = async ( request, response) =>{
     catch (error) {
         return response.status(500).json({
             success: false,
-            msg: languageMessage.internalServerError, 
+            msg: request.__('internal_server_error'), 
             error: error.message
         });
     }
