@@ -28,5 +28,9 @@
 	"provide_date_as_comma_separated": "Por favor proporcione la(s) fecha(s) en formato YYYY-MM-DD como valores separados por comas para el horario mensual",
 	"medication_taken_successfully": "Medicación tomada correctamente",
 	"medication_not_taken": "Medicación no tomada",
-	"time_updated_successfully": "Hora actualizada correctamente"
+	"time_updated_successfully": "Hora actualizada correctamente",
+	"data_not_found": "Datos no encontrados",
+	"medication_updated_successfully": "Medicación actualizada correctamente",
+	"data_updated_successfully": "Datos actualizados correctamente",
+	"report_shared_successfully": "Reporte compartido correctamente"
 }

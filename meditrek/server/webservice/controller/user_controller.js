@@ -1773,7 +1773,7 @@ const resetPassword = async (request, response) => {
         ? language_code
         : await getUserLanguage({ user_id });
 
-    req.setLocale(finalLanguage);
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -2784,7 +2784,12 @@ const signIn = async (request, response) => {
 
             const userName = user.name || "User";
 
-            otpStore[emailNormalized] = otp;
+            //otpStore[emailNormalized] = otp;
+
+            await query(
+                "UPDATE user_master SET otp = ? WHERE user_id = ?",
+                [otp, user.user_id]
+            );
 
             await mailer(
                 emailNormalized,
@@ -2814,15 +2819,96 @@ const signIn = async (request, response) => {
     }
 };
 
+// const verifyUserLoginOtp = async (req, res) => {
+
+    //     try {
+
+    //         const emailNormalized = req.body.email
+    //             ? req.body.email.trim().toLowerCase()
+    //             : "";
+            
+    //         const { otp, language_code } = req.body;
+
+    //         const finalLanguage = language_code && language_code.trim() !== ""
+    //             ? language_code
+    //             : await getUserLanguage({ emailNormalized });
+
+    //         req.setLocale(finalLanguage);
+
+    //         if (!otpStore[emailNormalized]) {
+    //             console.log(1);
+    //             return res.status(200).json({
+    //                 success: false,
+    //                 msg: res.__('invalid_otp')
+    //             });
+    //         }
+
+    //         if (String(otpStore[emailNormalized]) !== String(otp)) {
+    //             return res.status(200).json({
+    //                 success: false,
+    //                 msg: res.__('invalid_otp')
+    //             });
+    //         }
+
+    //         const sql = `
+    //             SELECT user_id 
+    //             FROM user_master 
+    //             WHERE LOWER(email) = ? AND delete_flag = 0
+    //             LIMIT 1
+    //         `;
+
+    //         connection.query(sql, [emailNormalized], async (err, result) => {
+
+    //             if (err || result.length === 0) {
+    //                 return res.status(200).json({
+    //                     success: false,
+    //                     msg: res.__('user_not_found')
+    //                 });
+    //             }
+
+    //             const user_id = result[0].user_id;
+
+    //             const token = jwt.sign(
+    //                 { user_id },
+    //                 process.env.SECRET_KEY,
+    //                 { expiresIn: "7d" }
+    //             );
+
+    //             delete otpStore[emailNormalized];
+
+    //             const userDetails = await getUserDetails(user_id);
+
+    //             return res.status(200).json({
+    //                 success: true,
+    //                 msg: res.__('login_successful'),
+    //                 token,
+    //                 userDataArray: userDetails
+    //             });
+
+    //         });
+
+    //     } catch (error) {
+    //         return res.status(200).json({
+    //             success: false,
+    //             msg: error.message
+    //         });
+    //     }
+    // };
+
 const verifyUserLoginOtp = async (req, res) => {
-
     try {
-
         const emailNormalized = req.body.email
             ? req.body.email.trim().toLowerCase()
             : "";
-        
+
         const { otp, language_code } = req.body;
+
+        if (!emailNormalized || !otp) {
+            return res.status(200).json({
+                success: false,
+                msg: "Email and OTP are required"
+            });
+        }
 
         const finalLanguage = language_code && language_code.trim() !== ""
             ? language_code
@@ -2830,56 +2916,52 @@ const verifyUserLoginOtp = async (req, res) => {
 
         req.setLocale(finalLanguage);
 
-        if (!otpStore[emailNormalized]) {
-            console.log(1);
+        // Get user + OTP from DB
+        const users = await query(
+            `SELECT user_id, otp 
+             FROM user_master 
+             WHERE LOWER(email) = ? AND delete_flag = 0 
+             LIMIT 1`,
+            [emailNormalized]
+        );
+
+        if (users.length === 0) {
+            return res.status(200).json({
+                success: false,
+                msg: res.__('user_not_found')
+            });
+        }
+
+        const user = users[0];
+
+        // Match OTP
+        if (String(user.otp) !== String(otp)) {
             return res.status(200).json({
                 success: false,
                 msg: res.__('invalid_otp')
             });
         }
 
-        if (String(otpStore[emailNormalized]) !== String(otp)) {
-            return res.status(200).json({
-                success: false,
-                msg: res.__('invalid_otp')
-            });
-        }
+        // Generate token
+        const token = jwt.sign(
+            { user_id: user.user_id },
+            process.env.SECRET_KEY,
+            { expiresIn: "7d" }
+        );
 
-        const sql = `
-            SELECT user_id 
-            FROM user_master 
-            WHERE LOWER(email) = ? AND delete_flag = 0
-            LIMIT 1
-        `;
+        // Clear OTP after success
+        await query(
+            "UPDATE user_master SET otp = NULL WHERE user_id = ?",
+            [user.user_id]
+        );
 
-        connection.query(sql, [emailNormalized], async (err, result) => {
+        const userDetails = await getUserDetails(user.user_id);
 
-            if (err || result.length === 0) {
-                return res.status(200).json({
-                    success: false,
-                    msg: res.__('user_not_found')
-                });
-            }
-
-            const user_id = result[0].user_id;
-
-            const token = jwt.sign(
-                { user_id },
-                process.env.SECRET_KEY,
-                { expiresIn: "7d" }
-            );
-
-            delete otpStore[emailNormalized];
-
-            const userDetails = await getUserDetails(user_id);
-
-            return res.status(200).json({
-                success: true,
-                msg: res.__('login_successful'),
-                token,
-                userDataArray: userDetails
-            });
-
+        return res.status(200).json({
+            success: true,
+            msg: res.__('login_successful'),
+            token,
+            userDataArray: userDetails
         });
 
     } catch (error) {

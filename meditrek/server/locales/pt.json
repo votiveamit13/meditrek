@@ -28,5 +28,9 @@
 	"provide_date_as_comma_separated": "Por favor, forneça a(s) data(s) no formato YYYY-MM-DD como valores separados por vírgula para a programação mensal",
 	"medication_taken_successfully": "Medicação tomada com sucesso",
 	"medication_not_taken": "Medicação não tomada",
-	"time_updated_successfully": "Hora atualizada com sucesso"
+	"time_updated_successfully": "Hora atualizada com sucesso",
+	"data_not_found": "Dados não encontrados",
+	"medication_updated_successfully": "Medicação atualizada com sucesso",
+	"data_updated_successfully": "Dados atualizados com sucesso",
+	"report_shared_successfully": "Relatório compartilhado com sucesso"
 }

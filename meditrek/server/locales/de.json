@@ -28,5 +28,9 @@
 	"provide_date_as_comma_separated": "Bitte geben Sie Datum(e) im Format YYYY-MM-DD als durch Kommas getrennte Werte für den Monatsplan an",
 	"medication_taken_successfully": "Medikament erfolgreich eingenommen",
 	"medication_not_taken": "Medikament nicht eingenommen",
-	"time_updated_successfully": "Zeit erfolgreich aktualisiert"
+	"time_updated_successfully": "Zeit erfolgreich aktualisiert",
+	"data_not_found": "Daten nicht gefunden",
+	"medication_updated_successfully": "Medikament erfolgreich aktualisiert",
+	"data_updated_successfully": "Daten erfolgreich aktualisiert",
+	"report_shared_successfully": "Bericht erfolgreich geteilt"
 }
