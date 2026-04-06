@@ -2418,7 +2418,7 @@ const addTemperature = async (request, response) => {
 
 const addCustomMeasure = async (request, response) => {
 
-    const { user_id, symptom, symptom_range } = request.body;
+    const { user_id, symptom, symptom_range, language_code } = request.body;
 
 
 
@@ -2428,7 +2428,11 @@ const addCustomMeasure = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2436,12 +2440,12 @@ const addCustomMeasure = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2451,9 +2455,9 @@ const addCustomMeasure = async (request, response) => {
 
         connection.query(insertQuery, [user_id, symptom, symptom_range], (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            return response.status(200).json({ success: true, msg: languageMessage.dataInserted });
+            return response.status(200).json({ success: true, msg: request.__('data_inserted_successfully') });
 
         });
 
@@ -2471,7 +2475,7 @@ const addCustomMeasure = async (request, response) => {
 
 const editCustomMeasure = async (request, response) => {
 
-    const { user_id, measurement_id, symptom, symptom_range } = request.body;
+    const { user_id, measurement_id, symptom, symptom_range, language_code } = request.body;
 
 
 
@@ -2481,6 +2485,11 @@ const editCustomMeasure = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
@@ -2489,12 +2498,12 @@ const editCustomMeasure = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2522,7 +2531,7 @@ const editCustomMeasure = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     error: err.message
 
@@ -2538,7 +2547,7 @@ const editCustomMeasure = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.dataNotFound
+                    msg: request.__('data_not_found')
 
                 });
 
@@ -2550,7 +2559,7 @@ const editCustomMeasure = async (request, response) => {
 
                 success: true,
 
-                msg: languageMessage.dataUpdated
+                msg: request.__('data_updated_successfully')
 
             });
 
@@ -2570,7 +2579,7 @@ const editCustomMeasure = async (request, response) => {
 
 const deleteCustomMeasure = async (request, response) => {
 
-    const { user_id, measurement_id } = request.body;
+    const { user_id, measurement_id, language_code } = request.body;
 
 
 
@@ -2580,7 +2589,11 @@ const deleteCustomMeasure = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2588,13 +2601,13 @@ const deleteCustomMeasure = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2622,7 +2635,7 @@ const deleteCustomMeasure = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.internalServerError,
+                    msg: request.__('internal_server_error'),
 
                     error: err.message
 
@@ -2638,7 +2651,7 @@ const deleteCustomMeasure = async (request, response) => {
 
                     success: false,
 
-                    msg: languageMessage.dataNotFound
+                    msg: request.__('data_not_found')
 
                 });
 
@@ -2650,7 +2663,7 @@ const deleteCustomMeasure = async (request, response) => {
 
                 success: true,
 
-                msg: languageMessage.dataDeleted
+                msg: request.__('data_deleted_successfully')
 
             });
 

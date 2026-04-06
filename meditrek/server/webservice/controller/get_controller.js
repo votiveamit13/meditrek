@@ -4445,7 +4445,7 @@ const getTemperatureDataStats = async (request, response) => {
 
 //  delete doctor api 
 const deleteDoctor = async( request, response) =>{
-    const { user_id, doctor_id} = request.body;
+    const { user_id, doctor_id, language_code} = request.body;
     try{
         if(!user_id){
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key :'user_id'});
@@ -4455,47 +4455,53 @@ const deleteDoctor = async( request, response) =>{
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'doctor_id'});
         }
 
+        const finalLanguage = language_code && language_code.trim() !== ""
+            ? language_code
+            : await getUserLanguage({ user_id });
+
+        request.setLocale(finalLanguage);
+
         const sql = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
         connection.query(sql, [user_id], async(err, res) =>{
             if(err){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message});
             }
             if(res.length == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound})
+                return response.status(200).json({ success: false, msg: request.__('data_not_found') })
             }
 
             if(res[0].active_flag == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.msgAccountdeactivated, active_flag : 0});
+                return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_flag : 0});
             }
 
         const sql = 'SELECT doctor_id, user_id FROM patient_master WHERE user_id = ? AND doctor_id = ? AND delete_flag = 0';
         connection.query(sql, [user_id, doctor_id], async(err1, res1) =>{
             if(err1){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err1.message});
             }
 
             if(res1.length > 0){
                 const update = 'UPDATE patient_master SET delete_flag = 1, updatetime = NOW() WHERE user_id = ? AND doctor_id = ?';
                 connection.query(update, [user_id, doctor_id], async(err2, res2) =>{
                     if(err1){
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
+                        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err1.message});
                     }
                     if(res2.affectedRows > 0){
-                        return response.status(200).json({ success: true, msg : languageMessage.DoctordeleteSuccess});
+                        return response.status(200).json({ success: true, msg : request.__('doctor_deleted_successfully') });
                     }
                     else{
-                        return response.status(200).json({ success: false, msg: languageMessage.DoctorDeleteUnsuccess});
+                        return response.status(200).json({ success: false, msg: request.__('doctor_has_not_been_deleted_please_try_again') });
                     }
                 })
             }
             else{
-                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound})
+                return response.status(200).json({ success: false, msg: request.__('data_not_found') });
             }
         })
         })
     }
     catch(error){
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: error.message});
     }
 }
 // delete doctor end 

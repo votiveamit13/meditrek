@@ -34,5 +34,8 @@
 	"data_updated_successfully": "Datos actualizados correctamente",
 	"report_shared_successfully": "Reporte compartido correctamente",
 	"data_inserted_successfully": "Datos insertados correctamente",
-	"information_shared_successfully": "Información compartida correctamente"
+	"information_shared_successfully": "Información compartida correctamente",
+	"doctor_deleted_successfully": "Doctor eliminado correctamente",
+	"doctor_has_not_been_deleted_please_try_again": "El doctor no ha sido eliminado, por favor intente de nuevo",
+	"data_deleted_successfully": "Datos eliminados correctamente"
 }
