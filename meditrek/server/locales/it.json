@@ -34,5 +34,8 @@
 	"data_updated_successfully": "Dati aggiornati con successo",
 	"report_shared_successfully": "Rapporto condiviso con successo",
 	"data_inserted_successfully": "Dati inseriti con successo",
-	"information_shared_successfully": "Informazioni condivise con successo"
+	"information_shared_successfully": "Informazioni condivise con successo",
+	"doctor_deleted_successfully": "Dottore eliminato con successo",
+	"doctor_has_not_been_deleted_please_try_again": "Il dottore non è stato eliminato, riprova",
+	"data_deleted_successfully": "Dati eliminati con successo"
 }
