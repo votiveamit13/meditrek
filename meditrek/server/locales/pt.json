@@ -37,5 +37,6 @@
 	"information_shared_successfully": "Informação compartilhada com sucesso",
 	"doctor_deleted_successfully": "Médico excluído com sucesso",
 	"doctor_has_not_been_deleted_please_try_again": "O médico não foi excluído, por favor tente novamente",
-	"data_deleted_successfully": "Dados excluídos com sucesso"
+	"data_deleted_successfully": "Dados excluídos com sucesso",
+	"data_found": "Dados encontrados"
 }

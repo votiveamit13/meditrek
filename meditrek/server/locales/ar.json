@@ -37,5 +37,6 @@
 	"information_shared_successfully": "تمت مشاركة المعلومات بنجاح",
 	"doctor_deleted_successfully": "تم حذف الطبيب بنجاح",
 	"doctor_has_not_been_deleted_please_try_again": "لم يتم حذف الطبيب، يرجى المحاولة مرة أخرى",
-	"data_deleted_successfully": "تم حذف البيانات بنجاح"
+	"data_deleted_successfully": "تم حذف البيانات بنجاح",
+	"data_found": "تم العثور على البيانات"
 }
