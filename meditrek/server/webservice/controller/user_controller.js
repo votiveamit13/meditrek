@@ -2839,7 +2839,7 @@ const signIn = async (request, response) => {
                         console.error("Notification check error:", err.message);
                         return; // ❌ don't send response
                     }
-
+    
                     if (Notificationresults.length > 0) {
 
                         const updateQuery = `
@@ -2850,7 +2850,7 @@ const signIn = async (request, response) => {
 
                         connection.query(
                             updateQuery,
-                            [device_type, player_id, formattedDate, formattedDate, emailNormalized],
+                            [device_type, player_id, formattedDate, formattedDate, user.user_id],
                             (err) => {
                                 if (err) console.error("Notification update error:", err.message);
                             }
@@ -2860,13 +2860,13 @@ const signIn = async (request, response) => {
 
                         const insertQuery = `
                             INSERT INTO user_notification 
-                            (email, device_type, player_id, inserttime, createtime) 
+                            (user_id, device_type, player_id, inserttime, createtime) 
                             VALUES (?, ?, ?, ?, ?)
                         `;
 
                         connection.query(
                             insertQuery,
-                            [emailNormalized, device_type, player_id, formattedDate, formattedDate],
+                            [user.user_id, device_type, player_id, formattedDate, formattedDate],
                             (err) => {
                                 if (err) console.error("Notification insert error:", err.message);
                             }
