@@ -5826,11 +5826,11 @@ const getPatientAnalyticsCustomTable = (req, res) => {
     }
   }
 
-  if (disease.length > 0) {
-    const cond = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
-    where += ` AND (${cond})`;
-    disease.forEach(d => params.push(`%${d}%`));
-  }
+  // if (disease.length > 0) {
+  //   const cond = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+  //   where += ` AND (${cond})`;
+  //   disease.forEach(d => params.push(`%${d}%`));
+  // }
 
   if (symptoms.length > 0) {
     where += ` AND EXISTS (
@@ -5933,13 +5933,22 @@ const getPatientAnalyticsCustomTable = (req, res) => {
       });
 
       let matchedPatients = finalPatients;
+      // ✅ DISEASE FILTER
+      if (Array.isArray(disease) && disease.length > 0) {
+        const selectedDiseases = disease.map(d => d.toLowerCase().trim());
 
+        matchedPatients = matchedPatients.filter(p =>
+          (p.diseases || []).some(d =>
+            selectedDiseases.includes(d.toLowerCase().trim())
+          )
+        );
+      }
       if (Array.isArray(medication) && medication.length > 0) {
         const selectedMeds = medication.map(m => m.toLowerCase().trim());
 
         // ✅ SAME SINGLE ONLY LOGIC
         if (singleOnly && medication.length === 1) {
-          matchedPatients = finalPatients.filter(p => {
+          matchedPatients = matchedPatients.filter(p => {
             const meds = (p.medications || []).map(m => m.name.toLowerCase().trim());
             return meds.length === 1 && selectedMeds.includes(meds[0]);
           });
@@ -5947,7 +5956,7 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 
         // ✅ SAME COMBINED ONLY LOGIC
         else if (combinedOnly && medication.length >= 2) {
-          matchedPatients = finalPatients.filter(p => {
+          matchedPatients = matchedPatients.filter(p => {
             const meds = (p.medications || [])
               .map(m => m.name.toLowerCase().trim())
               .sort();
@@ -5961,7 +5970,7 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 
         // ✅ DEFAULT
         else {
-          matchedPatients = finalPatients.filter(p =>
+          matchedPatients = matchedPatients.filter(p =>
             (p.medications || []).some(m =>
               selectedMeds.includes(m.name.toLowerCase().trim())
             )
@@ -9543,12 +9552,12 @@ const getSubadminMedicationFull = (req, res) => {
 
           let selectedMedCount = 0;
 
-          // ✅ FILTER CASE → sirf input ka count
+          //
           if (Array.isArray(medication) && medication.length > 0) {
             selectedMedCount = medication.length;
 
           } else {
-            // ✅ NO FILTER → old SQL wala logic
+            
             selectedMedCount = totalRes[0].total;
           }
 
