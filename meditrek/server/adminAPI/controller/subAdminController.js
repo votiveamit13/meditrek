@@ -6812,19 +6812,13 @@ const getDiseaseDashboard = (req, res) => {
       connection.query(diseaseSql, params, (err, diseaseRows) => {
         if (err) return res.json({ success: false, msg: err.message });
 
-        // const disease_distribution = diseaseRows.map(r => ({
-        //   name: cleanDiseaseString(r.name),
-        //   count: r.count,
-        //   percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
-        // }));
-        let disease_distribution = diseaseRows.map(r => ({
-        name: cleanDiseaseString(r.name),
-        count: r.count,
-        percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
-      }));
-
-      // Sort descending by count
-      disease_distribution.sort((a, b) => b.count - a.count);
+        const disease_distribution = diseaseRows.map(r => ({
+          name: cleanDiseaseString(r.name),
+          count: r.count,
+          percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
+        }))
+        .sort((a, b) => b.count - a.count);
+   
 
         const ageSql = `
           SELECT 
@@ -9598,7 +9592,8 @@ const getSubadminMedicationFull = (req, res) => {
             percentage: totalPatients
               ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
               : "0.00%"
-          }));
+          }))
+          .sort((a, b) => b.patient_count - a.patient_count);;
 
           const graph = Object.keys(medMap).map(name => ({
             name,
