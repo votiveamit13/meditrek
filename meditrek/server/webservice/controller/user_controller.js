@@ -2828,11 +2828,11 @@ const signIn = async (request, response) => {
 
             }
 
-            const checkQuery = `SELECT email FROM user_notification WHERE email = ?`;
+            const checkQuery = `SELECT user_id FROM user_notification WHERE user_id = ?`;
 
             connection.query(
                 checkQuery,
-                [emailNormalized],
+                [user.user_id],
                 (err, Notificationresults) => {
 
                     if (err) {
@@ -2845,7 +2845,7 @@ const signIn = async (request, response) => {
                         const updateQuery = `
                             UPDATE user_notification 
                             SET device_type = ?, player_id = ?, inserttime = ?, updatetime = ? 
-                            WHERE email = ?
+                            WHERE user_id = ?
                         `;
 
                         connection.query(
@@ -3064,13 +3064,19 @@ const verifyUserLoginOtp = async (req, res) => {
 
 const getUserNotification = async (request, response) => {
 
-    let { user_id } = request.query;
+    let { user_id, language_code } = request.query;
 
     if (!user_id) {
 
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
 
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -3082,25 +3088,25 @@ const getUserNotification = async (request, response) => {
 
             if (err) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
             }
 
             if (result.length === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
             }
 
             if (result[0]?.active_flag === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('user_deactivated'), active_flag: 0 });
 
             }
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -3124,7 +3130,7 @@ const getUserNotification = async (request, response) => {
 
                 if (err) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
                 }
 
@@ -3132,7 +3138,7 @@ const getUserNotification = async (request, response) => {
 
                 if (notifications.length === 0) {
 
-                    return response.status(200).json({ success: true, msg: languageMessage.dataNotFound, notifications: [] });
+                    return response.status(200).json({ success: true, msg: request.__('data_not_found'), notifications: [] });
 
                 }
 
@@ -3206,13 +3212,13 @@ const getUserNotification = async (request, response) => {
 
                     if (updateErr) {
 
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: updateErr.message });
+                        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: updateErr.message });
 
                     }
 
 
 
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, notifications: finalArr });
+                    return response.status(200).json({ success: true, msg: request.__('data_found'), notifications: finalArr });
 
                 });
 
@@ -3224,7 +3230,7 @@ const getUserNotification = async (request, response) => {
 
     } catch (err) {
 
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
     }
 
