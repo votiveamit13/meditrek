@@ -801,13 +801,19 @@ const userResendOtp = async (req, res) => {
 
 const deleteAccount = async (request, response) => {
 
-    let { user_id, reason } = request.body
+    let { user_id, reason, language_code } = request.body
 
     if (!user_id || !reason) {
 
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
 
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -819,25 +825,25 @@ const deleteAccount = async (request, response) => {
 
             if (err) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
             }
 
             if (result.length === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
             }
 
             if (result[0]?.active_flag === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_status: 0 });
 
             }
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -855,7 +861,7 @@ const deleteAccount = async (request, response) => {
 
                 if (err) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err });
 
                 }
 
@@ -865,7 +871,7 @@ const deleteAccount = async (request, response) => {
 
                     if (error1) {
 
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: error1 });
+                        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: error1 });
 
                     }
 
@@ -873,7 +879,7 @@ const deleteAccount = async (request, response) => {
 
                     const userDetails = await getUserDetails(user_id);
 
-                    return response.status(200).json({ success: true, msg: languageMessage.profileDeleteSuccess, userDataArray: userDetails });
+                    return response.status(200).json({ success: true, msg: request.__('profile_deleted_successfully'), userDataArray: userDetails });
 
                 });
 
@@ -883,7 +889,7 @@ const deleteAccount = async (request, response) => {
 
     } catch (err) {
 
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
     }
 

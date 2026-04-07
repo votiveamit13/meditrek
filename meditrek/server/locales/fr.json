@@ -38,5 +38,6 @@
   "doctor_deleted_successfully": "Médecin supprimé avec succès",
   "doctor_has_not_been_deleted_please_try_again": "Le médecin n'a pas été supprimé, veuillez réessayer",
   "data_deleted_successfully": "Données supprimées avec succès",
-  "data_found": "Données trouvées"
+  "data_found": "Données trouvées",
+  "profile_deleted_successfully": "Profil supprimé avec succès"
 }
