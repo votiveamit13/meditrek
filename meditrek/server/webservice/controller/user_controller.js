@@ -2800,6 +2800,96 @@ const signIn = async (request, response) => {
                 otp
             );
 
+            let token;
+
+            try {
+
+                token = await jwt.sign(
+
+                    { user_id: user.user_id },
+
+                    process.env.SECRET_KEY,
+
+                    { expiresIn: "24h", algorithm: "HS256" }
+
+                );
+
+            } catch (err) {
+
+                return response.status(200).json({
+
+                    success: false,
+
+                    msg: languageMessage.internalServerError,
+
+                    key: err.message,
+
+                });
+
+            }
+
+            const checkQuery = `SELECT email FROM user_notification WHERE email = ?`;
+
+            connection.query(
+                checkQuery,
+                [emailNormalized],
+                (err, Notificationresults) => {
+
+                    if (err) {
+                        console.error("Notification check error:", err.message);
+                        return; // ❌ don't send response
+                    }
+
+                    if (Notificationresults.length > 0) {
+
+                        const updateQuery = `
+                            UPDATE user_notification 
+                            SET device_type = ?, player_id = ?, inserttime = ?, updatetime = ? 
+                            WHERE email = ?
+                        `;
+
+                        connection.query(
+                            updateQuery,
+                            [device_type, player_id, formattedDate, formattedDate, emailNormalized],
+                            (err) => {
+                                if (err) console.error("Notification update error:", err.message);
+                            }
+                        );
+
+                    } else {
+
+                        const insertQuery = `
+                            INSERT INTO user_notification 
+                            (email, device_type, player_id, inserttime, createtime) 
+                            VALUES (?, ?, ?, ?, ?)
+                        `;
+
+                        connection.query(
+                            insertQuery,
+                            [emailNormalized, device_type, player_id, formattedDate, formattedDate],
+                            (err) => {
+                                if (err) console.error("Notification insert error:", err.message);
+                            }
+                        );
+                    }
+
+                    // Update login type (no response here)
+                    const updateLogType = `
+                        UPDATE user_master 
+                        SET login_type = ?, updatetime = ? 
+                        WHERE user_id = ?
+                    `;
+
+                    connection.query(
+                        updateLogType,
+                        [logInType, formattedDate, user.user_id],
+                        (err) => {
+                            if (err) console.error("Login type update error:", err.message);
+                        }
+                    );
+                }
+            );
+
             return response.status(200).json({
                 success: true,
                 msg: request.__('otp_sent_to_email'),
