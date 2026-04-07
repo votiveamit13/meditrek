@@ -38,5 +38,6 @@
 	"doctor_deleted_successfully": "Arzt erfolgreich gelöscht",
 	"doctor_has_not_been_deleted_please_try_again": "Arzt wurde nicht gelöscht, bitte versuchen Sie es erneut",
 	"data_deleted_successfully": "Daten erfolgreich gelöscht",
-	"data_found": "Daten gefunden"
+	"data_found": "Daten gefunden",
+	"profile_deleted_successfully": "Profil erfolgreich gelöscht"
 }

@@ -3559,7 +3559,7 @@ const AddMedication = async (request, response) => {
       timezone,
       language_code
     } = request.body;
-  
+    
     // Required param check
     if (!user_id || !medicine_id || !dosage || !type || schedule === undefined || !remainder_time) {
       return response.status(200).json({
