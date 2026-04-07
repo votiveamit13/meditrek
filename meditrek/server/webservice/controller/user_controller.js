@@ -2800,13 +2800,213 @@ const signIn = async (request, response) => {
                 otp
             );
 
-            return response.status(200).json({
-                success: true,
-                msg: request.__('otp_sent_to_email'),
-                email: emailNormalized,
-                user_id: user.user_id,
-                otp: otp
-            });
+            let token;
+
+            try {
+
+                token = await jwt.sign(
+
+                    { user_id: user.user_id },
+
+                    process.env.SECRET_KEY,
+
+                    { expiresIn: "24h", algorithm: "HS256" }
+
+                );
+
+            } catch (err) {
+
+                return response.status(200).json({
+
+                    success: false,
+
+                    msg: languageMessage.internalServerError,
+
+                    key: err.message,
+
+                });
+
+            }
+
+            const checkQuery = `SELECT user_id FROM user_notification WHERE user_id = ?`;
+
+            connection.query(
+
+                checkQuery,
+
+                [user.user_id],
+
+                (err, Notificationresults) => {
+
+                    if (err) {
+
+                        return response.status(200).json({
+
+                            success: false,
+
+                            msg: languageMessage.internalServerError,
+
+                            error: err.message,
+
+                        });
+
+                    }
+
+                    if (Notificationresults.length > 0) {
+
+                        // Record exists, update it
+
+                        const updateQuery = `UPDATE user_notification SET device_type = ?, player_id = ?, inserttime = ?, updatetime = ? WHERE user_id = ? `;
+
+                        connection.query(
+
+                            updateQuery,
+
+                            [device_type, player_id, formattedDate, formattedDate, user.user_id],
+
+                            async (err) => {
+
+                                if (err) {
+
+                                    return response.status(200).json({
+
+                                        success: false,
+
+                                        msg: languageMessage.internalServerError,
+
+                                        error: err.message,
+
+                                    });
+
+                                }
+
+                                const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
+
+                                connection.query(
+
+                                    updateLogType,
+
+                                    [logInType, formattedDate, user.user_id],
+
+                                    async (err) => {
+
+                                        if (err) {
+
+                                            return response.status(200).json({
+
+                                                success: false,
+
+                                                msg: languageMessage.internalServerError,
+
+                                                error: err.message,
+
+                                            });
+
+                                        }
+
+                                        const userDetails = await getUserDetails(user.user_id);
+
+                                        return response.status(200).json({
+
+                                            success: true,
+
+                                            msg: languageMessage.signInSuccess,
+
+                                            userDataArray: userDetails,
+
+                                            token,
+
+                                        });
+
+                                    })
+
+                            }
+
+                        );
+
+                    } else {
+
+                        const insertQuery = `INSERT INTO user_notification (user_id, device_type, player_id, inserttime, createtime) VALUES (?, ?, ?, ?,?)`;
+
+                        connection.query(
+
+                            insertQuery,
+
+                            [user.user_id, device_type, player_id, formattedDate, formattedDate],
+
+                            async (err) => {
+
+                                if (err) {
+
+                                    return response.status(200).json({
+
+                                        success: false,
+
+                                        msg: languageMessage.internalServerError,
+
+                                        error: err.message,
+
+                                    });
+
+                                }
+
+                                const updateLogType = `UPDATE user_master SET login_type = ?, updatetime = ? WHERE user_id = ? `;
+
+                                connection.query(
+
+                                    updateLogType,
+
+                                    [logInType, formattedDate, user.user_id],
+
+                                    async (err) => {
+
+                                        if (err) {
+
+                                            return response.status(200).json({
+
+                                                success: false,
+
+                                                msg: languageMessage.internalServerError,
+
+                                                error: err.message,
+
+                                            });
+
+                                        }
+
+                                        const userDetails = await getUserDetails(user.user_id);
+
+                                        return response.status(200).json({
+
+                                            success: true,
+
+                                            msg: languageMessage.signInSuccess,
+
+                                            userDataArray: userDetails,
+
+                                            token,
+
+                                        });
+
+                                    })
+
+                            }
+
+                        );
+
+                    }
+
+                }
+
+            );
+
+            // return response.status(200).json({
+            //     success: true,
+            //     msg: request.__('otp_sent_to_email'),
+            //     email: emailNormalized,
+            //     user_id: user.user_id,
+            //     otp: otp
+            // });
 
         });
 
