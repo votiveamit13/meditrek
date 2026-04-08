@@ -3149,7 +3149,7 @@ const getUserNotification = async (request, response) => {
                 }
 
 
-
+                //console.log("Fetched Notifications:", notifications);
                 //  Group by date
 
                 let groupedData = {};
@@ -3185,7 +3185,7 @@ const getUserNotification = async (request, response) => {
                 });
 
 
-
+                //console.log("Grouped Notifications:", groupedData);
                 //  Convert object to array sorted by date desc
 
                 let finalArr = Object.keys(groupedData)
@@ -3332,12 +3332,42 @@ const getReminderData = async (request, response) => {
                     const other_user_id_notification = result.user_id;
 
                     const action = "Reminder";
+                    const action_json_lang = 
+                    {
+                    "en": "Reminder",
+                    "es": "Recordatorio",
+                    "fr": "Rappel",
+                    "it": "Promemoria",
+                    "pt": "Lembrete",
+                    "ar": "تذكير",
+                    "de": "Erinnerung",
+                    };
 
                     const action_id = "0";
 
                     const title = "Medicine Reminder";
+                    const title_json_lang = 
+                    {
+                    "en": "Medicine Reminder",
+                    "es": "Recordatorio de medicina",
+                    "fr": "Rappel de médicament",
+                    "it": "Promemoria del medicinale",
+                    "pt": "Lembrete de medicamento",
+                    "ar": "تذكير الدواء",
+                    "de": "Medikamentenerinnerung",
+                    };
 
                     const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
+                    const message_json_lang = 
+                    {
+                    "en": "⏰ It's time to take your medicine",
+                    "es": "⏰ Es hora de tomar tu medicina",
+                    "fr": "⏰ Il est temps de prendre votre médicament",
+                    "it": "⏰ È ora di prendere il tuo medicinale",
+                    "pt": "⏰ É hora de tomar seu remédio",
+                    "ar": "⏰ حان الوقت لتناول دوائك",
+                    "de": "⏰ Es ist Zeit, Ihre Medizin zu nehmen",
+                    };
 
                     const action_data = {
 
@@ -3370,6 +3400,10 @@ const getReminderData = async (request, response) => {
                             title, title, title, title, title,
 
                             messages, messages, messages, messages, messages,
+
+                            action_json_lang,
+                            title_json_lang,
+                            message_json_lang,
 
                             action_data,
 
