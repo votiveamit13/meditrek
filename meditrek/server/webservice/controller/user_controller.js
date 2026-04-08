@@ -3242,7 +3242,7 @@ const getUserNotification = async (request, response) => {
 
 };
 
-const getReminderData = async (request, response) => {
+const getReminderDataOld = async (request, response) => {
     try {
         const serverTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const serverTime = new Date();
@@ -3370,6 +3370,244 @@ const getReminderData = async (request, response) => {
                             title, title, title, title, title,
 
                             messages, messages, messages, messages, messages,
+
+                            action_data,
+
+                            resolve
+
+                        );
+
+                    });
+
+
+
+                    test = 1;
+
+                    notificationResults.push(notification_arr_check);
+
+
+
+                    notificationsSent++;
+
+
+
+                }
+
+
+
+                return response.status(200).json({
+
+                    success: true,
+
+                    msg: notificationsSent > 0 ?
+
+                        `Reminder Notifications Processed (${notificationsSent} sent)` :
+
+                        test > 0 ? "Notifications prepared but not sent" : "No notifications processed",
+
+                    data,
+
+                    test,
+
+                    notifications_sent: notificationsSent,
+
+                    notification_results: notificationResults
+
+                });
+
+
+
+            } catch (error) {
+
+                console.error('Error in notification processing:', error);
+
+                return response.status(500).json({
+
+                    success: false,
+
+                    msg: "Error processing notifications",
+
+                    error: error.message,
+
+                    test,
+
+                    notifications_sent: notificationsSent,
+
+                    notification_results: notificationResults
+
+                });
+
+            }
+
+        });
+    } catch (err) {
+        return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            key: err.message
+        });
+    }
+};
+
+const getReminderData = async (request, response) => {
+    try {
+        const serverTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const serverTime = new Date();
+
+        const sql = `
+            SELECT 
+                m.medication_id,
+                m.user_id,
+                m.medicine_id,
+                m.dosage,
+                m.type,
+                m.schedule,
+                m.weekday,
+                m.current_quantity,
+                t.time_slots_id,
+                t.time,
+                mm.medicine_name,
+                un.current_timezone
+            FROM medication_master m
+            JOIN time_slots_master t ON t.medication_id = m.medication_id
+            JOIN medicine_master mm ON mm.medicine_id = m.medicine_id
+            JOIN user_notification un ON un.user_id = m.user_id
+            WHERE 
+                m.delete_flag = 0
+                AND t.delete_flag = 0
+                AND m.schedule = 0
+                AND t.taken_status = 0
+                AND m.pause_status = 0
+            ORDER BY m.medication_id DESC;
+        `;
+
+        connection.query(sql, [], async (err, data) => {
+            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+
+            if (!data || data.length === 0) {
+                return response.status(200).json({
+                    success: true,
+                    msg: languageMessage.dataNotFound,
+                    data: "NA",
+                    server_timezone: serverTimezone,
+                    server_time: serverTime
+                });
+            }
+
+            const nowUtc = moment.utc();
+
+            // filter rows matching current local time
+            const filtered = data.filter(row => {
+            const tz = row.current_timezone || "UTC";
+            const nowLocal = nowUtc.clone().tz(tz).format("HH:mm");
+        
+            // Slot normalization
+            const slot = row.time.length === 5 
+                ? row.time
+                : moment(row.time, "HH:mm:ss").format("HH:mm");
+        
+            // Tolerance 1 minute
+            const diff = moment(slot, "HH:mm").diff(moment(nowLocal, "HH:mm"), "minutes");
+            return Math.abs(diff) <= 0;
+        });
+
+
+            if (filtered.length === 0) {
+                return response.status(200).json({
+                    success: true,
+                    msg: "No reminders match current time",
+                    server_timezone: serverTimezone,
+                    server_time: serverTime
+                });
+            }
+
+            // NOW send notifications for filtered
+            let test = 0;
+
+            let notificationResults = [];
+
+            let notificationsSent = 0;
+
+
+
+            try {
+
+                for (const result of filtered) {
+
+                    const user_id_notification = 1;
+
+                    const other_user_id_notification = result.user_id;
+
+                    const action = "Reminder";
+                    const action_json_lang = {
+                        en: "Reminder",
+                        es: "Recordatorio",
+                        fr: "Rappel",
+                        it: "Promemoria",
+                        pt: "Lembrete",
+                        ar: "تذكير",
+                        de: "Erinnerung"
+                    };
+
+                    const action_id = "0";
+
+                    const title = "Medicine Reminder";
+                    const title_json_lang = {
+                        en: title,
+                        es: "Recordatorio de medicina",
+                        fr: "Rappel de médicament",
+                        it: "Promemoria del medicinale",
+                        pt: "Lembrete de medicamento",
+                        ar: "تذكير الدواء",
+                        de: "Medikamentenerinnerung"
+                    };
+
+                    const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
+                    const message_json_lang = {
+                        en: messages,
+                        es: `⏰ Es hora de tomar tu medicina. ${result.medicine_name} – ${result.dosage}`,
+                        fr: `⏰ Il est temps de prendre votre médicament. ${result.medicine_name} – ${result.dosage}`,
+                        it: `⏰ È ora di prendere il tuo medicinale. ${result.medicine_name} – ${result.dosage}`,
+                        pt: `⏰ É hora de tomar seu remédio. ${result.medicine_name} – ${result.dosage}`,
+                        ar: `⏰ حان الوقت لتناول دوائك. ${result.medicine_name} – ${result.dosage}`,
+                        de: `⏰ Es ist Zeit, Ihre Medizin zu nehmen. ${result.medicine_name} – ${result.dosage}`
+                    };
+
+                    const action_data = {
+
+                        user_id: user_id_notification,
+
+                        other_user_id: other_user_id_notification,
+
+                        action_id: action_id,
+
+                        action: action
+
+                    };
+
+
+
+                    // Process notification
+
+                    const notification_arr_check = await new Promise((resolve) => {
+
+                        getNotificationArrSingle(
+
+                            user_id_notification,
+
+                            other_user_id_notification,
+
+                            action,
+
+                            action_id,
+
+                            title, title, title, title, title,
+
+                            messages, messages, messages, messages, messages,
+
+                            action_json_lang,
+                            title_json_lang,
+                            message_json_lang,
 
                             action_data,
 
