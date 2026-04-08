@@ -3867,11 +3867,11 @@ const getPatientMedicationList = async (request, response) => {
               item.schedule = item.schedule == 0 ? "Daily" : item.schedule == 1 ? "Weekly" : "Monthly";
               item.taken_status = item.taken_status == 1; // true/false
               item.type = item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection";
-              const mTime = moment
-                  .utc(item.updatetime)
-                  .tz("Europe/Paris");
+              // const mTime = moment
+              //     .utc(item.updatetime)
+              //     .tz("Europe/Paris");
                 
-                item.updatetime = mTime.format("DD-MM-YYYY hh:mm A");
+              //   item.updatetime = mTime.format("DD-MM-YYYY hh:mm A");
 
               item.schedule_date = item.schedule_date ? moment(item.schedule_date).format("DD-MM-YYYY") : "NA";
               item.added_by = item.added_by == 0 ? "Admin" : item.added_by == 1 ? "User" : "NA";
