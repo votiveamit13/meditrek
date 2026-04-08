@@ -2171,7 +2171,7 @@ const getAllMedicalReports = async (req, res) => {
           });
         }
 
-        const addquery = "INSERT INTO note_master(user_id, doctor_id,description, createtime, updatetime) VALUES (?,?,?,now(), now())"
+        const addquery = "INSERT INTO note_master(user_id, doctor_id,description, createtime, updatetime) VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
         connection.query(addquery, [user_id, doctor_id,description], (addError, addResult) => {
           if (addError) {
             return res.status(200).json({
@@ -2363,7 +2363,7 @@ const getNotes = async (req, res) => {
           note_id: data.note_id,
           user_id: data.user_id,
           description: data.description,
-          createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A")
+          createtime: data.createtime
         }));
 
         // Format the response data
@@ -3272,7 +3272,7 @@ const updateNote = async (req, res) => {
     }
 
     const updateNoteQuery = await new Promise((resolve, reject) => {
-      const updateQuery = "UPDATE note_master SET description = ?, updatetime = now() WHERE note_id = ?";
+      const updateQuery = "UPDATE note_master SET description = ?, updatetime = UTC_TIMESTAMP() WHERE note_id = ?";
       connection.query(updateQuery, [description, note_id], (err, result) => {
         if (err) {
           reject(err);
@@ -10859,7 +10859,6 @@ const getMedicationReportedHealth = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  // Step 1: Get total patients of this doctor (not filtered)
   const totalPatientsSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
@@ -10914,6 +10913,7 @@ const getMedicationReportedHealth = (req, res) => {
 
     const allParams = [...joinParams, ...whereParams];
 
+    // Main query — now includes medication_start_date and reaction_date
     const sql = `
       SELECT
         arm.medicine_id,
@@ -10922,7 +10922,9 @@ const getMedicationReportedHealth = (req, res) => {
         u.name,
         TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
         u.diseases,
-        sm.symptom_name
+        sm.symptom_name,
+        arm.medication_start_date,
+        arm.reaction_date
       ${baseJoin}
       ${where}
       ORDER BY med.medicine_name ASC
@@ -10931,101 +10933,147 @@ const getMedicationReportedHealth = (req, res) => {
     connection.query(sql, allParams, (err2, rows) => {
       if (err2) return res.json({ success: false, error: err2.message });
 
-      let result = {};
+      // Collect all unique user_ids to fetch their full medication lists
+      const userIds = [...new Set(rows.map(r => r.user_id))];
 
-      rows.forEach(r => {
-        const med = r.medicine_name;
+      if (userIds.length === 0) {
+        return res.json({
+          success: true,
+          total_patients: totalPatients,
+          total_medications: 0,
+          page: Number(page),
+          limit: Number(limit),
+          patient_page: Number(patient_page),
+          patient_limit: Number(patient_limit),
+          data: []
+        });
+      }
 
-        if (!result[med]) {
-          result[med] = {
-            medicine_id: r.medicine_id,
-            patients: new Set(),
-            symptoms: {},           // symptom -> Set of user_ids
-            patient_details: {}
-          };
-        }
+      // Fetch all medications for these patients from medication_master
+      const allMedsSql = `
+        SELECT 
+          mm.user_id,
+          med2.medicine_id,
+          med2.medicine_name
+        FROM medication_master mm
+        JOIN medicine_master med2 ON med2.medicine_id = mm.medicine_id
+        WHERE mm.user_id IN (${userIds.map(() => '?').join(',')})
+          AND mm.delete_flag = 0
+      `;
 
-        result[med].patients.add(r.user_id);
+      connection.query(allMedsSql, userIds, (err3, medRows) => {
+        if (err3) return res.json({ success: false, error: err3.message });
 
-        // Count unique patients per symptom
-        if (r.symptom_name) {
-          if (!result[med].symptoms[r.symptom_name]) {
-            result[med].symptoms[r.symptom_name] = new Set();
+        // Build a map: user_id -> array of all their medications
+        const userMedsMap = {};
+        medRows.forEach(m => {
+          if (!userMedsMap[m.user_id]) {
+            userMedsMap[m.user_id] = [];
           }
-          result[med].symptoms[r.symptom_name].add(r.user_id);
-        }
-
-        if (!result[med].patient_details[r.user_id]) {
-          result[med].patient_details[r.user_id] = {
-            user_id: r.user_id,
-            name: r.name,
-            age: r.age,
-            diseases: r.diseases,
-            medications: {
-              id: r.medicine_id,
-              name: r.medicine_name
-            },
-            symptoms: new Set()
-          };
-        }
-
-        if (r.symptom_name) {
-          result[med].patient_details[r.user_id].symptoms.add(r.symptom_name);
-        }
-      });
-
-      let finalData = Object.keys(result).map(med => {
-        const patientCount = result[med].patients.size;
-
-        // percentage out of doctor's total patients
-        const percentage = totalPatients
-          ? ((patientCount / totalPatients) * 100).toFixed(1)
-          : "0.0";
-
-        let symptomData = Object.keys(result[med].symptoms).map(sym => {
-          const count = result[med].symptoms[sym].size; // unique patients
-          const perc = patientCount
-            ? ((count / patientCount) * 100).toFixed(1)
-            : "0.0";
-          return { symptom: sym, count, percentage: perc + "%" };
+          userMedsMap[m.user_id].push({
+            id: m.medicine_id,
+            name: m.medicine_name
+          });
         });
 
-        let allPatients = Object.values(result[med].patient_details);
-        const patientOffset = (patient_page - 1) * patient_limit;
-        let patients = allPatients
-          .slice(patientOffset, patientOffset + Number(patient_limit))
-          .map(p => ({
-            user_id: p.user_id,
-            patient_name: p.name,
-            age: p.age,
-            diseases: p.diseases,
-            medications: p.medications,
-            symptoms: Array.from(p.symptoms).join(", ")
-          }));
+        let result = {};
 
-        return {
-          medication: { id: result[med].medicine_id, name: med },
-          total_patients: patientCount,
-          percentage: percentage + "%",
-          symptoms: symptomData,
-          total_patients_in_medication: allPatients.length,
-          patient_page: Number(patient_page), 
-  patients
-        };
-      });
+        rows.forEach(r => {
+          const med = r.medicine_name;
 
-      const medOffset = (page - 1) * limit;
-      let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+          if (!result[med]) {
+            result[med] = {
+              medicine_id: r.medicine_id,
+              patients: new Set(),
+              symptoms: {},
+              patient_details: {}
+            };
+          }
 
-      return res.json({
-        success: true,
-        total_patients: totalPatients,   // all doctor's patients
-        total_medications: finalData.length,
-        page: Number(page),
-        limit: Number(limit),
-        patient_page: Number(patient_page),
-        patient_limit: Number(patient_limit),
-        data: paginatedMedications
+          result[med].patients.add(r.user_id);
+
+          if (r.symptom_name) {
+            if (!result[med].symptoms[r.symptom_name]) {
+              result[med].symptoms[r.symptom_name] = new Set();
+            }
+            result[med].symptoms[r.symptom_name].add(r.user_id);
+          }
+
+          if (!result[med].patient_details[r.user_id]) {
+            result[med].patient_details[r.user_id] = {
+              user_id: r.user_id,
+              name: r.name,
+              age: r.age,
+              diseases: r.diseases,
+              reacted_medication: {
+                id: r.medicine_id,
+                name: r.medicine_name
+              },
+              medication_start_date: r.medication_start_date,
+              reaction_date: r.reaction_date,
+              symptoms: new Set()
+            };
+          }
+
+          if (r.symptom_name) {
+            result[med].patient_details[r.user_id].symptoms.add(r.symptom_name);
+          }
+        });
+
+        let finalData = Object.keys(result).map(med => {
+          const patientCount = result[med].patients.size;
+          const percentage = totalPatients
+            ? ((patientCount / totalPatients) * 100).toFixed(1)
+            : "0.0";
+
+          let symptomData = Object.keys(result[med].symptoms).map(sym => {
+            const count = result[med].symptoms[sym].size;
+            const perc = patientCount
+              ? ((count / patientCount) * 100).toFixed(1)
+              : "0.0";
+            return { symptom: sym, count, percentage: perc + "%" };
+          });
+
+          let allPatients = Object.values(result[med].patient_details);
+          const patientOffset = (patient_page - 1) * patient_limit;
+          let patients = allPatients
+            .slice(patientOffset, patientOffset + Number(patient_limit))
+            .map(p => ({
+              user_id: p.user_id,
+              patient_name: p.name,
+              age: p.age,
+              diseases: p.diseases,
+              reacted_medication: p.reacted_medication,  // drug that caused reaction
+              all_medications: userMedsMap[p.user_id] || [], // all drugs patient is on
+              medication_start_date: p.medication_start_date,
+              reaction_date: p.reaction_date,
+              symptoms: Array.from(p.symptoms).join(", ")
+            }));
+
+          return {
+            medication: { id: result[med].medicine_id, name: med },
+            total_patients: patientCount,
+            percentage: percentage + "%",
+            symptoms: symptomData,
+            total_patients_in_medication: allPatients.length,
+            patient_page: Number(patient_page),
+            patients
+          };
+        });
+
+        const medOffset = (page - 1) * limit;
+        let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+
+        return res.json({
+          success: true,
+          total_patients: totalPatients,
+          total_medications: finalData.length,
+          page: Number(page),
+          limit: Number(limit),
+          patient_page: Number(patient_page),
+          patient_limit: Number(patient_limit),
+          data: paginatedMedications
+        });
       });
     });
   });
