@@ -244,17 +244,11 @@ async function getNotificationArrSingle(
   message_3,
   message_4,
   message_5,
-  action_json_lang,
-  title_json_lang,
-  message_json_lang,
   action_data,
   callback
 ) {
   const notification_arr = {};
   const action_json = JSON.stringify(action_data);
-  const action_json_lang_str = JSON.stringify(action_json_lang);
-  const title_json_lang_str = JSON.stringify(title_json_lang);
-  const message_json_lang_str = JSON.stringify(message_json_lang);
 
   InsertNotification(
     user_id,
@@ -272,9 +266,6 @@ async function getNotificationArrSingle(
     message_3,
     message_4,
     message_5,
-    action_json_lang_str,
-    title_json_lang_str,
-    message_json_lang_str,
     async (insert_status) => {
       if (insert_status !== "yes") return callback(notification_arr);
 
@@ -312,12 +303,12 @@ async function getNotificationArrSingle(
 
 
 
-function InsertNotification(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, action_json_lang_str, title_json_lang_str, message_json_lang_str, callback) {
+function InsertNotification(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, callback) {
   const utcDate = moment().utc().format('YYYY-MM-DD HH:mm:ss');
   const read_status = '0';
   const delete_flag = '0';
-  const sql = "INSERT INTO user_notification_message(user_id, other_user_id, action, action_id, action_json, title,title_2,title_3,title_4,title_5, message,message_2,message_3,message_4,message_5,action_json_lang,title_json_lang,message_json_lang, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?,?,?,?, ?,?, ?, ?, ?)";
-  connection.query(sql, [user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, action_json_lang_str, title_json_lang_str, message_json_lang_str, read_status, delete_flag, utcDate, utcDate], (error, results) => {
+  const sql = "INSERT INTO user_notification_message(user_id, other_user_id, action, action_id, action_json, title,title_2,title_3,title_4,title_5, message,message_2,message_3,message_4,message_5, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?,?,?,?, ?,?, ?, ?, ?)";
+  connection.query(sql, [user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, read_status, delete_flag, utcDate, utcDate], (error, results) => {
     if (error) {
       callback(error.message);
     } else {
