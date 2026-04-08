@@ -31,6 +31,13 @@ function generate6DigitCode(user_id) {
 
 const moment = require('moment-timezone');
 
+require('moment/locale/ar');
+require('moment/locale/fr');
+require('moment/locale/es');
+require('moment/locale/de');
+require('moment/locale/it');
+require('moment/locale/pt');
+
 
 
 // Get current time in the desired timezone (e.g., Paris)
@@ -3335,8 +3342,11 @@ const getUserNotification = async (request, response) => {
                 let groupedData = {};
 
                 notifications.forEach(data => {
+                    moment.locale(finalLanguage);
 
-                    const dateKey = moment(data.createtime).format("DD MMM, YYYY");
+                    const dateKey = moment(data.createtime)
+                    .locale(finalLanguage)
+                    .format("DD MMM, YYYY");
 
                     if (!groupedData[dateKey]) {
 
