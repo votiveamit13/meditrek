@@ -3339,6 +3339,36 @@ const getReminderData = async (request, response) => {
 
                     const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
 
+                    const action_json_lang_data = {
+                        en: "Reminder",
+                        es: "Recordatorio",
+                        fr: "Rappel",
+                        it: "Promemoria",
+                        pt: "Lembrete",
+                        ar: "تذكير",
+                        de: "Erinnerung",
+                    };
+
+                    const title_json_lang_data = {
+                        en: "Medicine Reminder",
+                        es: "Recordatorio de medicina",
+                        fr: "Rappel de médicament",
+                        it: "Promemoria del medicinale",
+                        pt: "Lembrete de medicamento",
+                        ar: "تذكير الدواء",
+                        de: "Medikamentenerinnerung",
+                    };
+
+                    const message_json_lang_data = {
+                        en: `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`,
+                        es: `⏰ Es hora de tomar tu medicina. ${result.medicine_name} – ${result.dosage}`,
+                        fr: `⏰ Il est temps de prendre votre médicament. ${result.medicine_name} – ${result.dosage}`,
+                        it: `⏰ È tempo di prendere il tuo medicinale. ${result.medicine_name} – ${result.dosage}`,
+                        pt: `⏰ É hora de tomar seu medicamento. ${result.medicine_name} – ${result.dosage}`,
+                        ar: `⏰حان الوقت لأخذ دوائك. ${result.medicine_name} – ${result.dosage}`,
+                        de: `⏰ Es ist Zeit, Ihren Medikament zu nehmen. ${result.medicine_name} – ${result.dosage}`,
+                    };
+
                     const action_data = {
 
                         user_id: user_id_notification,
@@ -3370,6 +3400,12 @@ const getReminderData = async (request, response) => {
                             title, title, title, title, title,
 
                             messages, messages, messages, messages, messages,
+
+                            action_json_lang_data,
+
+                            title_json_lang_data,
+
+                            message_json_lang_data,
 
                             action_data,
 
