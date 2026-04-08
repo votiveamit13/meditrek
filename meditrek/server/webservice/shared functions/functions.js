@@ -229,7 +229,7 @@ async function getUserCurrentTZ(user_id) {
   });
 }
 
-async function getNotificationArrSingle(
+async function getNotificationArrSingleOld(
   user_id,
   other_user_id,
   action,
@@ -301,14 +301,109 @@ async function getNotificationArrSingle(
   );
 }
 
+async function getNotificationArrSingle(
+  user_id,
+  other_user_id,
+  action,
+  action_id,
+  title,
+  title_2,
+  title_3,
+  title_4,
+  title_5,
+  message,
+  message_2,
+  message_3,
+  message_4,
+  message_5,
+  action_json_lang,
+  title_json_lang,
+  message_json_lang,
+  action_data,
+  callback
+) {
+  const notification_arr = {};
+  const action_json = JSON.stringify(action_data);
+  const action_json_lang_str = JSON.stringify(action_json_lang);
+  const title_json_lang_str = JSON.stringify(title_json_lang);
+  const message_json_lang_str = JSON.stringify(message_json_lang);
+
+  InsertNotification(
+    user_id,
+    other_user_id,
+    action,
+    action_id,
+    action_json,
+    title,
+    title_2,
+    title_3,
+    title_4,
+    title_5,
+    message,
+    message_2,
+    message_3,
+    message_4,
+    message_5,
+    action_json_lang_str,
+    title_json_lang_str,
+    message_json_lang_str,
+    async (insert_status) => {
+      if (insert_status !== "yes") return callback(notification_arr);
+
+      getNotificationStatus(other_user_id, async (notification_status) => {
+        if (notification_status !== "yes") return callback(notification_arr);
+
+        const player_id = await getUserPlayerIdAsync(other_user_id);
+
+        if (!player_id) return callback(notification_arr);
+
+        // Build return payload
+        notification_arr.player_id = player_id;
+        notification_arr.title = title;
+        notification_arr.message = message;
+        notification_arr.action_json = action_data;
+
+        // Send via FCM
+        try {
+          await sendFCMPush({
+            token: player_id,
+            title,
+            body: message,
+            data: { action_data: JSON.stringify(action_data) }
+          });
+        } catch (e) {
+          console.error("FCM Send Error:", e.message);
+        }
 
 
-function InsertNotification(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, callback) {
+        return callback(notification_arr);
+      });
+    }
+  );
+}
+
+
+
+function InsertNotificationOld(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, callback) {
   const utcDate = moment().utc().format('YYYY-MM-DD HH:mm:ss');
   const read_status = '0';
   const delete_flag = '0';
   const sql = "INSERT INTO user_notification_message(user_id, other_user_id, action, action_id, action_json, title,title_2,title_3,title_4,title_5, message,message_2,message_3,message_4,message_5, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?,?,?,?, ?,?, ?, ?, ?)";
   connection.query(sql, [user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, read_status, delete_flag, utcDate, utcDate], (error, results) => {
+    if (error) {
+      callback(error.message);
+    } else {
+      callback('yes');
+    }
+  });
+}
+
+function InsertNotification(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, action_json_lang_str, title_json_lang_str, message_json_lang_str, callback) {
+  const utcDate = moment().utc().format('YYYY-MM-DD HH:mm:ss');
+  const read_status = '0';
+  const delete_flag = '0';
+  const sql = "INSERT INTO user_notification_message(user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, action_json_lang, title_json_lang, message_json_lang, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  connection.query(sql, [user_id, other_user_id, action, action_id, action_json, title, title_2, title_3, title_4, title_5, message, message_2, message_3, message_4, message_5, action_json_lang_str, title_json_lang_str, message_json_lang_str, read_status, delete_flag, utcDate, utcDate], (error, results) => {
     if (error) {
       callback(error.message);
     } else {
