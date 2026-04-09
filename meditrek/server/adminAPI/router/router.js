@@ -205,7 +205,7 @@ router.post("/admin-DiseasesMedicine-Summary", getDiseaseMedicineSummaryAdmin);
 router.post("/admin-medication-full", getAdminMedicationFull);
 
 router.post("/admin-medication-disease-dashboard", getMedicationDiseaseDashboardAdmin);
-router.get("/doctor-list ", getDoctorList );
+router.get("/doctor-list", getDoctorList );
 // admin analytics api rout end
 
 module.exports = router;
