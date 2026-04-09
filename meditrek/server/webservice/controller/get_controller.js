@@ -4063,10 +4063,10 @@ const getBPDataStats = async (request, response) => {
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
         if (err || result.length === 0 || result[0].active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
         }
         if (result[0]?.delete_flag == 1) {
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
         }
 
         // SQL Queries
@@ -4104,7 +4104,7 @@ const getBPDataStats = async (request, response) => {
 
         // Fetch today's data first
         connection.query(todayQuery, [user_id], (err, todayResult) => {
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
             const todayData = (() => {
                 if (todayResult.length === 0) return [];
@@ -4135,13 +4135,13 @@ const getBPDataStats = async (request, response) => {
             
             // Fetch weekly, monthly, yearly
             connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
-                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                 connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
-                    if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                    if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                         // Transform data with proper averaging
                         const weeklyData = transformWeeklyData(weeklyResult, timezone, finalLanguage);
@@ -4421,11 +4421,11 @@ const getTemperatureDataStats = async (request, response) => {
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(userQuery, [user_id], (err, result) => {
         if (err || result.length === 0 || result[0].active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
         }
 
         if (result[0]?.delete_flag == 1) {
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
         }
 
         // SQL Queries
@@ -4464,7 +4464,7 @@ const getTemperatureDataStats = async (request, response) => {
 
         // Fetch today's data
         connection.query(todayQuery, [user_id], (err, todayResult) => {
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
             const todayData = todayResult.map(row => ({
                     measurement_id: row.measurement_id,
@@ -4484,15 +4484,15 @@ const getTemperatureDataStats = async (request, response) => {
 
             // Weekly data
             connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
-                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                 // Monthly data
                 connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
-                    if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                    if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                     // Yearly data
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                         // Transform data for graphs
                         const weeklyData = transformWeeklyTemperatureData(weeklyResult || [], timezone, finalLanguage);
@@ -4615,10 +4615,10 @@ const getFastingGlucoseDataStats = async (request, response) => {
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
         if (err || result.length === 0 || result[0].active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
         }
         if (result[0]?.delete_flag == 1) {
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
         }
 
         // Queries
@@ -4655,7 +4655,7 @@ const getFastingGlucoseDataStats = async (request, response) => {
         `;
 
         connection.query(todayQuery, [user_id], (err, todayResult) => {
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
             const todayData = (() => {
                 if (todayResult.length === 0) return [];
@@ -4682,13 +4682,13 @@ const getFastingGlucoseDataStats = async (request, response) => {
             })();
             
             connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
-                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                 connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
-                    if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                    if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                         const weeklyData = transformWeeklyGlucoseData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyGlucoseData(monthlyResult);
@@ -4938,10 +4938,10 @@ const getPPBGSDataStats = async (request, response) => {
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
         if (err || result.length === 0 || result[0].active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
         }
         if (result[0]?.delete_flag == 1) {
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
         }
 
         // Queries
@@ -4979,7 +4979,7 @@ const getPPBGSDataStats = async (request, response) => {
 
         // Get Today's Data
         connection.query(todayQuery, [user_id], (err, todayResult) => {
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
             const todayData = (() => {
                 if (todayResult.length === 0) return [];
@@ -5008,15 +5008,15 @@ const getPPBGSDataStats = async (request, response) => {
             
             // Weekly Data
             connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
-                if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                 // Monthly Data
                 connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
-                    if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                    if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                     // Yearly Data
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                        if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
                         const weeklyData = transformWeeklyPPBGSData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyPPBGSData(monthlyResult);
@@ -5283,14 +5283,14 @@ const getWeightMeasurementDataStats = async (request, response) => {
         if (err || result.length === 0 || result[0].active_flag === 0) {
             return response.status(200).json({
                 success: false,
-                msg: languageMessage.userNotFound
+                msg: request.__('user_not_found')
             });
         }
 
         if (result[0]?.delete_flag == 1) {
             return response.status(200).json({
                 success: false,
-                msg: languageMessage.msgUserDeleted,
+                msg: request.__('your_account_is_not_registered_with_us'),
                 active_flag: 0
             });
         }
@@ -5349,7 +5349,7 @@ const getWeightMeasurementDataStats = async (request, response) => {
                 if (err) {
                     return response.status(200).json({
                         success: false,
-                        msg: languageMessage.internalServerError,
+                        msg: request.__('internal_server_error'),
                         error: err.message
                     });
                 }
@@ -5380,7 +5380,7 @@ const getWeightMeasurementDataStats = async (request, response) => {
                         if (err) {
                             return response.status(200).json({
                                 success: false,
-                                msg: languageMessage.internalServerError,
+                                msg: request.__('internal_server_error'),
                                 error: err.message
                             });
                         }
@@ -5395,7 +5395,7 @@ const getWeightMeasurementDataStats = async (request, response) => {
                                 if (err) {
                                     return response.status(200).json({
                                         success: false,
-                                        msg: languageMessage.internalServerError,
+                                        msg: request.__('internal_server_error'),
                                         error: err.message
                                     });
                                 }
@@ -5410,7 +5410,7 @@ const getWeightMeasurementDataStats = async (request, response) => {
                                         if (err) {
                                             return response.status(200).json({
                                                 success: false,
-                                                msg: languageMessage.internalServerError,
+                                                msg: request.__('internal_server_error'),
                                                 error: err.message
                                             });
                                         }
