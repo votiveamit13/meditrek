@@ -5999,6 +5999,7 @@ const getDocterAllMedicines = async (req, res) => {
 //     });
 //   });
 // };
+// ✅ FIXED: getPatientAnalyticsCustomTable
 const getPatientAnalyticsCustomTable = (req, res) => {
   const {
     doctor_id,
@@ -6038,14 +6039,26 @@ const getPatientAnalyticsCustomTable = (req, res) => {
     }
   }
 
+  // ✅ FIXED: symptom filter now checks report_share_master for information_type=4
+  // and also checks delete_flag on symptoms_master
   if (symptoms.length > 0) {
     where += ` AND EXISTS (
-      SELECT 1 FROM adverse_reaction_master arm2
-      JOIN symptoms_master sm2 ON sm2.symptom_id = arm2.symptom_id
-      WHERE arm2.user_id = u.user_id
-      AND sm2.symptom_name IN (${symptoms.map(() => "?").join(",")})
+      SELECT 1
+      FROM report_share_master r2
+      JOIN adverse_reaction_master arm2
+        ON arm2.user_id = r2.user_id
+        AND arm2.delete_flag = 0
+      JOIN symptoms_master sm2
+        ON sm2.symptom_id = arm2.symptom_id
+        AND sm2.delete_flag = 0
+      WHERE r2.user_id = u.user_id
+        AND r2.doctor_id = ?
+        AND r2.share_type = 0
+        AND r2.delete_flag = 0
+        AND FIND_IN_SET('4', r2.information_type)
+        AND sm2.symptom_name IN (${symptoms.map(() => "?").join(",")})
     )`;
-    params.push(...symptoms);
+    params.push(doctor_id, ...symptoms); // ✅ doctor_id added for r2.doctor_id = ?
   }
 
   const totalSql = `
@@ -6068,12 +6081,21 @@ const getPatientAnalyticsCustomTable = (req, res) => {
         u.gender,
         u.diseases,
 
+        -- ✅ FIXED: reported_symptoms now respects sharing permissions (information_type=4)
         (
           SELECT GROUP_CONCAT(DISTINCT sm2.symptom_name)
-          FROM adverse_reaction_master arm2
-          JOIN symptoms_master sm2 
+          FROM report_share_master r2
+          JOIN adverse_reaction_master arm2
+            ON arm2.user_id = r2.user_id
+            AND arm2.delete_flag = 0
+          JOIN symptoms_master sm2
             ON sm2.symptom_id = arm2.symptom_id
-          WHERE arm2.user_id = u.user_id
+            AND sm2.delete_flag = 0
+          WHERE r2.user_id = u.user_id
+            AND r2.doctor_id = ?
+            AND r2.share_type = 0
+            AND r2.delete_flag = 0
+            AND FIND_IN_SET('4', r2.information_type)
         ) AS reported_symptoms,
 
         (
@@ -6107,14 +6129,13 @@ const getPatientAnalyticsCustomTable = (req, res) => {
       ORDER BY u.name ASC
     `;
 
-    connection.query(dataSql, [...params, doctor_id], (err2, users) => {
+    // ✅ params order: reported_symptoms doctor_id, medications doctor_id, then where params
+    connection.query(dataSql, [doctor_id, doctor_id, ...params], (err2, users) => {
       if (err2) {
         return res.json({ success: false, error: err2.message });
       }
 
       const finalPatients = users.map(user => {
-
-        // ✅ SAFE disease parsing
         let diseases = [];
         try {
           const parsed = JSON.parse(user.diseases);
@@ -6133,13 +6154,10 @@ const getPatientAnalyticsCustomTable = (req, res) => {
             user.gender == 2 ? "Female" :
             user.gender == 3 ? "Other" :
             "Not Specified",
-
           diseases,
-
           reported_symptoms: user.reported_symptoms
             ? user.reported_symptoms.split(",")
             : [],
-
           medications: user.medications
             ? JSON.parse(user.medications)
             : []
@@ -6148,29 +6166,49 @@ const getPatientAnalyticsCustomTable = (req, res) => {
 
       let matchedPatients = finalPatients;
 
-      // ✅ DISEASE FILTER
+      // ✅ SYMPTOM FILTER — post-process filter (mirrors disease/medication pattern)
+      if (Array.isArray(symptoms) && symptoms.length > 0) {
+        const selectedSymptoms = symptoms.map(s => s.toLowerCase().trim());
+
+        if (singleOnly && symptoms.length === 1) {
+          matchedPatients = matchedPatients.filter(p => {
+            const syms = (p.reported_symptoms || []).map(s => s.toLowerCase().trim());
+            return syms.length === 1 && selectedSymptoms.includes(syms[0]);
+          });
+        } else if (combinedOnly && symptoms.length >= 2) {
+          matchedPatients = matchedPatients.filter(p => {
+            const syms = (p.reported_symptoms || []).map(s => s.toLowerCase().trim());
+            return (
+              syms.length === selectedSymptoms.length &&
+              selectedSymptoms.every(s => syms.includes(s))
+            );
+          });
+        } else {
+          matchedPatients = matchedPatients.filter(p =>
+            (p.reported_symptoms || []).some(s =>
+              selectedSymptoms.includes(s.toLowerCase().trim())
+            )
+          );
+        }
+      }
+
+      // Disease filter (unchanged)
       if (Array.isArray(disease) && disease.length > 0) {
         const selectedDiseases = disease.map(d => d.toLowerCase().trim());
-
         if (singleOnly && disease.length === 1) {
           matchedPatients = matchedPatients.filter(p => {
             const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
             return dis.length === 1 && selectedDiseases.includes(dis[0]);
           });
-        }
-
-        else if (combinedOnly && disease.length >= 2) {
+        } else if (combinedOnly && disease.length >= 2) {
           matchedPatients = matchedPatients.filter(p => {
             const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-
             return (
               dis.length === selectedDiseases.length &&
               selectedDiseases.every(d => dis.includes(d))
             );
           });
-        }
-
-        else {
+        } else {
           matchedPatients = matchedPatients.filter(p =>
             (p.diseases || []).some(d =>
               selectedDiseases.includes(d.toLowerCase().trim())
@@ -6179,34 +6217,23 @@ const getPatientAnalyticsCustomTable = (req, res) => {
         }
       }
 
-      // ✅ MEDICATION FILTER
+      // Medication filter (unchanged)
       if (Array.isArray(medication) && medication.length > 0) {
         const selectedMeds = medication.map(m => m.toLowerCase().trim());
-
         if (singleOnly && medication.length === 1) {
           matchedPatients = matchedPatients.filter(p => {
-            const meds = (p.medications || [])
-              .map(m => m?.name?.toLowerCase().trim())
-              .filter(Boolean);
-
+            const meds = (p.medications || []).map(m => m?.name?.toLowerCase().trim()).filter(Boolean);
             return meds.length === 1 && selectedMeds.includes(meds[0]);
           });
-        }
-
-        else if (combinedOnly && medication.length >= 2) {
+        } else if (combinedOnly && medication.length >= 2) {
           matchedPatients = matchedPatients.filter(p => {
-            const meds = (p.medications || [])
-              .map(m => m?.name?.toLowerCase().trim())
-              .filter(Boolean);
-
+            const meds = (p.medications || []).map(m => m?.name?.toLowerCase().trim()).filter(Boolean);
             return (
               meds.length === selectedMeds.length &&
               selectedMeds.every(m => meds.includes(m))
             );
           });
-        }
-
-        else {
+        } else {
           matchedPatients = matchedPatients.filter(p =>
             (p.medications || []).some(m =>
               selectedMeds.includes(m?.name?.toLowerCase().trim())
@@ -11176,49 +11203,35 @@ const getMedicationReportedHealth = (req, res) => {
 //     });
 //   }
 // };
+// ✅ FIXED: getDoctorAllSymptoms
 const getDoctorAllSymptoms = async (req, res) => {
   const doctor_id = req.query.doctor_id;
 
   try {
     if (!doctor_id) {
-      return res.json({
-        success: false,
-        msg: "doctor_id required"
-      });
+      return res.json({ success: false, msg: "doctor_id required" });
     }
 
     const sql = `
       SELECT DISTINCT
-        mm.medicine_id,
-        mm.medicine_name,
         sm.symptom_id,
         sm.symptom_name
       FROM report_share_master r
 
-      JOIN medication_master m 
-        ON m.user_id = r.user_id
-        AND m.delete_flag = 0
-        AND m.createtime <= r.createtime
-
-      JOIN medicine_master mm
-        ON mm.medicine_id = m.medicine_id
-        AND mm.delete_flag = 0
-
-      LEFT JOIN adverse_reaction_master arm
+      JOIN adverse_reaction_master arm
         ON arm.user_id = r.user_id
-        AND arm.medicine_id = m.medicine_id
         AND arm.delete_flag = 0
 
-      LEFT JOIN symptoms_master sm
+      JOIN symptoms_master sm
         ON sm.symptom_id = arm.symptom_id
         AND sm.delete_flag = 0
 
       WHERE r.doctor_id = ?
         AND r.share_type = 0
         AND r.delete_flag = 0
-        AND FIND_IN_SET('1', r.information_type)
+        AND FIND_IN_SET('4', r.information_type)
 
-      ORDER BY mm.medicine_name ASC
+      ORDER BY sm.symptom_name ASC
     `;
 
     connection.query(sql, [doctor_id], (err, result) => {
@@ -11226,45 +11239,15 @@ const getDoctorAllSymptoms = async (req, res) => {
         return res.json({ success: false, msg: "Error", err: err.message });
       }
 
-      const grouped = {};
-
-      result.forEach(row => {
-        if (!grouped[row.medicine_id]) {
-          grouped[row.medicine_id] = {
-            medicine_id: row.medicine_id,
-            medicine_name: row.medicine_name,
-            symptoms: []
-          };
-        }
-
-        if (row.symptom_id && row.symptom_name) {
-          // duplicate avoid
-          const exists = grouped[row.medicine_id].symptoms.find(
-            s => s.symptom_id === row.symptom_id
-          );
-
-          if (!exists) {
-            grouped[row.medicine_id].symptoms.push({
-              symptom_id: row.symptom_id,
-              symptom_name: row.symptom_name
-            });
-          }
-        }
-      });
-
       return res.json({
         success: true,
-        totalMedicines: Object.keys(grouped).length,
-        data: Object.values(grouped)
+        total: result.length,
+        data: result
       });
     });
 
   } catch (error) {
-    return res.json({
-      success: false,
-      msg: "Server error",
-      err: error.message
-    });
+    return res.json({ success: false, msg: "Server error", err: error.message });
   }
 };
 

@@ -187,7 +187,7 @@ router.post("/subadmin-medication-full", getSubadminMedicationFull);
 router.post("/medication-disease-dashboard", getMedicationDiseaseDashboard);
 // report helthapi
 router.post("/medication-reported-health", getMedicationReportedHealth);
-router.post("/report-symptoms", getDoctorAllSymptoms);
+router.get("/report-symptoms", getDoctorAllSymptoms);
 
 router.get("/get_app_content", getAppContent);
 
