@@ -8850,9 +8850,246 @@ const getAdminMedicationFull = (req, res) => {
 
 
 
+const getMedicationDiseaseDashboardAdmin = (req, res) => {
+  const {
+    doctor_id,
+    medication = [],
+    diseases = [],
+    age_group,
+    gender,
+    exclude_disease = [],
+    singleOnly = false,
+    combinedOnly = false,
+    page = 1,
+    limit = 10
+  } = req.body;
+
+  let where = `WHERE p.delete_flag = 0`;
+  let params = [];
+  if (doctor_id) {
+    where += ` AND p.doctor_id = ?`;
+    params.push(doctor_id);
+  }
+
+  const offset = (page - 1) * limit;
+
+  if (gender !== undefined && gender !== null && gender !== "") {
+    where += ` AND u.gender = ?`;
+    params.push(gender);
+  }
+
+  if (age_group) {
+    if (age_group.includes("+")) {
+      const min = parseInt(age_group);
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+      params.push(min);
+    } else {
+      const [min, max] = age_group.split("-");
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      params.push(min, max);
+    }
+  }
+
+  // Total patients
+  const totalSql = `
+    SELECT COUNT(DISTINCT user_id) as total
+    FROM patient_master p
+    ${where}
+  `;
+
+  connection.query(totalSql, params, (err, totalRes) => {
+    if (err) return res.json({ success: false, msg: err.message });
+
+    const totalPatients = totalRes[0].total;
+
+    const matchSql = `
+      SELECT DISTINCT 
+        p.user_id, 
+        u.name,
+        TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+        CASE 
+          WHEN u.gender = 1 THEN 'Male'
+          WHEN u.gender = 2 THEN 'Female'
+          WHEN u.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
+        END as gender,
+        u.diseases
+      FROM patient_master p
+      JOIN user_master u ON u.user_id = p.user_id
+      ${where}
+    `;
+
+    connection.query(matchSql, params, async (err, matchRows) => {
+      if (err) return res.json({ success: false, msg: err.message });
+
+      const promises = matchRows.map(row => new Promise((resolve, reject) => {
+        const checkShare = `
+          SELECT createtime 
+          FROM report_share_master 
+          WHERE user_id = ? AND delete_flag = 0
+          ORDER BY createtime DESC
+          LIMIT 1
+        `;
+
+        connection.query(checkShare, [row.user_id], (err1, shareList) => {
+          if (err1) return reject(err1);
+
+          if (!shareList.length) {
+            row.medications = [];
+            return resolve(row);
+          }
+
+          const shareTime = shareList[0].createtime;
+
+          const medSql = `
+            SELECT DISTINCT a.medicine_id, a.medicine_name
+            FROM medication_master m
+            JOIN medicine_master a ON a.medicine_id = m.medicine_id
+            JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+            WHERE m.user_id = ? AND m.delete_flag = 0 AND tm.delete_flag = 0 AND m.createtime <= ?
+            ORDER BY a.medicine_name ASC
+          `;
+
+          connection.query(medSql, [row.user_id, shareTime], (err2, meds) => {
+            if (err2) return reject(err2);
+
+            row.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
+            resolve(row);
+          });
+        });
+      }));
+
+      let finalRows = await Promise.all(promises);
+
+      const extractDiseases = (dStr) => {
+        if (!dStr) return [];
+        const matches = dStr.match(/name:\s*([^,}]+)/g) || [];
+        return matches.map(d => d.replace("name:", "").trim().toLowerCase());
+      };
+
+      const extractMedNames = (medList) => medList.map(m => m.name.toLowerCase());
+
+      const selectedDiseases = (diseases || []).map(d => d.toLowerCase());
+      const selectedMeds = (medication || []).map(m => m.toLowerCase());
+
+      if (singleOnly && selectedDiseases.length === 1) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
+          return patientDiseases.length === 1 && patientDiseases.includes(selectedDiseases[0]);
+        });
+      } else if (combinedOnly && selectedDiseases.length >= 2) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
+          const hasAll = selectedDiseases.every(d => patientDiseases.includes(d));
+          return hasAll && patientDiseases.length === selectedDiseases.length;
+        });
+      } else if (selectedDiseases.length > 0) {
+        finalRows = finalRows.filter(p => {
+          const patientDiseases = extractDiseases(p.diseases);
+          return selectedDiseases.some(d => patientDiseases.includes(d));
+        });
+      }
+
+      if (selectedMeds.length > 0) {
+        if (singleOnly && selectedMeds.length === 1) {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+            return meds.length === 1 && meds.some(m => m.includes(selectedMeds[0]));
+          });
+        } else if (combinedOnly && selectedMeds.length >= 2) {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+            const matched = selectedMeds.filter(sel => meds.some(m => m.includes(sel)));
+            return matched.length === selectedMeds.length && meds.length === selectedMeds.length;
+          });
+        } else {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+            return selectedMeds.some(sel => meds.some(m => m.includes(sel)));
+          });
+        }
+      }
+
+      const matchedPatients = finalRows.length;
+
+      let diseaseMap = {};
+
+      finalRows.forEach(row => {
+        if (!row.diseases) return;
+        const parts = row.diseases.split("},");
+        parts.forEach(d => {
+          const match = d.match(/name:\s*([^,}]+)/);
+          if (match) {
+            const name = match[1].trim();
+            if (exclude_disease.includes(name)) return;
+            diseaseMap[name] = (diseaseMap[name] || 0) + 1;
+          }
+        });
+      });
+
+      const disease_distribution = Object.keys(diseaseMap).map(name => ({
+        disease: name,
+        patient_count: diseaseMap[name],
+        percent_matched: matchedPatients ? ((diseaseMap[name] / matchedPatients) * 100).toFixed(2) : "0.00",
+        percent_total: totalPatients ? ((diseaseMap[name] / totalPatients) * 100).toFixed(2) : "0.00"
+      }));
+
+      let top_disease = "";
+      let max = 0;
+      disease_distribution.forEach(d => {
+        if (d.patient_count > max) {
+          max = d.patient_count;
+          top_disease = d.disease;
+        }
+      });
+
+      return res.json({
+        success: true,
+        total_patients: totalPatients,
+        matched_patients: matchedPatients,
+        unique_diseases: Object.keys(diseaseMap).length,
+        top_disease,
+        disease_distribution,
+        patients: finalRows.slice(offset, offset + Number(limit))
+      });
+    });
+  });
+};
 
 
+const getDoctorList = (req, res) => {
+  const sql = `
+    SELECT
+      doctor_id,
+      doctor_name,
+      mobile,
+      email,
+      doctor_category_id,
+      approve_status,
+      active_flag
+    FROM doctor_master
+    WHERE
+      approve_status = 1
+      AND active_flag    = 1
+      AND delete_flag    = 0
+    ORDER BY doctor_name ASC
+  `;
 
+  connection.query(sql, [], (err, rows) => {
+    if (err) {
+      return res.json({ success: false, error: err.message });
+    }
+
+    return res.json({
+      success: true,
+      total: rows.length,
+      data: rows.map(r => ({
+        value: r.doctor_id,
+        label: r.doctor_name || `Doctor #${r.doctor_id}`,
+      })),
+    });
+  });
+};
 
 module.exports = {
   // abhich
@@ -8996,4 +9233,6 @@ module.exports = {
   getDiseaseMedicineSummaryAdmin,
   getPatientDiseasesMedicineListAdmin,
   getAdminMedicationFull,
+  getMedicationDiseaseDashboardAdmin,
+  getDoctorList
 };
