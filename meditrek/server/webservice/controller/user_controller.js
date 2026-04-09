@@ -31,6 +31,13 @@ function generate6DigitCode(user_id) {
 
 const moment = require('moment-timezone');
 
+require('moment/locale/ar');
+require('moment/locale/fr');
+require('moment/locale/es');
+require('moment/locale/de');
+require('moment/locale/it');
+require('moment/locale/pt');
+
 
 
 // Get current time in the desired timezone (e.g., Paris)
@@ -46,7 +53,13 @@ const formattedDate = parisTime.format('YYYY-MM-DD HH:mm:ss');
 const query = util.promisify(connection.query).bind(connection);
 const { getUserLanguage } = require('../helpers/languageHelper');
 
-
+function safeParse(str) {
+  try {
+    return str ? JSON.parse(str) : {};
+  } catch (e) {
+    return {};
+  }
+}
 
 
 
@@ -801,13 +814,19 @@ const userResendOtp = async (req, res) => {
 
 const deleteAccount = async (request, response) => {
 
-    let { user_id, reason } = request.body
+    let { user_id, reason, language_code } = request.body
 
     if (!user_id || !reason) {
 
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
 
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     try {
 
@@ -819,25 +838,25 @@ const deleteAccount = async (request, response) => {
 
             if (err) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
             }
 
             if (result.length === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
             }
 
             if (result[0]?.active_flag === 0) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_has_been_deactivated'), active_status: 0 });
 
             }
 
             if (result[0]?.delete_flag == 1) {
 
-                return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+                return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
             }
 
@@ -855,7 +874,7 @@ const deleteAccount = async (request, response) => {
 
                 if (err) {
 
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err });
+                    return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err });
 
                 }
 
@@ -865,7 +884,7 @@ const deleteAccount = async (request, response) => {
 
                     if (error1) {
 
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: error1 });
+                        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: error1 });
 
                     }
 
@@ -873,7 +892,7 @@ const deleteAccount = async (request, response) => {
 
                     const userDetails = await getUserDetails(user_id);
 
-                    return response.status(200).json({ success: true, msg: languageMessage.profileDeleteSuccess, userDataArray: userDetails });
+                    return response.status(200).json({ success: true, msg: request.__('profile_deleted_successfully'), userDataArray: userDetails });
 
                 });
 
@@ -883,7 +902,7 @@ const deleteAccount = async (request, response) => {
 
     } catch (err) {
 
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
 
     }
 
@@ -3062,6 +3081,180 @@ const verifyUserLoginOtp = async (req, res) => {
     }
 };
 
+// const getUserNotification = async (request, response) => {
+
+//     let { user_id, language_code } = request.query;
+
+//     if (!user_id) {
+
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+
+//     }
+
+//     const finalLanguage = language_code && language_code.trim() !== ""
+//         ? language_code
+//         : await getUserLanguage({ user_id });
+
+//     request.setLocale(finalLanguage);
+
+//     try {
+
+//         //   Validate user
+
+//         const query1 = "SELECT mobile, active_flag, delete_flag FROM user_master WHERE user_id = ?";
+
+//         connection.query(query1, [user_id], async (err, result) => {
+
+//             if (err) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//             }
+
+//             if (result.length === 0) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('user_not_found') });
+
+//             }
+
+//             if (result[0]?.active_flag === 0) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('user_deactivated'), active_flag: 0 });
+
+//             }
+
+//             if (result[0]?.delete_flag == 1) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
+
+//             }
+
+
+
+//             //  Fetch notifications sorted by latest first
+
+//             const query2 = `
+
+//                 SELECT notification_message_id, action, title, message, updatetime, createtime
+
+//                 FROM user_notification_message
+
+//                 WHERE other_user_id = ? AND delete_flag = 0
+
+//                 ORDER BY createtime DESC
+
+//             `;
+
+//             connection.query(query2, [user_id], async (err, notifications) => {
+
+//                 if (err) {
+
+//                     return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//                 }
+
+
+
+//                 if (notifications.length === 0) {
+
+//                     return response.status(200).json({ success: true, msg: request.__('data_not_found'), notifications: [] });
+
+//                 }
+
+
+
+//                 //  Group by date
+
+//                 let groupedData = {};
+
+//                 notifications.forEach(data => {
+
+//                     const dateKey = moment(data.createtime).format("DD MMM, YYYY");
+
+//                     if (!groupedData[dateKey]) {
+
+//                         groupedData[dateKey] = [];
+
+//                     }
+//                     const tz = request.query.timezone || 'UTC';
+//                     groupedData[dateKey].push({
+
+//                         notification_message_id: data.notification_message_id,
+
+//                         action: data.action,
+
+//                         title: data.title,
+
+//                         message: data.message,
+
+//                         updatetime: moment.utc(data.createtime).tz(tz).format("YYYY-MM-DD HH:mm:ss"),
+
+//                         time: moment.utc(data.createtime)
+//                             .tz(tz)
+//                             .format("hh:mm A")
+
+//                     });
+
+//                 });
+
+
+
+//                 //  Convert object to array sorted by date desc
+
+//                 let finalArr = Object.keys(groupedData)
+
+//                     .sort((a, b) => new Date(b) - new Date(a))
+
+//                     .map(date => ({
+
+//                         date: date,
+
+//                         notifications: groupedData[date]
+
+//                     }));
+
+
+
+//                 //  Update read status
+
+//                 const update = `
+
+//                     UPDATE user_notification_message 
+
+//                     SET read_status = 1 
+
+//                     WHERE other_user_id = ? AND delete_flag = 0
+
+//                 `;
+
+//                 connection.query(update, [user_id], async (updateErr) => {
+
+//                     if (updateErr) {
+
+//                         return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: updateErr.message });
+
+//                     }
+
+
+
+//                     return response.status(200).json({ success: true, msg: request.__('data_found'), notifications: finalArr });
+
+//                 });
+
+//             });
+
+//         });
+
+
+
+//     } catch (err) {
+
+//         return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//     }
+
+// };
+
 const getUserNotification = async (request, response) => {
 
     let { user_id, language_code } = request.query;
@@ -3116,7 +3309,7 @@ const getUserNotification = async (request, response) => {
 
             const query2 = `
 
-                SELECT notification_message_id, action, title, message, updatetime, createtime
+                SELECT notification_message_id, action, title, message, updatetime, createtime, action_json_lang,title_json_lang,message_json_lang
 
                 FROM user_notification_message
 
@@ -3149,8 +3342,11 @@ const getUserNotification = async (request, response) => {
                 let groupedData = {};
 
                 notifications.forEach(data => {
+                    moment.locale(finalLanguage);
 
-                    const dateKey = moment(data.createtime).format("DD MMM, YYYY");
+                    const dateKey = moment(data.createtime)
+                    .locale(finalLanguage)
+                    .format("DD MMM, YYYY");
 
                     if (!groupedData[dateKey]) {
 
@@ -3158,15 +3354,33 @@ const getUserNotification = async (request, response) => {
 
                     }
                     const tz = request.query.timezone || 'UTC';
+
+                    const actionLangObj = safeParse(data.action_json_lang);
+                    const titleLangObj = safeParse(data.title_json_lang);
+                    const messageLangObj = safeParse(data.message_json_lang);
+                    
+                    const selectedAction =
+                    actionLangObj[finalLanguage] ||
+                    actionLangObj["en"] ||
+                    data.title;
+
+                    const selectedTitle =
+                    titleLangObj[finalLanguage] ||
+                    titleLangObj["en"] ||
+                    data.title;
+
+                    const selectedMessage =
+                    messageLangObj[finalLanguage] ||
+                    messageLangObj["en"] ||
+                    data.message;
+
                     groupedData[dateKey].push({
 
                         notification_message_id: data.notification_message_id,
 
-                        action: data.action,
-
-                        title: data.title,
-
-                        message: data.message,
+                        action: selectedAction,
+                        title: selectedTitle,
+                        message: selectedMessage,
 
                         updatetime: moment.utc(data.createtime).tz(tz).format("YYYY-MM-DD HH:mm:ss"),
 
@@ -3333,6 +3547,36 @@ const getReminderData = async (request, response) => {
 
                     const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
 
+                    const action_json_lang_data = {
+                        en: "Reminder",
+                        es: "Recordatorio",
+                        fr: "Rappel",
+                        it: "Promemoria",
+                        pt: "Lembrete",
+                        ar: "تذكير",
+                        de: "Erinnerung",
+                    };
+
+                    const title_json_lang_data = {
+                        en: "Medicine Reminder",
+                        es: "Recordatorio de medicina",
+                        fr: "Rappel de médicament",
+                        it: "Promemoria del medicinale",
+                        pt: "Lembrete de medicamento",
+                        ar: "تذكير الدواء",
+                        de: "Medikamentenerinnerung",
+                    };
+
+                    const message_json_lang_data = {
+                        en: `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`,
+                        es: `⏰ Es hora de tomar tu medicina. ${result.medicine_name} – ${result.dosage}`,
+                        fr: `⏰ Il est temps de prendre votre médicament. ${result.medicine_name} – ${result.dosage}`,
+                        it: `⏰ È tempo di prendere il tuo medicinale. ${result.medicine_name} – ${result.dosage}`,
+                        pt: `⏰ É hora de tomar seu medicamento. ${result.medicine_name} – ${result.dosage}`,
+                        ar: `⏰حان الوقت لأخذ دوائك. ${result.medicine_name} – ${result.dosage}`,
+                        de: `⏰ Es ist Zeit, Ihren Medikament zu nehmen. ${result.medicine_name} – ${result.dosage}`,
+                    };
+
                     const action_data = {
 
                         user_id: user_id_notification,
@@ -3364,6 +3608,12 @@ const getReminderData = async (request, response) => {
                             title, title, title, title, title,
 
                             messages, messages, messages, messages, messages,
+
+                            action_json_lang_data,
+
+                            title_json_lang_data,
+
+                            message_json_lang_data,
 
                             action_data,
 
