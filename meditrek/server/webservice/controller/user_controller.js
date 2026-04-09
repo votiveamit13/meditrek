@@ -3342,7 +3342,7 @@ const getUserNotification = async (request, response) => {
                 let groupedData = {};
 
                 notifications.forEach(data => {
-                    moment.locale(finalLanguage);
+                    //moment.locale(finalLanguage);
 
                     const dateKey = moment(data.createtime)
                     .locale(finalLanguage)
