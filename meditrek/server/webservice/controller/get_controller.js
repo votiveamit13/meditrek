@@ -10,6 +10,15 @@ const { request } = require("http");
 const { response } = require("express");
 const { connect } = require("http2");
 
+//require('moment/min/locales');
+require('moment/locale/ar');
+require('moment/locale/fr');
+require('moment/locale/es');
+require('moment/locale/de');
+require('moment/locale/it');
+require('moment/locale/pt');
+const { getUserLanguage } = require('../helpers/languageHelper');
+
 // Get current time in the desired timezone (e.g., Paris)
 
 const parisTime = moment().tz(process.env.TIME_ZONE || 'Europe/Paris');
@@ -4039,7 +4048,7 @@ async function getDocumentFileSizeByCategory(category_id, user_id) {
 
 // get bp data graph
 const getBPDataStats = async (request, response) => {
-    const { user_id, type } = request.query;
+    const { user_id, type, language_code } = request.query;
     const timezone =
         request.headers['x-timezone'] ||
         request.query.timezone ||
@@ -4051,6 +4060,11 @@ const getBPDataStats = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'type' });
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
@@ -4110,9 +4124,17 @@ const getBPDataStats = async (request, response) => {
                         systolic_bp: row.systolic_bp,
                         diastolic_bp: row.diastolic_bp,
                         pulse: row.pulse == 0 ? 'NA' : row.pulse,
-                        date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-                       time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+                        //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        date: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("MMMM DD, YYYY"),
 
+                        time: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("hh:mm A")
                     };
                 });
             })();
