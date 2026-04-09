@@ -30,13 +30,13 @@ function generate6DigitCode(user_id) {
 
 
 const moment = require('moment-timezone');
-
-require('moment/locale/ar');
-require('moment/locale/fr');
-require('moment/locale/es');
-require('moment/locale/de');
-require('moment/locale/it');
-require('moment/locale/pt');
+require('moment/min/locales');
+// require('moment/locale/ar');
+// require('moment/locale/fr');
+// require('moment/locale/es');
+// require('moment/locale/de');
+// require('moment/locale/it');
+// require('moment/locale/pt');
 
 
 
@@ -3791,6 +3791,36 @@ const getReminderDataWeekly = async (request, response) => {
 
                     const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
 
+                    const action_json_lang_data = {
+                        en: "Reminder",
+                        es: "Recordatorio",
+                        fr: "Rappel",
+                        it: "Promemoria",
+                        pt: "Lembrete",
+                        ar: "تذكير",
+                        de: "Erinnerung",
+                    };
+
+                    const title_json_lang_data = {
+                        en: "Medicine Reminder",
+                        es: "Recordatorio de medicina",
+                        fr: "Rappel de médicament",
+                        it: "Promemoria del medicinale",
+                        pt: "Lembrete de medicamento",
+                        ar: "تذكير الدواء",
+                        de: "Medikamentenerinnerung",
+                    };
+
+                    const message_json_lang_data = {
+                        en: `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`,
+                        es: `⏰ Es hora de tomar tu medicina. ${result.medicine_name} – ${result.dosage}`,
+                        fr: `⏰ Il est temps de prendre votre médicament. ${result.medicine_name} – ${result.dosage}`,
+                        it: `⏰ È tempo di prendere il tuo medicinale. ${result.medicine_name} – ${result.dosage}`,
+                        pt: `⏰ É hora de tomar seu medicamento. ${result.medicine_name} – ${result.dosage}`,
+                        ar: `⏰حان الوقت لأخذ دوائك. ${result.medicine_name} – ${result.dosage}`,
+                        de: `⏰ Es ist Zeit, Ihren Medikament zu nehmen. ${result.medicine_name} – ${result.dosage}`,
+                    };
+
                     const action_data = {
                         user_id: user_id_notification,
                         other_user_id: other_user_id_notification,
@@ -3806,6 +3836,9 @@ const getReminderDataWeekly = async (request, response) => {
                             action_id,
                             title, title, title, title, title,
                             messages, messages, messages, messages, messages,
+                            action_json_lang_data,
+                            title_json_lang_data,
+                            message_json_lang_data,
                             action_data,
                             resolve
                         );
@@ -3950,6 +3983,36 @@ const getReminderDataMonthly = async (request, response) => {
                     const title = "Medicine Reminder";
                     const messages = `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`;
 
+                    const action_json_lang_data = {
+                        en: "Reminder",
+                        es: "Recordatorio",
+                        fr: "Rappel",
+                        it: "Promemoria",
+                        pt: "Lembrete",
+                        ar: "تذكير",
+                        de: "Erinnerung",
+                    };
+
+                    const title_json_lang_data = {
+                        en: "Medicine Reminder",
+                        es: "Recordatorio de medicina",
+                        fr: "Rappel de médicament",
+                        it: "Promemoria del medicinale",
+                        pt: "Lembrete de medicamento",
+                        ar: "تذكير الدواء",
+                        de: "Medikamentenerinnerung",
+                    };
+
+                    const message_json_lang_data = {
+                        en: `⏰ It's time to take your medicine. ${result.medicine_name} – ${result.dosage}`,
+                        es: `⏰ Es hora de tomar tu medicina. ${result.medicine_name} – ${result.dosage}`,
+                        fr: `⏰ Il est temps de prendre votre médicament. ${result.medicine_name} – ${result.dosage}`,
+                        it: `⏰ È tempo di prendere il tuo medicinale. ${result.medicine_name} – ${result.dosage}`,
+                        pt: `⏰ É hora de tomar seu medicamento. ${result.medicine_name} – ${result.dosage}`,
+                        ar: `⏰حان الوقت لأخذ دوائك. ${result.medicine_name} – ${result.dosage}`,
+                        de: `⏰ Es ist Zeit, Ihren Medikament zu nehmen. ${result.medicine_name} – ${result.dosage}`,
+                    };
+
                     const action_data = {
                         user_id: user_id_notification,
                         other_user_id: other_user_id_notification,
@@ -3965,6 +4028,9 @@ const getReminderDataMonthly = async (request, response) => {
                             action_id,
                             title, title, title, title, title,
                             messages, messages, messages, messages, messages,
+                            action_json_lang_data,
+                            title_json_lang_data,
+                            message_json_lang_data,
                             action_data,
                             resolve
                         );
@@ -4109,6 +4175,36 @@ const refillReminder = async (request, response) => {
 
                     const messages = `⏰ Time to refill your prescription for ${result.medicine_name}.  Refill your ${result.medicine_name} today.`;
 
+                    const action_json_lang_data = {
+                        en: "Refill",
+                        es: "Rellenar",
+                        fr: "Recharge",
+                        it: "Ricarica",
+                        pt: "Recarga",
+                        ar: "إعادة تعبئة",
+                        de: "Nachfüllung",
+                    };
+
+                    const title_json_lang_data = {
+                        en: "Refill Reminder",
+                        es: "Recordatorio de recarga",
+                        fr: "Rappel de rechargement",
+                        it: "Promemoria di ricarica",
+                        pt: "Lembrete de recarga",
+                        ar: "تذكير إعادة التعبئة",
+                        de: "Erinnerung an die Nachfüllung",
+                    };
+
+                    const message_json_lang_data = {
+                        en: `⏰ Time to refill your prescription for ${result.medicine_name}.  Refill your ${result.medicine_name} today.`,
+                        es: `⏰ Es hora de recargar su receta para ${result.medicine_name}. Recargue su ${result.medicine_name} hoy.`,
+                        fr: `⏰ Il est temps de recharger votre ordonnance pour ${result.medicine_name}. Rechargez votre ${result.medicine_name} aujourd'hui.`,
+                        it: `⏰ È ora di ricaricare la tua prescrizione per ${result.medicine_name}. Ricarica il tuo ${result.medicine_name} oggi.`,
+                        pt: `⏰ É hora de recarregar sua prescrição para ${result.medicine_name}. Recarregue seu ${result.medicine_name} hoje.`,
+                        ar: `⏰ حان الوقت لإعادة تعبئة وصفتك الطبية لـ ${result.medicine_name}. قم بإعادة تعبئة ${result.medicine_name} اليوم.`,
+                        de: `⏰ Es ist Zeit, Ihr Rezept für ${result.medicine_name} aufzufüllen. Füllen Sie Ihr ${result.medicine_name} heute auf.`,
+                    };
+
                     const action_data = {
 
                         user_id: user_id_notification,
@@ -4140,6 +4236,12 @@ const refillReminder = async (request, response) => {
                             title, title, title, title, title,
 
                             messages, messages, messages, messages, messages,
+
+                            action_json_lang_data,
+
+                            title_json_lang_data,
+
+                            message_json_lang_data,
 
                             action_data,
 
