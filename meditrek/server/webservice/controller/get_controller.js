@@ -10,13 +10,7 @@ const { request } = require("http");
 const { response } = require("express");
 const { connect } = require("http2");
 
-//require('moment/min/locales');
-require('moment/locale/ar');
-require('moment/locale/fr');
-require('moment/locale/es');
-require('moment/locale/de');
-require('moment/locale/it');
-require('moment/locale/pt');
+require('moment/min/locales');
 const { getUserLanguage } = require('../helpers/languageHelper');
 
 // Get current time in the desired timezone (e.g., Paris)
@@ -4150,9 +4144,9 @@ const getBPDataStats = async (request, response) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
 
                         // Transform data with proper averaging
-                        const weeklyData = transformWeeklyData(weeklyResult);
+                        const weeklyData = transformWeeklyData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyData(monthlyResult);
-                        const yearlyData = transformYearlyData(yearlyResult);
+                        const yearlyData = transformYearlyData(yearlyResult,finalLanguage);
 
                         let filteredData = {};
 
@@ -4222,7 +4216,7 @@ function groupByDateAndAverage(rawData, type = 'daily') {
     return averaged;
 }
 // WEEKLY TRANSFORMATION
-function transformWeeklyData(rawData) {
+function transformWeeklyData(rawData, timezone, finalLanguage) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const averaged = groupByDateAndAverage(rawData); // avg per day
 
@@ -4240,16 +4234,24 @@ function transformWeeklyData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString();
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 systolic_bp: averaged[key].systolic_bp,
                 diastolic_bp: averaged[key].diastolic_bp,
                 pulse: averaged[key].pulse
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 systolic_bp: 0,
                 diastolic_bp: 0,
                 pulse: 0
@@ -4265,6 +4267,7 @@ function transformWeeklyData(rawData) {
         records: weekly
     };
 }
+
 // MONTHLY TRANSFORMATION
 function transformMonthlyData(rawData) {
     const today = new Date();
@@ -4304,25 +4307,67 @@ function transformMonthlyData(rawData) {
 }
 
 // YEARLY TRANSFORMATION
-function transformYearlyData(rawData) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// function transformYearlyData(rawData) {
+//     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+//     const averaged = groupByDateAndAverage(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 systolic_bp: averaged[found].systolic_bp,
+//                 diastolic_bp: averaged[found].diastolic_bp,
+//                 pulse: averaged[found].pulse
+//             };
+//         }
+//         return { day: months[idx], systolic_bp: 0, diastolic_bp: 0, pulse: 0 };
+//     });
+
+//     const averages = calcAverage(yearly);
+//     return {
+//         average_systolic: averages.avgSys,
+//         average_diastolic: averages.avgDia,
+//         average_pulse: averages.avgPulse,
+//         records: yearly
+//     };
+// }
+
+function transformYearlyData(rawData, finalLanguage) {
     const averaged = groupByDateAndAverage(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // SAFE: generate month using moment
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");  // Jan / يناير / janv.
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 systolic_bp: averaged[found].systolic_bp,
                 diastolic_bp: averaged[found].diastolic_bp,
                 pulse: averaged[found].pulse
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                systolic_bp: 0,
+                diastolic_bp: 0,
+                pulse: 0
+            });
         }
-        return { day: months[idx], systolic_bp: 0, diastolic_bp: 0, pulse: 0 };
-    });
+    }
 
     const averages = calcAverage(yearly);
+
     return {
         average_systolic: averages.avgSys,
         average_diastolic: averages.avgDia,
