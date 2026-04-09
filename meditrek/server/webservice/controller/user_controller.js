@@ -30,13 +30,13 @@ function generate6DigitCode(user_id) {
 
 
 const moment = require('moment-timezone');
-require('moment/min/locales');
-// require('moment/locale/ar');
-// require('moment/locale/fr');
-// require('moment/locale/es');
-// require('moment/locale/de');
-// require('moment/locale/it');
-// require('moment/locale/pt');
+//require('moment/min/locales');
+require('moment/locale/ar');
+require('moment/locale/fr');
+require('moment/locale/es');
+require('moment/locale/de');
+require('moment/locale/it');
+require('moment/locale/pt');
 
 
 
