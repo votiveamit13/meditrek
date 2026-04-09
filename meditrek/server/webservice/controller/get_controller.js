@@ -4,13 +4,21 @@ const connection = require('../connection');
 
 const languageMessage = require('../shared functions/languageMessage')
 const moment = require('moment-timezone');
+
+//require('moment/min/locales');
+require('moment/locale/ar');
+require('moment/locale/fr');
+require('moment/locale/es');
+require('moment/locale/de');
+require('moment/locale/it');
+require('moment/locale/pt');
+
 const { readv } = require("fs");
 const { error } = require("console");
 const { request } = require("http");
 const { response } = require("express");
 const { connect } = require("http2");
 
-require('moment/min/locales');
 const { getUserLanguage } = require('../helpers/languageHelper');
 
 // Get current time in the desired timezone (e.g., Paris)
