@@ -2,7 +2,7 @@ var express = require("express");
 const upload = require("../controller/multer");
 const uploadImage = require("../controller/multerimage");
 const connection = require("../connection/connection");
-const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser,getLanguages,saveLanguages,getUserLanguages,updateUserLanguage,createPost,getInsightsPosts,updateInsightsPost,deleteInsightsPost,getAllInsightsPosts,deleteMedicineBulk,getAdminPatientDemographics} = require("../controller/admin_controller");
+const { approveDoctor, rejectDoctor, adminLogin, UpdateAdminPassword, getAllusersData, UpdateAdminProfile, ActivateDeactivateUser, DoctorActivateDeactivateUser, getAllDeletedUser, getDoctorSpecialization, addDoctorSpecialization, editDoctorSpecialization, deleteDoctorSpecialization, getAllDoctor, getAllMedicine, addMedicine, editMedicine, deleteMedicine, getdisease, addDisease, editDisease, deleteDisease, getAllSymptoms, addSymptom, editSymptom, deleteSymptom, getReportCategory, addReportCategory, editReportCategory, deleteReportCategory, getContent, getContentUrl, getHelpAndSupport, sendReply, sendBroadcastMessageAllUser, updateContent, getAdminAllData, getAllCompliance, getTabularUser, getUserAnalyticalReports, ViewUserDetails, get_all_count, get_medicine_types, add_medicine_type, update_medicine_type, delete_medicine_type, addDoctor, addFromWebsiteDoctor, editDoctor, deleteDoctor, fetchUsers, fetchdoctorbyuser, getAdverseofUser, AdminForgetPassword, adminForgetNewPassword, getMedicationList, getReport, getDoctorDetail, getDoctorUserSharedReport, getTabuldoctor, getDoctorAnalyticalReports, bulkUploadMedicine, bulkUploadDisease, bulkUploadSymptoms, viewCompliance, getFaq, addFaq, editFaq, deleteFaq, getUserMedicine,getFaqDoctor ,sendMessageByDoctorToAdmin,getAllDeletedDoctor,deleteUser,getLanguages,saveLanguages,getUserLanguages,updateUserLanguage,createPost,getInsightsPosts,updateInsightsPost,deleteInsightsPost,getAllInsightsPosts,deleteMedicineBulk,getAdminPatientDemographics,getPatientDemographicsDetailsAdmin,getDiseaseDashboardAdmin,getPatientDiseasesMedicineAnalyticsAdmin,getPatientDiseasesMedicineListAdmin,getDiseaseMedicineSummaryAdmin,getAdminMedicationFull} = require("../controller/admin_controller");
 const { subAdminLogin,verifyLoginOtp, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication, getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, deleteImage, deleteDoctorAccount, getPatientMeasurements, getPatientMedicationList, getPatientReport, getAdverseofPatient,dashboardGraphs,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographics,getPatientDemographicsDetails,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList ,getDiseaseMedicineSummary,getSubadminMedicationFull,getDiseaseDashboard,getMedicationDiseaseDashboard,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms,getAppContent} = require("../controller/subAdminController.js")
 const { verifyToken } = require("../controller/VerifyToken");
 const uploadInsights = require('../../webservice/middleware/insightsUpload');
@@ -188,19 +188,21 @@ router.post("/medication-disease-dashboard", getMedicationDiseaseDashboard);
 // report helthapi
 router.post("/medication-reported-health", getMedicationReportedHealth);
 router.post("/report-symptoms", getDoctorAllSymptoms);
-// admin anyalist api route
-router.post("/admin-patient-demographics", getAdminPatientDemographics);
-// router.post("/admin-patient-demographics-details", getPatientDemographicsDetailsAdmin);
 
-// router.post("/admin-disease-dashboard", getDiseaseDashboardAdmin);
-
-// router.post("/admin-DiseasesMedicine", getPatientDiseasesMedicineAnalyticsAdmin);
-// router.post("/admin-DiseasesMedicine-Details", getPatientDiseasesMedicineListAdmin);
-// router.post("/admin-DiseasesMedicine-Summary", getDiseaseMedicineSummaryAdmin);
-
-
+router.get("/report-symptoms", getDoctorAllSymptoms);
 
 router.get("/get_app_content", getAppContent);
+// admin anyalist api route
+router.post("/admin-patient-demographics", getAdminPatientDemographics);
+router.post("/admin-patient-demographics-details", getPatientDemographicsDetailsAdmin);
+
+router.post("/admin-disease-dashboard", getDiseaseDashboardAdmin);
+
+router.post("/admin-DiseasesMedicine", getPatientDiseasesMedicineAnalyticsAdmin);
+router.post("/admin-DiseasesMedicine-Details", getPatientDiseasesMedicineListAdmin);
+router.post("/admin-DiseasesMedicine-Summary", getDiseaseMedicineSummaryAdmin);
+
+router.post("/admin-medication-full", getAdminMedicationFull);
 
 module.exports = router;
 
