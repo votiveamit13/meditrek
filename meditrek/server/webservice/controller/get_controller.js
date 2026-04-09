@@ -10,13 +10,7 @@ const { request } = require("http");
 const { response } = require("express");
 const { connect } = require("http2");
 
-//require('moment/min/locales');
-require('moment/locale/ar');
-require('moment/locale/fr');
-require('moment/locale/es');
-require('moment/locale/de');
-require('moment/locale/it');
-require('moment/locale/pt');
+require('moment/min/locales');
 const { getUserLanguage } = require('../helpers/languageHelper');
 
 // Get current time in the desired timezone (e.g., Paris)
@@ -4150,9 +4144,9 @@ const getBPDataStats = async (request, response) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
 
                         // Transform data with proper averaging
-                        const weeklyData = transformWeeklyData(weeklyResult);
+                        const weeklyData = transformWeeklyData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyData(monthlyResult);
-                        const yearlyData = transformYearlyData(yearlyResult);
+                        const yearlyData = transformYearlyData(yearlyResult,finalLanguage);
 
                         let filteredData = {};
 
@@ -4222,7 +4216,7 @@ function groupByDateAndAverage(rawData, type = 'daily') {
     return averaged;
 }
 // WEEKLY TRANSFORMATION
-function transformWeeklyData(rawData) {
+function transformWeeklyData(rawData, timezone, finalLanguage) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const averaged = groupByDateAndAverage(rawData); // avg per day
 
@@ -4240,16 +4234,24 @@ function transformWeeklyData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString();
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 systolic_bp: averaged[key].systolic_bp,
                 diastolic_bp: averaged[key].diastolic_bp,
                 pulse: averaged[key].pulse
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 systolic_bp: 0,
                 diastolic_bp: 0,
                 pulse: 0
@@ -4265,6 +4267,7 @@ function transformWeeklyData(rawData) {
         records: weekly
     };
 }
+
 // MONTHLY TRANSFORMATION
 function transformMonthlyData(rawData) {
     const today = new Date();
@@ -4304,25 +4307,67 @@ function transformMonthlyData(rawData) {
 }
 
 // YEARLY TRANSFORMATION
-function transformYearlyData(rawData) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// function transformYearlyData(rawData) {
+//     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+//     const averaged = groupByDateAndAverage(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 systolic_bp: averaged[found].systolic_bp,
+//                 diastolic_bp: averaged[found].diastolic_bp,
+//                 pulse: averaged[found].pulse
+//             };
+//         }
+//         return { day: months[idx], systolic_bp: 0, diastolic_bp: 0, pulse: 0 };
+//     });
+
+//     const averages = calcAverage(yearly);
+//     return {
+//         average_systolic: averages.avgSys,
+//         average_diastolic: averages.avgDia,
+//         average_pulse: averages.avgPulse,
+//         records: yearly
+//     };
+// }
+
+function transformYearlyData(rawData, finalLanguage) {
     const averaged = groupByDateAndAverage(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // SAFE: generate month using moment
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");  // Jan / يناير / janv.
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 systolic_bp: averaged[found].systolic_bp,
                 diastolic_bp: averaged[found].diastolic_bp,
                 pulse: averaged[found].pulse
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                systolic_bp: 0,
+                diastolic_bp: 0,
+                pulse: 0
+            });
         }
-        return { day: months[idx], systolic_bp: 0, diastolic_bp: 0, pulse: 0 };
-    });
+    }
 
     const averages = calcAverage(yearly);
+
     return {
         average_systolic: averages.avgSys,
         average_diastolic: averages.avgDia,
@@ -4353,7 +4398,7 @@ function calcAverage(records) {
 
 
 const getTemperatureDataStats = async (request, response) => {
-    const { user_id, type } = request.query;
+    const { user_id, type, language_code } = request.query;
     
      const timezone =
         request.headers['x-timezone'] ||
@@ -4366,6 +4411,12 @@ const getTemperatureDataStats = async (request, response) => {
     if (!type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'type' });
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(userQuery, [user_id], (err, result) => {
@@ -4418,8 +4469,17 @@ const getTemperatureDataStats = async (request, response) => {
             const todayData = todayResult.map(row => ({
                     measurement_id: row.measurement_id,
                     temperature: row.temperature ?? 0,
-                    date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-                    time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                    //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+                    //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                    date: moment.utc(row.createtime)
+                    .tz(timezone)
+                    .locale(finalLanguage)
+                    .format("MMMM DD, YYYY"),
+
+                    time: moment.utc(row.createtime)
+                    .tz(timezone)
+                    .locale(finalLanguage)
+                    .format("hh:mm A")
                 }));
 
             // Weekly data
@@ -4435,9 +4495,9 @@ const getTemperatureDataStats = async (request, response) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
 
                         // Transform data for graphs
-                        const weeklyData = transformWeeklyTemperatureData(weeklyResult || []);
+                        const weeklyData = transformWeeklyTemperatureData(weeklyResult || [], timezone, finalLanguage);
                         const monthlyData = transformMonthlyTemperatureData(monthlyResult || []);
-                        const yearlyData = transformYearlyTemperatureData(yearlyResult || []);
+                        const yearlyData = transformYearlyTemperatureData(yearlyResult || [], finalLanguage);
 
                         let filteredData = {};
 
@@ -4532,7 +4592,7 @@ const deleteDoctor = async( request, response) =>{
 
 // Fasting Glucose API with Weekly/Monthly/Yearly Breakdown
 const getFastingGlucoseDataStats = async (request, response) => {
-    const { user_id, type } = request.query;
+    const { user_id, type, language_code } = request.query;
     
     const timezone =
         request.headers['x-timezone'] ||
@@ -4545,6 +4605,12 @@ const getFastingGlucoseDataStats = async (request, response) => {
     if (!type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'type' });
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
@@ -4600,8 +4666,17 @@ const getFastingGlucoseDataStats = async (request, response) => {
                     return {
                         measurement_id: row.measurement_id,
                         fasting_glucose: row.fasting_glucose,
-                        date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-                        time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+                        //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        date: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("MMMM DD, YYYY"),
+
+                        time: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("hh:mm A")
                     };
                 });
             })();
@@ -4615,9 +4690,9 @@ const getFastingGlucoseDataStats = async (request, response) => {
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
 
-                        const weeklyData = transformWeeklyGlucoseData(weeklyResult);
+                        const weeklyData = transformWeeklyGlucoseData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyGlucoseData(monthlyResult);
-                        const yearlyData = transformYearlyGlucoseData(yearlyResult);
+                        const yearlyData = transformYearlyGlucoseData(yearlyResult,finalLanguage);
 
                         let filteredData = {};
 
@@ -4681,7 +4756,7 @@ function groupGlucoseByDate(rawData, type = 'daily') {
     return averaged;
 }
 // ===== Weekly Transformation =====
-function transformWeeklyGlucoseData(rawData) {
+function transformWeeklyGlucoseData(rawData, timezone, finalLanguage) {
     const averaged = groupGlucoseByDate(rawData); // grouped by toDateString()
 
     // Get current week's Monday
@@ -4697,14 +4772,22 @@ function transformWeeklyGlucoseData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString(); // match with grouped keys
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 fasting_glucose: averaged[key].fasting_glucose
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 fasting_glucose: 0
             });
         }
@@ -4751,24 +4834,60 @@ function transformMonthlyGlucoseData(rawData) {
 }
 
 // ===== Yearly Transformation =====
-function transformYearlyGlucoseData(rawData) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// function transformYearlyGlucoseData(rawData) {
+//     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+//     const averaged = groupGlucoseByDate(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 fasting_glucose: averaged[found].fasting_glucose
+//             };
+//         }
+//         return { day: months[idx], fasting_glucose: 0 };
+//     });
+
+//     const avg = calcGlucoseAverage(yearly);
+//     return {
+//         average_fasting_glucose: avg,
+//         records: yearly
+//     };
+// }
+function transformYearlyGlucoseData(rawData, finalLanguage) {
 
     const averaged = groupGlucoseByDate(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // Multilingual month label (SAFE)
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 fasting_glucose: averaged[found].fasting_glucose
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                fasting_glucose: 0
+            });
         }
-        return { day: months[idx], fasting_glucose: 0 };
-    });
+    }
 
     const avg = calcGlucoseAverage(yearly);
+
     return {
         average_fasting_glucose: avg,
         records: yearly
@@ -4796,7 +4915,7 @@ function calcGlucoseAverage(records) {
 
 //  get ppbgs data stats graph new api...
 const getPPBGSDataStats = async (request, response) => {
-    const { user_id, type } = request.query;
+    const { user_id, type, language_code } = request.query;
     
     const timezone =
         request.headers['x-timezone'] ||
@@ -4809,6 +4928,12 @@ const getPPBGSDataStats = async (request, response) => {
     if (!type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'type' });
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
     connection.query(userQuery, [user_id], (err, result) => {
@@ -4865,8 +4990,17 @@ const getPPBGSDataStats = async (request, response) => {
                     return {
                         measurement_id: row.measurement_id,
                         ppbgs: row.ppbgs,
-                        date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-                        time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+                        //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                        date: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("MMMM DD, YYYY"),
+
+                        time: moment.utc(row.createtime)
+                        .tz(timezone)
+                        .locale(finalLanguage)
+                        .format("hh:mm A")
                     };
                 });
             })();
@@ -4884,9 +5018,9 @@ const getPPBGSDataStats = async (request, response) => {
                     connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
 
-                        const weeklyData = transformWeeklyPPBGSData(weeklyResult);
+                        const weeklyData = transformWeeklyPPBGSData(weeklyResult, timezone, finalLanguage);
                         const monthlyData = transformMonthlyPPBGSData(monthlyResult);
-                        const yearlyData = transformYearlyPPBGSData(yearlyResult);
+                        const yearlyData = transformYearlyPPBGSData(yearlyResult,finalLanguage);
 
                         let filteredData = {};
 
@@ -4950,7 +5084,7 @@ function groupPPBGSByDate(rawData, type = 'daily') {
     return averaged;
 }
 // ===== Weekly Transformation =====
-function transformWeeklyPPBGSData(rawData) {
+function transformWeeklyPPBGSData(rawData, timezone, finalLanguage) {
     const averaged = groupPPBGSByDate(rawData); // keys should be toDateString()
 
     // Get Monday of current week
@@ -4967,14 +5101,22 @@ function transformWeeklyPPBGSData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString(); // match with group keys
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 ppbgs: averaged[key].ppbgs
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 ppbgs: 0
             });
         }
@@ -5020,24 +5162,60 @@ function transformMonthlyPPBGSData(rawData) {
 }
 
 // ===== Yearly Transformation =====
-function transformYearlyPPBGSData(rawData) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// function transformYearlyPPBGSData(rawData) {
+//     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+//     const averaged = groupPPBGSByDate(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 ppbgs: averaged[found].ppbgs
+//             };
+//         }
+//         return { day: months[idx], ppbgs: 0 };
+//     });
+
+//     const avg = calcPPBGSAverage(yearly);
+//     return {
+//         average_ppbgs: avg,
+//         records: yearly
+//     };
+// }
+function transformYearlyPPBGSData(rawData, finalLanguage) {
 
     const averaged = groupPPBGSByDate(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // Multilingual month label (SAFE)
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 ppbgs: averaged[found].ppbgs
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                ppbgs: 0
+            });
         }
-        return { day: months[idx], ppbgs: 0 };
-    });
+    }
 
     const avg = calcPPBGSAverage(yearly);
+
     return {
         average_ppbgs: avg,
         records: yearly
@@ -5065,7 +5243,7 @@ function calcPPBGSAverage(records) {
 
 //  get weight graph api 
 const getWeightMeasurementDataStats = async (request, response) => {
-    const { user_id, type } = request.query;
+    const { user_id, type, language_code } = request.query;
 
     // ✅ Read device timezone (fallback to UTC)
     const timezone =
@@ -5088,6 +5266,12 @@ const getWeightMeasurementDataStats = async (request, response) => {
             key: 'type'
         });
     }
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
 
     const userQuery = `
         SELECT active_flag, delete_flag
@@ -5173,8 +5357,17 @@ const getWeightMeasurementDataStats = async (request, response) => {
                 const todayData = todayResult.map(row => ({
                     measurement_id: row.measurement_id,
                     weight: row.weight,
-                    date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-                    time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                    //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+                    //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+                    date: moment.utc(row.createtime)
+                    .tz(timezone)
+                    .locale(finalLanguage)
+                    .format("MMMM DD, YYYY"),
+
+                    time: moment.utc(row.createtime)
+                    .tz(timezone)
+                    .locale(finalLanguage)
+                    .format("hh:mm A")
                 }));
 
                 /* -------------------------------------------------
@@ -5223,9 +5416,9 @@ const getWeightMeasurementDataStats = async (request, response) => {
                                         }
 
                                         // Existing transformers
-                                        const weeklyData  = transformWeeklyWeightData(weeklyResult);
+                                        const weeklyData  = transformWeeklyWeightData(weeklyResult, timezone, finalLanguage);
                                         const monthlyData = transformMonthlyWeightData(monthlyResult);
-                                        const yearlyData  = transformYearlyWeightData(yearlyResult);
+                                        const yearlyData  = transformYearlyWeightData(yearlyResult,finalLanguage);
 
                                         let filteredData = {};
 
@@ -5294,7 +5487,7 @@ function groupWeightByDate(rawData, type = 'daily') {
 }
 
 // ===== Weekly Transformation =====
-function transformWeeklyWeightData(rawData) {
+function transformWeeklyWeightData(rawData, timezone, finalLanguage) {
     const averaged = groupWeightByDate(rawData); // keys should be toDateString()
 
     // Get Monday of the current week
@@ -5311,14 +5504,22 @@ function transformWeeklyWeightData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString(); // match the format used in grouping
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 weight: averaged[key].weight
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 weight: 0
             });
         }
@@ -5363,29 +5564,66 @@ function transformMonthlyWeightData(rawData) {
 }
 
 // ===== Yearly Transformation =====
-function transformYearlyWeightData(rawData) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// function transformYearlyWeightData(rawData) {
+//     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+//     const averaged = groupWeightByDate(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 weight: averaged[found].weight
+//             };
+//         }
+//         return { day: months[idx], weight: 0 };
+//     });
+
+//     const avg = calcWeightAverage(yearly);
+//     return {
+//         average_weight: avg,
+//         records: yearly
+//     };
+// }
+function transformYearlyWeightData(rawData, finalLanguage) {
 
     const averaged = groupWeightByDate(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // Multilingual month label (SAFE)
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 weight: averaged[found].weight
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                weight: 0
+            });
         }
-        return { day: months[idx], weight: 0 };
-    });
+    }
 
     const avg = calcWeightAverage(yearly);
+
     return {
         average_weight: avg,
         records: yearly
     };
 }
+
 // ===== Utility to calculate average weight =====
 function calcWeightAverage(records) {
     let total = 0, count = 0;
@@ -5582,7 +5820,7 @@ function groupTemperatureByDate(rawData, type = 'daily') {
     return averaged;
 }
 // ===== Weekly Transformation =====
-function transformWeeklyTemperatureData(rawData) {
+function transformWeeklyTemperatureData(rawData, timezone, finalLanguage) {
     const averaged = groupTemperatureByDate(rawData); 
 
     // Get the Monday of the current week
@@ -5599,14 +5837,22 @@ function transformWeeklyTemperatureData(rawData) {
         currentDate.setDate(monday.getDate() + i);
         const key = currentDate.toDateString(); // used for matching grouped data
 
+        // FIX: use currentDate instead of row
+        const formattedDay = moment(currentDate)
+            .tz(timezone)
+            .locale(finalLanguage)
+            .format("DD MMM");
+
         if (averaged[key]) {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 temperature: averaged[key].temperature
             });
         } else {
             weekly.push({
-                day: moment(currentDate).format("DD MMM"),
+                //day: moment(currentDate).format("DD MMM"),
+                day: formattedDay,
                 temperature: 0
             });
         }
@@ -5651,24 +5897,60 @@ function transformMonthlyTemperatureData(rawData) {
 }
 
 // ===== Yearly Transformation =====
-function transformYearlyTemperatureData(rawData) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// function transformYearlyTemperatureData(rawData) {
+//     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+//     const averaged = groupTemperatureByDate(rawData, 'yearly');
+
+//     let yearly = months.map((m, idx) => {
+//         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+//         if (found !== undefined) {
+//             return {
+//                 day: months[idx],
+//                 temperature: averaged[found].temperature
+//             };
+//         }
+//         return { day: months[idx], temperature: 0 };
+//     });
+
+//     const avg = calcTemperatureAverage(yearly);
+//     return {
+//         average_temperature: avg,
+//         records: yearly
+//     };
+// }
+function transformYearlyTemperatureData(rawData, finalLanguage) {
 
     const averaged = groupTemperatureByDate(rawData, 'yearly');
 
-    let yearly = months.map((m, idx) => {
+    let yearly = [];
+
+    for (let idx = 0; idx < 12; idx++) {
+
+        // Multilingual month label (SAFE)
+        const monthLabel = moment()
+            .month(idx)
+            .locale(finalLanguage || "en")
+            .format("MMM");
+
         const found = Object.keys(averaged).find(k => parseInt(k) === idx);
+
         if (found !== undefined) {
-            return {
-                day: months[idx],
+            yearly.push({
+                day: monthLabel,
                 temperature: averaged[found].temperature
-            };
+            });
+        } else {
+            yearly.push({
+                day: monthLabel,
+                temperature: 0
+            });
         }
-        return { day: months[idx], temperature: 0 };
-    });
+    }
 
     const avg = calcTemperatureAverage(yearly);
+
     return {
         average_temperature: avg,
         records: yearly

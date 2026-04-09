@@ -4914,6 +4914,9 @@ const sendNotificationAll = (req, res) => {
               title, title, title, title, title,
               message, message, message, message, message,
               {},
+              {},
+              {},
+              {},
               resolve
             );
           });
@@ -4995,6 +4998,9 @@ const sendNotificationUsers = (req, res) => {
             "0",
             title, title, title, title, title,
             message, message, message, message, message,
+            {},
+            {},
+            {},
             {},
             resolve
           );
