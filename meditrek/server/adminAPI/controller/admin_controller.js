@@ -6793,6 +6793,143 @@ const deleteMedicineBulk = (req, res) => {
   });
 };
 
+const getAdminPatientDemographics = (req, res) => {
+  const { doctor_id, gender, age_group, page = 1, limit = 10 } = req.body;
+
+  let where = `WHERE pm.delete_flag = 0`;
+  let params = [];
+  const offset = (page - 1) * limit;
+
+  if (doctor_id) {
+    where += ` AND pm.doctor_id = ?`;
+    params.push(doctor_id);
+  }
+
+  if (gender !== undefined && gender !== "") {
+    where += ` AND um.gender = ?`;
+    params.push(Number(gender));
+  }
+
+  // if (age_group && age_group !== "") {
+  //   if (age_group.includes("-")) {
+  //     const [min, max] = age_group.split("-").map(Number);
+  //     where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ${min} AND ${max}`;
+  //   } else if (age_group === "85+") {
+  //     where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= 85`;
+  //   }
+  // }
+  if (age_group && age_group !== "") {
+  if (age_group.includes("-")) {
+    const [min, max] = age_group.split("-").map(Number);
+    where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?`;
+    params.push(min, max);
+  } else if (age_group === "85+") {
+    where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?`;
+    params.push(85);
+  }
+}
+
+  // Total patients for the selected doctor (or all if no doctor selected)
+//   const totalSql = `
+//   SELECT COUNT(*) as total
+//   FROM patient_master pm
+//   JOIN user_master um ON pm.user_id = um.user_id
+//   ${where}
+// `;
+const totalSql = `
+  SELECT COUNT(*) as total
+  FROM patient_master pm
+  WHERE pm.delete_flag = 0
+  ${doctor_id ? "AND pm.doctor_id = ?" : ""}
+`;
+  
+
+  connection.query(totalSql, params, (err, totalResult) => {
+    if (err) return res.json({ success: false, error: err.message });
+    const total_patients = totalResult[0]?.total || 0;
+
+    // Age & Gender distribution
+    const dataSql = `
+      SELECT 
+        CASE 
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 44 THEN '31-44'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 45 AND 64 THEN '45-64'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 65 AND 74 THEN '65-74'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 75 AND 84 THEN '75-84'
+          ELSE '85+'
+        END as age_group,
+        CASE 
+          WHEN um.gender = 1 THEN 'Male'
+          WHEN um.gender = 2 THEN 'Female'
+          WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
+        END as gender,
+        COUNT(*) as count
+      FROM patient_master pm
+      JOIN user_master um ON pm.user_id = um.user_id
+      ${where}
+      GROUP BY age_group, gender
+      ORDER BY FIELD(age_group, '0-18', '19-30', '31-44','45-64','65-74','75-84','85+')
+    `;
+
+    connection.query(dataSql, params, (err2, rows) => {
+      if (err2) return res.json({ success: false, error: err2.message });
+
+      // Build distributions & cross table
+      const ageGroups = ["0-18", "19-30", "31-44","45-64","65-74","75-84", "85+"];
+      const genders = ["Male", "Female", "Other", "Not Specified"];
+      const ageSexCross = {};
+      const ageDist = {};
+      const sexDist = {};
+
+      // Initialize
+      ageGroups.forEach(a => { ageSexCross[a] = { Male:0, Female:0, Other:0, "Not Specified":0, total:0 }; ageDist[a] = 0; });
+      genders.forEach(g => { sexDist[g] = 0; });
+
+      rows.forEach(r => {
+        ageSexCross[r.age_group][r.gender] = r.count;
+        ageSexCross[r.age_group].total += r.count;
+        ageDist[r.age_group] += r.count;
+        sexDist[r.gender] += r.count;
+      });
+
+      // Prepare response in required format
+      const ageDistribution = ageGroups.map(a => ({
+        age_group: a,
+        count: ageDist[a],
+        percentage: total_patients > 0 ? ((ageDist[a]/total_patients)*100).toFixed(1) : "0.0"
+      }));
+
+      const sexDistribution = genders.map(g => ({
+        gender: g,
+        count: sexDist[g],
+        percentage: total_patients > 0 ? ((sexDist[g]/total_patients)*100).toFixed(1) : "0.0"
+      }));
+
+      const crossTable = ageGroups.map(a => ({
+        age_group: a,
+        ...genders.reduce((acc, g) => {
+          acc[g] = `${ageSexCross[a][g]} (${total_patients>0 ? ((ageSexCross[a][g]/total_patients)*100).toFixed(1) : "0.0"}%)`;
+          return acc;
+        }, {}),
+        total: `${ageSexCross[a].total} (${total_patients>0 ? ((ageSexCross[a].total/total_patients)*100).toFixed(1) : "0.0"}%)`
+      }));
+
+      return res.json({
+        success: true,
+        total_patients,
+        ageDistribution,
+        sexDistribution,
+        crossTable
+      });
+    });
+  });
+};
+
+
+
 
 module.exports = {
   // abhich
@@ -6929,4 +7066,10 @@ module.exports = {
   updateInsightsPost,
   deleteInsightsPost,
   deleteMedicineBulk,
+  getAdminPatientDemographics,
+  // getPatientDemographicsDetailsAdmin,
+  // getDiseaseDashboardAdmin,
+  // getPatientDiseasesMedicineAnalyticsAdmin,
+  // getDiseaseMedicineSummaryAdmin,
+  // getPatientDiseasesMedicineListAdmin,
 };
