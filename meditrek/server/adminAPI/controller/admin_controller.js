@@ -6978,11 +6978,17 @@ const getAdminPatientDemographics = (req, res) => {
 //   WHERE pm.delete_flag = 0
 //   ${doctor_id ? "AND pm.doctor_id = ?" : ""}
 // `;
-  const totalSql = `
-  SELECT COUNT(DISTINCT p.user_id) as total
-  FROM patient_master p
-  JOIN user_master u ON u.user_id = p.user_id
-  WHERE p.delete_flag = 0
+//   const totalSql = `
+//   SELECT COUNT(DISTINCT p.user_id) as total
+//   FROM patient_master p
+//   JOIN user_master u ON u.user_id = p.user_id
+//   WHERE p.delete_flag = 0
+// `;
+const totalSql = `
+  SELECT COUNT(DISTINCT pm.user_id) as total
+  FROM patient_master pm
+  JOIN user_master um ON pm.user_id = um.user_id
+  ${where}
 `;
   
 
