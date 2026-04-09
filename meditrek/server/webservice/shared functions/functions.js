@@ -244,9 +244,9 @@ async function getNotificationArrSingle(
   message_3,
   message_4,
   message_5,
-  action_json_lang_data,
-  title_json_lang_data,
-  message_json_lang_data,
+  action_json_lang_data = {},
+  title_json_lang_data = {},
+  message_json_lang_data = {},
   action_data,
   callback
 ) {
