@@ -2155,7 +2155,7 @@ const getLaboratoryReportCounts = async (request, response) => {
 
 const addBPData = async (request, response) => {
 
-    const { user_id, systolic_bp, diastolic_bp, pulse } = request.body;
+    const { user_id, systolic_bp, diastolic_bp, pulse, language_code } = request.body;
 
 
 
@@ -2165,7 +2165,11 @@ const addBPData = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2173,13 +2177,13 @@ const addBPData = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2187,9 +2191,9 @@ const addBPData = async (request, response) => {
 
         connection.query(insertQuery, [user_id, systolic_bp, diastolic_bp, pulse ? pulse : 0], (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            return response.status(200).json({ success: true, msg: languageMessage.BPAdded });
+            return response.status(200).json({ success: true, msg: request.__('bp_added_successfully') });
 
         });
 
@@ -2207,7 +2211,7 @@ const addBPData = async (request, response) => {
 
 const addFastingGlucose = async (request, response) => {
 
-    const { user_id, fasting_glucose } = request.body;
+    const { user_id, fasting_glucose, language_code } = request.body;
 
 
 
@@ -2217,7 +2221,11 @@ const addFastingGlucose = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2225,13 +2233,13 @@ const addFastingGlucose = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2241,9 +2249,9 @@ const addFastingGlucose = async (request, response) => {
 
         connection.query(insertQuery, [user_id, fasting_glucose], (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            return response.status(200).json({ success: true, msg: languageMessage.FastingGlucoseAdd });
+            return response.status(200).json({ success: true, msg: request.__('fasting_glucose_added_successfully') });
 
         });
 
@@ -2261,7 +2269,7 @@ const addFastingGlucose = async (request, response) => {
 
 const addPPBGS = async (request, response) => {
 
-    const { user_id, ppbgs } = request.body;
+    const { user_id, ppbgs, language_code } = request.body;
 
 
 
@@ -2271,7 +2279,11 @@ const addPPBGS = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2279,13 +2291,13 @@ const addPPBGS = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2295,9 +2307,9 @@ const addPPBGS = async (request, response) => {
 
         connection.query(insertQuery, [user_id, ppbgs], (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            return response.status(200).json({ success: true, msg: languageMessage.PPBGSAdded });
+            return response.status(200).json({ success: true, msg: request.__('ppbgs_added_successfully') });
 
         });
     });
@@ -2314,7 +2326,7 @@ const addPPBGS = async (request, response) => {
 
 const addWeightMeasurement = async (request, response) => {
 
-    const { user_id, weight } = request.body;
+    const { user_id, weight,language_code } = request.body;
 
 
 
@@ -2324,7 +2336,11 @@ const addWeightMeasurement = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2332,24 +2348,24 @@ const addWeightMeasurement = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
         }
 
         const insertQuery = `INSERT INTO measurement_master (user_id, type, weight) VALUES (?, 3, ?)`;
 
         connection.query(insertQuery, [user_id, weight], async (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
-            
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
+
             const userDataArray = await  getUserDetails(user_id);
             
-            return response.status(200).json({ success: true, msg: languageMessage.WeightAdded, userDataArray : userDataArray });
+            return response.status(200).json({ success: true, msg: request.__('weight_added_successfully'), userDataArray : userDataArray });
         });
     });
 };
@@ -2364,7 +2380,7 @@ const addWeightMeasurement = async (request, response) => {
 
 const addTemperature = async (request, response) => {
 
-    const { user_id, temperature } = request.body;
+    const { user_id, temperature,language_code } = request.body;
 
 
 
@@ -2374,7 +2390,11 @@ const addTemperature = async (request, response) => {
 
     }
 
+    const finalLanguage = language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
+    request.setLocale(finalLanguage);
 
     const userQuery = "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -2382,13 +2402,13 @@ const addTemperature = async (request, response) => {
 
         if (err || result.length === 0 || result[0].active_flag === 0) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return response.status(200).json({ success: false, msg: request.__('user_not_found') });
 
         }
 
         if (result[0]?.delete_flag == 1) {
 
-            return response.status(200).json({ success: false, msg: languageMessage.msgUserDeleted, active_flag: 0 });
+            return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
 
         }
 
@@ -2398,9 +2418,9 @@ const addTemperature = async (request, response) => {
 
         connection.query(insertQuery, [user_id, temperature], (err) => {
 
-            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            if (err) return response.status(200).json({ success: false, msg: request.__('internal_server_error'), error: err.message });
 
-            return response.status(200).json({ success: true, msg: languageMessage.TempAdded });
+            return response.status(200).json({ success: true, msg: request.__('temperature_added_successfully') });
 
         });
 
