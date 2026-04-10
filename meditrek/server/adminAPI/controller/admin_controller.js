@@ -7473,11 +7473,19 @@ const getDiseaseDashboardAdmin = (req, res) => {
   `;
 
   //  SINGLE ONLY (exactly 1 disease and matches)
-  if (disease.length === 1 && singleOnly) {
-    where += ` AND u.diseases LIKE ?`;
-    params.push(`%${disease[0]}%`);
-    where += ` AND ${countCondition} = 1`;
-  }
+  // if (disease.length === 1 && singleOnly) {
+  //   where += ` AND u.diseases LIKE ?`;
+  //   params.push(`%${disease[0]}%`);
+  //   where += ` AND ${countCondition} = 1`;
+  // }
+    if (singleOnly) {
+      const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+      where += ` AND (${diseaseConditions})`;
+      disease.forEach(d => params.push(`%${d}%`));
+
+      // exactly 1 disease
+      where += ` AND ${countCondition} = 1`;
+    }
   // COMBINED ONLY (all diseases must match, exact count)
   else if (combinedOnly && disease.length >= 2) {
     const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
