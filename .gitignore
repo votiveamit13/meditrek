@@ -43,3 +43,6 @@ next-env.d.ts
 node_modules/
 *.zip
 **/serviceAccountKey.json
+
+meditrek/server/env
+.env
