@@ -7471,6 +7471,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
      exclude_medication = [],
     singleOnly = false,
   combinedOnly = false,
+  includeExtra = false,
   } = req.body;
 
   if (!doctor_id) {
@@ -7523,6 +7524,11 @@ if (Array.isArray(disease) && disease.length > 0) {
     where += ` AND ${countCondition} = ?`;
     params.push(disease.length);
   }
+   else if (includeExtra && disease.length >= 2) {
+  const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+  where += ` AND (${diseaseConditions})`;
+  disease.forEach(d => params.push(`%${d}%`));
+}
 
   // ✅ DEFAULT
   else {
@@ -7690,6 +7696,7 @@ const getPatientDiseasesMedicineList = (req, res) => {
   diseases = [],
   singleOnly = false,
   combinedOnly = false,
+  includeExtra = false,
   page = 1,
   limit = 10
 } = req.body;
@@ -7745,6 +7752,11 @@ if (Array.isArray(diseases) && diseases.length > 0) {
     where += ` AND ${countCondition} = ?`;
     params.push(diseases.length);
   }
+  else if (includeExtra && diseases.length >= 2) {
+  const diseaseConditions = diseases.map(() => `u.diseases LIKE ?`).join(" AND ");
+  where += ` AND (${diseaseConditions})`;
+  diseases.forEach(d => params.push(`%${d}%`));
+}
 
   // ✅ DEFAULT (loose match)
   else {
@@ -8254,7 +8266,7 @@ if (Array.isArray(diseases) && diseases.length > 0) {
 //   });
 // };
 const getDiseaseMedicineSummary = (req, res) => {
-  const { doctor_id, gender, age_group, singleOnly = false, combinedOnly = false, disease = [], medication_name, page = 1, limit = 10 } = req.body;
+  const { doctor_id, gender, age_group, singleOnly = false, combinedOnly = false, includeExtra = false, disease = [], medication_name, page = 1, limit = 10 } = req.body;
 
   if (!doctor_id) {
     return res.json({ success: false, msg: "doctor_id required" });
@@ -8308,6 +8320,11 @@ const getDiseaseMedicineSummary = (req, res) => {
       disease.forEach(d => params.push(`%${d}%`));
       where += ` AND ${countCondition} = ?`;
       params.push(disease.length);
+    }
+    else if (includeExtra && disease.length >= 2) {
+      const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      where += ` AND (${diseaseConditions})`;
+      disease.forEach(d => params.push(`%${d}%`));
     }
 
     else {
