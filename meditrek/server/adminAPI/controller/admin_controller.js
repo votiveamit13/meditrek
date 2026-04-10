@@ -9169,6 +9169,255 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
 };
 
 
+const getMedicationReportedHealthAdmin = (req, res) => {
+  const {
+    doctor_id,
+    medication = [],
+    age_group,
+    page = 1,
+    limit = 10,
+    patient_page = 1,
+    patient_limit = 5
+  } = req.body;
+
+  // ================= TOTAL PATIENTS =================
+  let totalPatientsSql = `
+    SELECT COUNT(DISTINCT p.user_id) as total
+    FROM patient_master p
+    WHERE p.delete_flag = 0
+  `;
+  let totalParams = [];
+
+  if (doctor_id) {
+    totalPatientsSql += ` AND p.doctor_id = ?`;
+    totalParams.push(doctor_id);
+  }
+
+  connection.query(totalPatientsSql, totalParams, (err0, totalRes) => {
+    if (err0) return res.json({ success: false, error: err0.message });
+
+    const totalPatients = totalRes[0]?.total || 0;
+
+    // ================= BASE JOIN =================
+    let baseJoin = `
+      FROM patient_master p
+      JOIN user_master u 
+        ON u.user_id = p.user_id
+      JOIN report_share_master rsm
+        ON rsm.user_id = u.user_id
+        AND rsm.information_type = '4'
+        AND rsm.delete_flag = 0
+      JOIN adverse_reaction_master arm 
+        ON arm.user_id = u.user_id 
+        AND arm.delete_flag = 0
+      JOIN medicine_master med 
+        ON med.medicine_id = arm.medicine_id
+      LEFT JOIN symptoms_master sm 
+        ON sm.symptom_id = arm.symptom_id 
+        AND sm.delete_flag = 0
+    `;
+
+    let joinParams = [];
+
+    if (doctor_id) {
+      baseJoin += ` AND rsm.doctor_id = ?`;
+      joinParams.push(doctor_id);
+    }
+
+    // ================= WHERE =================
+    let where = `WHERE p.delete_flag = 0`;
+    let whereParams = [];
+
+    if (doctor_id) {
+      where += ` AND p.doctor_id = ?`;
+      whereParams.push(doctor_id);
+    }
+
+    if (age_group) {
+      if (age_group.includes("+")) {
+        const min = parseInt(age_group.replace("+", ""));
+        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+        whereParams.push(min);
+      } else {
+        const [min, max] = age_group.split("-").map(Number);
+        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+        whereParams.push(min, max);
+      }
+    }
+
+    if (Array.isArray(medication) && medication.length > 0) {
+      const medCond = medication.map(() => `med.medicine_name LIKE ?`).join(" OR ");
+      where += ` AND (${medCond})`;
+      medication.forEach(m => whereParams.push(`%${m}%`));
+    }
+
+    const allParams = [...joinParams, ...whereParams];
+
+    // ================= MAIN QUERY =================
+    const sql = `
+      SELECT
+        arm.medicine_id,
+        med.medicine_name,
+        arm.user_id,
+        p.doctor_id,
+        u.name,
+        TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+        u.diseases,
+        sm.symptom_name,
+        arm.medication_start_date,
+        arm.reaction_date
+      ${baseJoin}
+      ${where}
+      ORDER BY med.medicine_name ASC
+    `;
+
+    connection.query(sql, allParams, (err2, rows) => {
+      if (err2) return res.json({ success: false, error: err2.message });
+
+      const userIds = [...new Set(rows.map(r => r.user_id))];
+
+      if (userIds.length === 0) {
+        return res.json({
+          success: true,
+          total_patients: totalPatients,
+          total_medications: 0,
+          page: Number(page),
+          limit: Number(limit),
+          patient_page: Number(patient_page),
+          patient_limit: Number(patient_limit),
+          data: []
+        });
+      }
+
+      const allMedsSql = `
+        SELECT 
+          mm.user_id,
+          med2.medicine_id,
+          med2.medicine_name
+        FROM medication_master mm
+        JOIN medicine_master med2 ON med2.medicine_id = mm.medicine_id
+        WHERE mm.user_id IN (${userIds.map(() => '?').join(',')})
+          AND mm.delete_flag = 0
+      `;
+
+      connection.query(allMedsSql, userIds, (err3, medRows) => {
+        if (err3) return res.json({ success: false, error: err3.message });
+
+        const userMedsMap = {};
+        medRows.forEach(m => {
+          if (!userMedsMap[m.user_id]) userMedsMap[m.user_id] = [];
+          userMedsMap[m.user_id].push({
+            id: m.medicine_id,
+            name: m.medicine_name
+          });
+        });
+
+        let result = {};
+
+        rows.forEach(r => {
+          const med = r.medicine_name;
+
+          if (!result[med]) {
+            result[med] = {
+              medicine_id: r.medicine_id,
+              patients: new Set(),
+              symptoms: {},
+              patient_details: {}
+            };
+          }
+
+          result[med].patients.add(r.user_id);
+
+          if (r.symptom_name) {
+            if (!result[med].symptoms[r.symptom_name]) {
+              result[med].symptoms[r.symptom_name] = new Set();
+            }
+            result[med].symptoms[r.symptom_name].add(r.user_id);
+          }
+
+          if (!result[med].patient_details[r.user_id]) {
+            result[med].patient_details[r.user_id] = {
+              user_id: r.user_id,
+                doctor_id: r.doctor_id,
+              name: r.name,
+              age: r.age,
+              diseases: r.diseases,
+              reacted_medication: {
+                id: r.medicine_id,
+                name: r.medicine_name
+              },
+              medication_start_date: r.medication_start_date,
+              reaction_date: r.reaction_date,
+              symptoms: new Set()
+            };
+          }
+
+          if (r.symptom_name) {
+            result[med].patient_details[r.user_id].symptoms.add(r.symptom_name);
+          }
+        });
+
+        let finalData = Object.keys(result).map(med => {
+          const patientCount = result[med].patients.size;
+          const percentage = totalPatients
+            ? ((patientCount / totalPatients) * 100).toFixed(1)
+            : "0.0";
+
+          let symptomData = Object.keys(result[med].symptoms).map(sym => {
+            const count = result[med].symptoms[sym].size;
+            const perc = patientCount
+              ? ((count / patientCount) * 100).toFixed(1)
+              : "0.0";
+            return { symptom: sym, count, percentage: perc + "%" };
+          });
+
+          let allPatients = Object.values(result[med].patient_details);
+          const patientOffset = (patient_page - 1) * patient_limit;
+
+          let patients = allPatients
+            .slice(patientOffset, patientOffset + Number(patient_limit))
+            .map(p => ({
+              user_id: p.user_id,
+              doctor_id: p.doctor_id,
+              patient_name: p.name,
+              age: p.age,
+              diseases: p.diseases,
+              reacted_medication: p.reacted_medication,
+              all_medications: userMedsMap[p.user_id] || [],
+              medication_start_date: p.medication_start_date,
+              reaction_date: p.reaction_date,
+              symptoms: Array.from(p.symptoms).join(", ")
+            }));
+
+          return {
+            medication: { id: result[med].medicine_id, name: med },
+            total_patients: patientCount,
+            percentage: percentage + "%",
+            symptoms: symptomData,
+            total_patients_in_medication: allPatients.length,
+            patient_page: Number(patient_page),
+            patients
+          };
+        });
+
+        const medOffset = (page - 1) * limit;
+        let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+
+        return res.json({
+          success: true,
+          total_patients: totalPatients,
+          total_medications: finalData.length,
+          page: Number(page),
+          limit: Number(limit),
+          patient_page: Number(patient_page),
+          patient_limit: Number(patient_limit),
+          data: paginatedMedications
+        });
+      });
+    });
+  });
+};
+
 const getDoctorList = (req, res) => {
   const sql = `
     SELECT
@@ -9346,5 +9595,6 @@ module.exports = {
   getPatientDiseasesMedicineListAdmin,
   getAdminMedicationFull,
   getMedicationDiseaseDashboardAdmin,
+  getMedicationReportedHealthAdmin,
   getDoctorList
 };
