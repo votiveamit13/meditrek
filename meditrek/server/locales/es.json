@@ -39,5 +39,10 @@
 	"doctor_has_not_been_deleted_please_try_again": "El doctor no ha sido eliminado, por favor intente de nuevo",
 	"data_deleted_successfully": "Datos eliminados correctamente",
 	"data_found": "Datos encontrados",
-	"profile_deleted_successfully": "Perfil eliminado correctamente"
+	"profile_deleted_successfully": "Perfil eliminado correctamente",
+	"bp_added_successfully": "Presión arterial agregada correctamente",
+	"fasting_glucose_added_successfully": "Glucosa en ayunas agregada correctamente",
+	"ppbgs_added_successfully": "PPBGS agregado correctamente",
+	"weight_added_successfully": "Peso agregado correctamente",
+	"temperature_added_successfully": "Temperatura agregada correctamente"
 }

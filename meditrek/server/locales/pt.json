@@ -39,5 +39,10 @@
 	"doctor_has_not_been_deleted_please_try_again": "O médico não foi excluído, por favor tente novamente",
 	"data_deleted_successfully": "Dados excluídos com sucesso",
 	"data_found": "Dados encontrados",
-	"profile_deleted_successfully": "Perfil excluído com sucesso"
+	"profile_deleted_successfully": "Perfil excluído com sucesso",
+	"bp_added_successfully": "Pressão arterial adicionada com sucesso",
+	"fasting_glucose_added_successfully": "Glicose em jejum adicionada com sucesso",
+	"ppbgs_added_successfully": "PPBGS adicionado com sucesso",
+	"weight_added_successfully": "Peso adicionado com sucesso",
+	"temperature_added_successfully": "Temperatura adicionada com sucesso"
 }
