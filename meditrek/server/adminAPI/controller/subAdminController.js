@@ -7542,17 +7542,13 @@ if (Array.isArray(disease) && disease.length > 0) {
     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
     medication.forEach(m => params.push(`%${m}%`));
   }
-  let topWhere = where;
-  let topParams = [...params];
+    let topWhere = where;
+    let topParams = [...params];
 
-  if (exclude_medication.length) {
-    topWhere += ` AND (` + exclude_medication.map(() => `
-      REPLACE(LOWER(med.medicine_name), ' ', '') 
-      NOT LIKE REPLACE(LOWER(?), ' ', '')
-    `).join(" AND ") + `)`;
-
-    exclude_medication.forEach(m => topParams.push(`%${m}%`));
-  }
+    if (Array.isArray(exclude_medication) && exclude_medication.length > 0) {
+      topWhere += ` AND med.medicine_name NOT IN (${exclude_medication.map(() => '?').join(',')})`;
+      topParams.push(...exclude_medication);
+    }
   const totalSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
