@@ -8955,13 +8955,12 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
   let where = `WHERE pm.delete_flag = 0
                AND u.user_id IS NOT NULL
                AND u.dob IS NOT NULL
-               AND u.dob <= CURDATE()`; // ignore future dob
-
+               AND u.dob <= CURDATE()`; 
+      let totalWhere = `WHERE pm.delete_flag = 0`;
   if (doctor_id) {
-    where += ` AND pm.doctor_id = ?`;
-    params.push(doctor_id);
-    totalParams.push(doctor_id);
-  }
+  totalWhere += ` AND pm.doctor_id = ?`;
+  totalParams.push(doctor_id);   
+}
 
   if (gender !== undefined && gender !== null && gender !== "") {
     where += ` AND u.gender = ?`;
@@ -8979,29 +8978,34 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
   //     params.push(min, max);
   //   }
   // }
-  if (age_group) {
-  if (age_group.includes("+")) {
-    const min = parseInt(age_group.replace("+", ""));
-    where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
-    params.push(min);
-    totalParams.push(min);      // <-- add this
-  } else {
-    const [min, max] = age_group.split("-").map(Number);
-    where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
-    params.push(min, max);
-    totalParams.push(min, max); // <-- add this
-  }
-}
+    if (age_group) {
+      if (age_group.includes("+")) {
+        const min = parseInt(age_group.replace("+", ""));
+        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+        params.push(min);
+       
+      } else {
+        const [min, max] = age_group.split("-").map(Number);
+        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+        params.push(min, max);
+      
+      }
+    }
 
   const offset = (page - 1) * limit;
 
   // Total patients count
+  // const totalSql = `
+  //   SELECT COUNT(DISTINCT pm.user_id) as total
+  //   FROM patient_master pm
+  //   JOIN user_master u ON u.user_id = pm.user_id
+  //   ${where}
+  // `;
   const totalSql = `
-    SELECT COUNT(DISTINCT pm.user_id) as total
-    FROM patient_master pm
-    JOIN user_master u ON u.user_id = pm.user_id
-    ${where}
-  `;
+  SELECT COUNT(DISTINCT pm.user_id) as total
+  FROM patient_master pm
+  ${totalWhere}
+`;
 
   const patientSql = `
     SELECT DISTINCT pm.user_id, pm.doctor_id, u.name, u.dob, u.gender, u.diseases
