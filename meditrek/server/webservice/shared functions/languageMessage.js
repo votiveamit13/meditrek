@@ -1,137 +1,134 @@
 const messages = {
+  msg_empty_param: ["Please send data"],
 
-  msg_empty_param: ['Please send data'],
+  internalServerError: ["Internal Server Error"],
 
-  internalServerError: ['Internal Server Error'],
+  accountAlreadyExists: ["account already exists"],
 
-  accountAlreadyExists: ['account already exists'],
+  internalServerError: ["Internal Server Error"],
 
-  internalServerError: ['Internal Server Error'],
+  userNotFound: ["User not found"],
 
-  userNotFound: ['User not found'],
+  expertNotFound: ["Expert not found"],
 
-  expertNotFound: ['Expert not found'],
+  userCreatedSuccess: ["User created successfully! OTP sent to email."],
 
-  userCreatedSuccess: ['User created successfully! OTP sent to email.'],
+  updateSuccess: ["Profile created successfully!"],
 
-  updateSuccess: ['Profile created successfully!'],
+  editSuccess: ["Profile edited successfully!"],
 
-  editSuccess: ['Profile edited successfully!'],
+  profileDeleteSuccess: ["Profile Deleted successfully!"],
 
-  profileDeleteSuccess: ['Profile Deleted successfully!'],
+  updateBankSuccess: ["Bank Details Updated successfully!"],
 
-  updateBankSuccess: ['Bank Details Updated successfully!'],
+  userCreatedOtpSaveFailed: [
+    "User created successfully, but failed to save OTP.",
+  ],
 
-  userCreatedOtpSaveFailed: ['User created successfully, but failed to save OTP.'],
+  failedToFetchData: ["Failed to fetch data"],
 
-  failedToFetchData: ['Failed to fetch data'],
+  userCreatedOtpSendFailed: [
+    "User created successfully, but failed to send OTP.",
+  ],
 
-  userCreatedOtpSendFailed: ['User created successfully, but failed to send OTP.'],
+  errorSendingOtpMail: ["Error sending OTP email."],
 
-  errorSendingOtpMail: ['Error sending OTP email.'],
+  otpSuccess: ["OTP sent successfully."],
 
-  otpSuccess: ['OTP sent successfully.'],
+  otpfailed: ["Failed to sent OTP."],
 
-  otpfailed: ['Failed to sent OTP.'],
+  accountdeactivated: ["Your account has been deactivated"],
 
-  accountdeactivated: ['Your account has been deactivated'],
+  invalidOtp: ["Invalid OTP"],
 
-  invalidOtp: ['Invalid OTP'],
+  otpVerifiedSuccess: ["OTP verified successfully!"],
 
-  otpVerifiedSuccess: ['OTP verified successfully!'],
-
-  locationSuccess: ['Location stored successfully'],
+  locationSuccess: ["Location stored successfully"],
 
   IncorrectPassword: ["Password is incorrect"],
 
-  signInSuccess: ['SignIn successfully'],
+  signInSuccess: ["SignIn successfully"],
 
-  passUpdatedSuccess: ['Password updated successfully.'],
+  passUpdatedSuccess: ["Password updated successfully."],
 
-  profileUpdatedSuccess: ['User profile updated successfully!'],
+  profileUpdatedSuccess: ["User profile updated successfully!"],
 
-  newOldPasswordNotCorrect: ['Current password not correct'],
+  newOldPasswordNotCorrect: ["Current password not correct"],
 
-  wrongEmail: ['Invalid email address'],
+  wrongEmail: ["Invalid email address"],
 
-  wrongUserName: ['Invalid User name'],
+  wrongUserName: ["Invalid User name"],
 
-  responseSend: ['Response sended successfully'],
+  responseSend: ["Response sended successfully"],
 
-  dataFound: ['Data Found'],
+  dataFound: ["Data Found"],
 
-  jobPostCreated: ['Job post created'],
+  jobPostCreated: ["Job post created"],
 
-  dataNotFound: ['Data not Found'],
+  dataNotFound: ["Data not Found"],
 
-  userDeleted: ['User Deactativated'],
+  userDeleted: ["User Deactativated"],
 
+  msgUserDeleted: ["Your account is not register with us"],
 
-  msgUserDeleted : ["Your account is not register with us"],
+  alreadyUseNum: ["Mobile number is already registered"],
 
-  alreadyUseNum: ['Mobile number is already registered'],
+  walletUpdate: ["Wallet recharged successfully!"],
 
-  walletUpdate: ['Wallet recharged successfully!'],
+  invalidType: ["Invalid type provided"],
 
-  invalidType: ['Invalid type provided'],
+  withdrawSend: ["Withdraw request send successfully!"],
 
-  withdrawSend: ['Withdraw request send successfully!'],
+  expertHired: ["Expert hired successfully!"],
 
-  expertHired: ['Expert hired successfully!'],
+  projectCostCreate: ["Project cost created!!"],
 
-  projectCostCreate: ['Project cost created!!'],
+  mobileIsUsed: ["Mobile number is already used"],
 
-  mobileIsUsed: ['Mobile number is already used'],
+  sendContactUs: ["Thank you for contact, we will get back to you soon."],
 
-  sendContactUs: ['Thank you for contact, we will get back to you soon.'],
+  medicationPaused: ["Medication Status Changed!"],
 
-  medicationPaused: ['Medication Status Changed!'],
+  medicationTaken: ["Medication Taken Successfully!"],
 
-  medicationTaken: ['Medication Taken Successfully!'],
+  medicineCreated: ["Medicine Created"],
 
-  medicineCreated: ['Medicine Created'],
+  medicationCreated: ["Medication Created Successfully!"],
 
-  medicationCreated: ['Medication Created Successfully!'],
+  medicationUpdated: ["Medication Updated Successfully!"],
 
-  medicationUpdated: ['Medication Updated Successfully!'],
+  MedicationDeleted: ["Medication Deleted"],
 
-  MedicationDeleted: ['Medication Deleted'],
+  reportAdded: ["Report Added Successfully!"],
 
-  reportAdded: ['Report Added Successfully!'],
+  reportNotFound: ["Report Not Found"],
 
-  reportNotFound: ['Report Not Found'],
+  reportDeleted: ["Report Deleted Successfully!"],
 
-  reportDeleted: ['Report Deleted Successfully!'],
+  reportGraphSuccess: ["Monthly report counts fetched Successfully."],
 
-  reportGraphSuccess: ['Monthly report counts fetched Successfully.'],
+  dataInserted: ["Data Inserted Successfully!"],
 
-  dataInserted: ['Data Inserted Successfully!'],
+  dataUpdated: ["Data Updated Successfully"],
 
-  dataUpdated: ['Data Updated Successfully'],
+  dataDeleted: ["Data Deleted Successfully"],
 
-  dataDeleted: ['Data Deleted Successfully'],
+  DoctordeleteSuccess: ["Doctor deleted successfully "],
+  DoctorDeleteUnsuccess: ["Doctor has not been deleted, please try again"],
+  InformatonShared: ["Information shared successfully"],
+  doctorNotFound: ["Doctor not found"],
 
-  DoctordeleteSuccess : ['Doctor deleted successfully '], 
-  DoctorDeleteUnsuccess :['Doctor has not been deleted, please try again'], 
-  InformatonShared : ['Information shared successfully'], 
-  doctorNotFound : ['Doctor not found'], 
-
-  ReportNotShared : ['Reports has not been shared, please try again'],
-  ReportShared : ['Reports shared successfully'], 
-  BPAdded :['BP added successfully'],
-  FastingGlucoseAdd:['Fasting Glucose added successfully'],
-  PPBGSAdded : ['PPBGS added successfully'],
-  WeightAdded : ['Weight added successfully'],
-  TempAdded : ['Temperature added successfully'],
-  TimeUpdated : ['Time updated successfully'],
-  medicationNotTaken : ['Medication not taken '], 
-  playerIdRemoved :['Player ID removed successfully'], 
-  dataDeletedSuccessfully:['Data deleted successfully'],
-
-
+  ReportNotShared: ["Reports has not been shared, please try again"],
+  ReportShared: ["Reports shared successfully"],
+  BPAdded: ["BP added successfully"],
+  FastingGlucoseAdd: ["Fasting Glucose added successfully"],
+  PPBGSAdded: ["PPBGS added successfully"],
+  WeightAdded: ["Weight added successfully"],
+  TempAdded: ["Temperature added successfully"],
+  TimeUpdated: ["Time updated successfully"],
+  medicationNotTaken: ["Medication not taken "],
+  playerIdRemoved: ["Player ID removed successfully"],
+  dataDeletedSuccessfully: ["Data deleted successfully"],
 };
 
-
-
-module.exports = messages; 
-
+module.exports = messages;
