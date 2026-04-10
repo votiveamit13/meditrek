@@ -44,5 +44,8 @@
   "fasting_glucose_added_successfully": "تم إضافة الجلوكوز الصائم بنجاح",
   "ppbgs_added_successfully": "تم إضافة PPBGS بنجاح",
   "weight_added_successfully": "تم إضافة الوزن بنجاح",
-  "temperature_added_successfully": "تم إضافة درجة الحرارة بنجاح"
+  "temperature_added_successfully": "تم إضافة درجة الحرارة بنجاح",
+  "msgUserDeleted": "حسابك غير مسجل لدينا",
+  "report_not_found": "التقرير غير موجود",
+  "report_deleted_successfully": "تم حذف التقرير بنجاح"
 }

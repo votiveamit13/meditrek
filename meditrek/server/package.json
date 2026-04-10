@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "author": "",
   "license": "ISC",
@@ -24,8 +25,10 @@
     "mysql": "^2.18.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
-    "nodemon": "^3.1.9",
     "pm2": "^6.0.5",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

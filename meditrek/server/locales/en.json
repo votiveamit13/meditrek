@@ -44,5 +44,8 @@
   "fasting_glucose_added_successfully": "Fasting Glucose added successfully",
   "ppbgs_added_successfully": "PPBGS added successfully",
   "weight_added_successfully": "Weight added successfully",
-  "temperature_added_successfully": "Temperature added successfully"
+  "temperature_added_successfully": "Temperature added successfully",
+  "msgUserDeleted": "Your account is not registered with us",
+  "report_not_found": "Report not found",
+  "report_deleted_successfully": "Report deleted successfully"
 }

@@ -117,13 +117,11 @@ const sendContactUs = async (request, response) => {
       }
 
       if (result[0]?.delete_flag == 1) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("your_account_is_not_registered_with_us"),
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("your_account_is_not_registered_with_us"),
+          active_flag: 0,
+        });
       }
 
       // if (!(result[0].email == email)) {
@@ -215,13 +213,11 @@ const pauseMedication = async (request, response) => {
 
   connection.query(query1, values1, async (err, result) => {
     if (err) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.internalServerError,
-          key: err.message,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.internalServerError,
+        key: err.message,
+      });
     }
 
     if (result.length === 0) {
@@ -231,23 +227,19 @@ const pauseMedication = async (request, response) => {
     }
 
     if (result[0]?.active_flag === 0) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.userDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.userDeleted,
+        active_flag: 0,
+      });
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     const query2 =
@@ -257,13 +249,11 @@ const pauseMedication = async (request, response) => {
 
     connection.query(query2, values2, async (err, result) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          key: err.message,
+        });
       }
 
       return response
@@ -288,13 +278,11 @@ const MedicationMarkASTaken = async (request, response) => {
 
   connection.query(query1, values1, async (err, result) => {
     if (err) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.internalServerError,
-          key: err.message,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.internalServerError,
+        key: err.message,
+      });
     }
 
     if (result.length === 0) {
@@ -304,23 +292,19 @@ const MedicationMarkASTaken = async (request, response) => {
     }
 
     if (result[0]?.active_flag === 0) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.userDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.userDeleted,
+        active_flag: 0,
+      });
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     // 1. Get medication_id from time_slots_id
@@ -328,13 +312,11 @@ const MedicationMarkASTaken = async (request, response) => {
       "SELECT t.medication_id,m.medicine_id,t.time FROM time_slots_master t JOIN medication_master m ON m.medication_id = t.medication_id WHERE t.time_slots_id = ? AND t.delete_flag = 0";
     connection.query(getMedicationQuery, [time_slots_id], (err, medResult) => {
       if (err || medResult.length === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key: err?.message || "Medication not found",
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          key: err?.message || "Medication not found",
+        });
       }
 
       const medication_id = medResult[0].medication_id;
@@ -378,13 +360,11 @@ const MedicationMarkASTaken = async (request, response) => {
         [status, medicine_id, user_id, time_slots_id, formattedDate],
         async (err) => {
           if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessage.internalServerError,
-                key: err.message,
-              });
+            return response.status(200).json({
+              success: false,
+              msg: languageMessage.internalServerError,
+              key: err.message,
+            });
           }
           // 2. Update taken_status in time_slots_master
           const updateSlotQuery =
@@ -394,13 +374,11 @@ const MedicationMarkASTaken = async (request, response) => {
             [formattedDate, time_slots_id],
             (err, updateResult) => {
               if (err) {
-                return response
-                  .status(200)
-                  .json({
-                    success: false,
-                    msg: languageMessage.internalServerError,
-                    key: err.message,
-                  });
+                return response.status(200).json({
+                  success: false,
+                  msg: languageMessage.internalServerError,
+                  key: err.message,
+                });
               }
 
               // 3. Decrease remaining_quantity by 1 in medication_master
@@ -411,21 +389,17 @@ const MedicationMarkASTaken = async (request, response) => {
                 [medication_id],
                 (err, medUpdateResult) => {
                   if (err) {
-                    return response
-                      .status(200)
-                      .json({
-                        success: false,
-                        msg: languageMessage.internalServerError,
-                        key: err.message,
-                      });
+                    return response.status(200).json({
+                      success: false,
+                      msg: languageMessage.internalServerError,
+                      key: err.message,
+                    });
                   }
 
-                  return response
-                    .status(200)
-                    .json({
-                      success: true,
-                      msg: languageMessage.medicationTaken,
-                    });
+                  return response.status(200).json({
+                    success: true,
+                    msg: languageMessage.medicationTaken,
+                  });
                 },
               );
             },
@@ -489,13 +463,11 @@ const insertMedicine = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     // Insert medicine into medicine_master
@@ -634,13 +606,11 @@ const AddMedicationn = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     // Insert medication data into medication_master
@@ -1140,13 +1110,11 @@ const editNewMedication = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     const checksql =
@@ -1160,13 +1128,11 @@ const editNewMedication = async (request, response) => {
         });
       }
       if (check.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.dataNotFound,
-            key: "medication",
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.dataNotFound,
+          key: "medication",
+        });
       }
 
       const insertQuery = `
@@ -1384,13 +1350,11 @@ const DeleteMedication = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     // Perform soft delete on medication record
@@ -1506,13 +1470,11 @@ const addMedicalReport = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     // Insert medicine into medicine_master
@@ -1557,12 +1519,11 @@ const addMedicalReport = async (request, response) => {
 //Delete Report
 
 const deleteMedicalReport = async (request, response) => {
-  const { user_id, medical_report_id } = request.body;
+  const { user_id, medical_report_id, language_code } = request.body;
 
   if (!user_id) {
     return response.status(200).json({
       success: false,
-
       msg: languageMessage.msg_empty_param,
     });
   }
@@ -1579,6 +1540,13 @@ const deleteMedicalReport = async (request, response) => {
 
   // Validate user
 
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
+
   const userQuery =
     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
 
@@ -1590,7 +1558,7 @@ const deleteMedicalReport = async (request, response) => {
         success: false,
 
         msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -1598,29 +1566,24 @@ const deleteMedicalReport = async (request, response) => {
     if (result.length === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userDeleted,
-
+        msg: request.__("user_deactativated"),
         active_flag: 0,
       });
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("msgUserDeleted"),
+        active_flag: 0,
+      });
     }
 
     // Check if report exists and not already deleted
@@ -1637,9 +1600,7 @@ const deleteMedicalReport = async (request, response) => {
       if (err) {
         return response.status(200).json({
           success: false,
-
-          msg: languageMessage.internalServerError,
-
+          msg: request.__("internal_server_error"),
           key: err.message,
         });
       }
@@ -1647,8 +1608,7 @@ const deleteMedicalReport = async (request, response) => {
       if (result.length === 0) {
         return response.status(200).json({
           success: false,
-
-          msg: languageMessage.reportNotFound,
+          msg: request.__("report_not_found"),
         });
       }
 
@@ -1672,7 +1632,7 @@ const deleteMedicalReport = async (request, response) => {
             return response.status(200).json({
               success: false,
 
-              msg: languageMessage.internalServerError,
+              msg: request.__("internal_server_error"),
 
               key: err.message,
             });
@@ -1682,6 +1642,7 @@ const deleteMedicalReport = async (request, response) => {
             success: true,
 
             msg: languageMessage.reportDeleted,
+            msg: request.__("report_deleted_successfully"),
           });
         },
       );
@@ -1741,13 +1702,11 @@ const getLaboratoryReportCounts = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     try {
@@ -1842,13 +1801,11 @@ const addBPData = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, systolic_bp, diastolic_bp, pulse) VALUES (?, 0, ?, ?, ?)`;
@@ -1858,13 +1815,11 @@ const addBPData = async (request, response) => {
       [user_id, systolic_bp, diastolic_bp, pulse ? pulse : 0],
       (err) => {
         if (err)
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            error: err.message,
+          });
 
         return response
           .status(200)
@@ -1905,33 +1860,27 @@ const addFastingGlucose = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, fasting_glucose) VALUES (?, 1, ?)`;
 
     connection.query(insertQuery, [user_id, fasting_glucose], (err) => {
       if (err)
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
-
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: request.__("fasting_glucose_added_successfully"),
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          error: err.message,
         });
+
+      return response.status(200).json({
+        success: true,
+        msg: request.__("fasting_glucose_added_successfully"),
+      });
     });
   });
 };
@@ -1967,26 +1916,22 @@ const addPPBGS = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, ppbgs) VALUES (?, 2, ?)`;
 
     connection.query(insertQuery, [user_id, ppbgs], (err) => {
       if (err)
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          error: err.message,
+        });
 
       return response
         .status(200)
@@ -2026,36 +1971,30 @@ const addWeightMeasurement = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, weight) VALUES (?, 3, ?)`;
 
     connection.query(insertQuery, [user_id, weight], async (err) => {
       if (err)
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          error: err.message,
+        });
 
       const userDataArray = await getUserDetails(user_id);
 
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: request.__("weight_added_successfully"),
-          userDataArray: userDataArray,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: request.__("weight_added_successfully"),
+        userDataArray: userDataArray,
+      });
     });
   });
 };
@@ -2091,33 +2030,27 @@ const addTemperature = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, temperature) VALUES (?, 4, ?)`;
 
     connection.query(insertQuery, [user_id, temperature], (err) => {
       if (err)
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
-
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: request.__("temperature_added_successfully"),
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          error: err.message,
         });
+
+      return response.status(200).json({
+        success: true,
+        msg: request.__("temperature_added_successfully"),
+      });
     });
   });
 };
@@ -2152,26 +2085,22 @@ const addCustomMeasure = async (request, response) => {
         .json({ success: false, msg: request.__("user_not_found") });
     }
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `INSERT INTO measurement_master (user_id, type, symptom, symptom_range) VALUES (?, 5, ?, ?)`;
 
     connection.query(insertQuery, [user_id, symptom, symptom_range], (err) => {
       if (err)
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          error: err.message,
+        });
 
       return response
         .status(200)
@@ -2211,13 +2140,11 @@ const editCustomMeasure = async (request, response) => {
         .json({ success: false, msg: request.__("user_not_found") });
     }
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const updateQuery = `
@@ -2291,13 +2218,11 @@ const deleteCustomMeasure = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const updateQuery = `
@@ -2408,13 +2333,11 @@ const addAdverseReaction = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const insertQuery = `
@@ -2614,13 +2537,11 @@ const editAdverseReaction = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     const updateQuery = `
@@ -2726,13 +2647,11 @@ const deleteAdverseReaction = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     // Perform soft delete
@@ -2807,13 +2726,11 @@ const addDoctors = async (request, response) => {
   const userValues = [user_id];
   connection.query(userQuery, userValues, async (err, result) => {
     if (err) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          key: err.message,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
     }
     if (result.length === 0)
       return response
@@ -2821,22 +2738,18 @@ const addDoctors = async (request, response) => {
         .json({ success: false, msg: request.__("user_not_found") });
 
     if (result[0]?.active_flag === 0)
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("user_deactivated"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_deactivated"),
+        active_flag: 0,
+      });
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("your_account_is_not_registered_with_us"),
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
     }
 
     try {
@@ -2845,28 +2758,22 @@ const addDoctors = async (request, response) => {
       const Values = [user_id, doctor_id, createtime];
       connection.query(Query, Values, async (err, subResult) => {
         if (err)
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              key: err.message,
-            });
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: request.__("data_inserted_successfully"),
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
           });
+        return response.status(200).json({
+          success: true,
+          msg: request.__("data_inserted_successfully"),
+        });
       });
     } catch (error) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          error: error.message,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        error: error.message,
+      });
     }
   });
 };
@@ -2925,13 +2832,11 @@ const clearAllNotifications = async (request, response) => {
 
     connection.query(query1, values1, async (err, result) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          key: err.message,
+        });
       }
       if (result.length === 0) {
         return response
@@ -2939,22 +2844,18 @@ const clearAllNotifications = async (request, response) => {
           .json({ success: false, msg: languageMessage.userNotFound });
       }
       if (result[0]?.active_flag === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.userDeleted,
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.userDeleted,
+          active_flag: 0,
+        });
       }
       if (result[0]?.delete_flag == 1) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.msgUserDeleted,
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.msgUserDeleted,
+          active_flag: 0,
+        });
       }
 
       const query = `
@@ -2965,35 +2866,29 @@ const clearAllNotifications = async (request, response) => {
       const values = [formattedDate, user_id];
       connection.query(query, values, (err, result) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              key: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            key: err.message,
+          });
         }
         if (result.affectedRows === 0) {
           return response
             .status(200)
             .json({ success: false, msg: languageMessage.dataNotFound });
         }
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: ["All notifications deleted successfully."],
-          });
+        return response.status(200).json({
+          success: true,
+          msg: ["All notifications deleted successfully."],
+        });
       });
     });
   } catch (err) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        key: err.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      key: err.message,
+    });
   }
 };
 //end
@@ -3020,13 +2915,11 @@ const clearSingleNotifications = async (request, response) => {
 
     connection.query(query1, values1, async (err, result) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          key: err.message,
+        });
       }
       if (result.length === 0) {
         return response
@@ -3034,22 +2927,18 @@ const clearSingleNotifications = async (request, response) => {
           .json({ success: false, msg: languageMessage.userNotFound });
       }
       if (result[0]?.active_flag === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.userDeleted,
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.userDeleted,
+          active_flag: 0,
+        });
       }
       if (result[0]?.delete_flag == 1) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.msgUserDeleted,
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.msgUserDeleted,
+          active_flag: 0,
+        });
       }
 
       const query = `
@@ -3061,13 +2950,11 @@ const clearSingleNotifications = async (request, response) => {
 
       connection.query(query, values, (err, result) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              key: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            key: err.message,
+          });
         }
 
         if (result.affectedRows === 0) {
@@ -3082,13 +2969,11 @@ const clearSingleNotifications = async (request, response) => {
       });
     });
   } catch (err) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        key: err.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      key: err.message,
+    });
   }
 };
 
@@ -3504,13 +3389,11 @@ const editMedication = async (request, response) => {
     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
   connection.query(userQuery, [user_id], async (err, result) => {
     if (err) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          key: err.message,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
     }
 
     if (result.length === 0) {
@@ -3531,22 +3414,18 @@ const editMedication = async (request, response) => {
       "SELECT medication_id FROM medication_master WHERE user_id = ? AND medication_id = ? AND delete_flag = 0";
     connection.query(checkSql, [user_id, medication_id], async (err, check) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            key: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          key: err.message,
+        });
       }
       if (check.length === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("data_not_found"),
-            key: "medication",
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("data_not_found"),
+          key: "medication",
+        });
       }
 
       //   Prepare weekday/schedule_date based on schedule type
@@ -3617,13 +3496,11 @@ const editMedication = async (request, response) => {
 
       connection.query(updateQuery, updateValues, async (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              key: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
+          });
         }
 
         //   Handle time slots (delete old + insert new)
@@ -3687,52 +3564,42 @@ const editMedication = async (request, response) => {
               [formattedDate, medication_id],
               (err) => {
                 if (err) {
-                  return response
-                    .status(200)
-                    .json({
-                      success: false,
-                      msg: request.__("internal_server_error"),
-                      key: err.message,
-                    });
+                  return response.status(200).json({
+                    success: false,
+                    msg: request.__("internal_server_error"),
+                    key: err.message,
+                  });
                 }
 
                 // Insert new time slots
                 const timeSlotInsertSql = `INSERT INTO time_slots_master (medication_id, time) VALUES ?`;
                 connection.query(timeSlotInsertSql, [timeSlotValues], (err) => {
                   if (err) {
-                    return response
-                      .status(200)
-                      .json({
-                        success: false,
-                        msg: request.__("internal_server_error"),
-                        key: err.message,
-                      });
+                    return response.status(200).json({
+                      success: false,
+                      msg: request.__("internal_server_error"),
+                      key: err.message,
+                    });
                   }
 
-                  return response
-                    .status(200)
-                    .json({
-                      success: true,
-                      msg: request.__("medication_updated_successfully"),
-                    });
+                  return response.status(200).json({
+                    success: true,
+                    msg: request.__("medication_updated_successfully"),
+                  });
                 });
               },
             );
           } else {
-            return response
-              .status(200)
-              .json({
-                success: true,
-                msg: request.__("medication_updated_successfully"),
-              });
-          }
-        } else {
-          return response
-            .status(200)
-            .json({
+            return response.status(200).json({
               success: true,
               msg: request.__("medication_updated_successfully"),
             });
+          }
+        } else {
+          return response.status(200).json({
+            success: true,
+            msg: request.__("medication_updated_successfully"),
+          });
         }
       });
     });
@@ -3961,23 +3828,19 @@ const shareReportToDoctor = async (request, response) => {
   const { user_id, doctor_id, medical_report_id, language_code } = request.body;
   try {
     if (!user_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msg_empty_param,
-          key: "user_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+        key: "user_id",
+      });
     }
 
     if (!doctor_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msg_empty_param,
-          key: "doctor_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+        key: "doctor_id",
+      });
     }
 
     const finalLanguage =
@@ -3991,13 +3854,11 @@ const shareReportToDoctor = async (request, response) => {
       "SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(checkUser, [user_id], async (err, res) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            key: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          key: err.message,
+        });
       }
       if (res.length == 0) {
         return response
@@ -4005,26 +3866,22 @@ const shareReportToDoctor = async (request, response) => {
           .json({ success: false, msg: request.__("user_not_found") });
       }
       if (res[0].active_flag == 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: request.__("your_account_has_been_deactivated"),
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: request.__("your_account_has_been_deactivated"),
+          active_flag: 0,
+        });
       }
 
       const checkDoctor =
         "SELECT doctor_id FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
       connection.query(checkDoctor, [doctor_id], async (err, res) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              key: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
+          });
         }
         if (res.length == 0) {
           return response
@@ -4039,30 +3896,22 @@ const shareReportToDoctor = async (request, response) => {
           [user_id, medical_report_id, doctor_id, formattedDate, formattedDate],
           async (err, res) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: request.__("internal_server_error"),
-                  key: err.message,
-                });
+              return response.status(200).json({
+                success: false,
+                msg: request.__("internal_server_error"),
+                key: err.message,
+              });
             }
             if (res.affectedRows == 0) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: request.__(
-                    "reports_has_not_been_shared_please_try_again",
-                  ),
-                });
-            }
-            return response
-              .status(200)
-              .json({
-                success: true,
-                msg: request.__("report_shared_successfully"),
+              return response.status(200).json({
+                success: false,
+                msg: request.__("reports_has_not_been_shared_please_try_again"),
               });
+            }
+            return response.status(200).json({
+              success: true,
+              msg: request.__("report_shared_successfully"),
+            });
           },
         );
       });
@@ -4229,13 +4078,11 @@ const checkReportsAddedStatus = async (request, response) => {
   const { user_id } = request.query;
   try {
     if (!user_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msg_empty_param,
-          key: "user_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+        key: "user_id",
+      });
     }
     const checkUser =
       "SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
@@ -4276,13 +4123,11 @@ const checkReportsAddedStatus = async (request, response) => {
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -4351,13 +4196,11 @@ const getNotificationStatus = async (request, response) => {
   const { user_id } = request.query;
   try {
     if (!user_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msg_empty_param,
-          key: "user_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+        key: "user_id",
+      });
     }
 
     const checkUser =
@@ -4389,33 +4232,27 @@ const getNotificationStatus = async (request, response) => {
         "SELECT notification_message_id FROM user_notification_message WHERE other_user_id = ? AND delete_flag = 0 AND read_status = 0";
       connection.query(sql, [user_id], async (err1, res1) => {
         if (err1) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              error: err1.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            error: err1.message,
+          });
         }
 
         let notification_status = res1.length > 0 ? true : false;
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: languageMessage.dataFound,
-            notification_status,
-          });
+        return response.status(200).json({
+          success: true,
+          msg: languageMessage.dataFound,
+          notification_status,
+        });
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -4460,13 +4297,11 @@ const DeleteMedicationFromHistory = async (request, response) => {
     }
 
     if (result[0]?.delete_flag == 1) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msgUserDeleted,
-          active_flag: 0,
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msgUserDeleted,
+        active_flag: 0,
+      });
     }
 
     const check =
@@ -4476,13 +4311,11 @@ const DeleteMedicationFromHistory = async (request, response) => {
       [user_id, medication_id],
       async (checkErr, checkRes) => {
         if (checkErr) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              error: checkErr.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            error: checkErr.message,
+          });
         }
         let deleteQuery;
 
@@ -4498,20 +4331,16 @@ const DeleteMedicationFromHistory = async (request, response) => {
             deleteValues,
             async (err, deleteResult) => {
               if (err) {
-                return response
-                  .status(200)
-                  .json({
-                    success: false,
-                    msg: languageMessage.internalServerError,
-                    key: err.message,
-                  });
-              }
-              return response
-                .status(200)
-                .json({
-                  success: true,
-                  msg: languageMessage.MedicationDeleted,
+                return response.status(200).json({
+                  success: false,
+                  msg: languageMessage.internalServerError,
+                  key: err.message,
                 });
+              }
+              return response.status(200).json({
+                success: true,
+                msg: languageMessage.MedicationDeleted,
+              });
             },
           );
         } else {
@@ -4604,25 +4433,21 @@ const removePlayerId = async (request, response) => {
   const { user_id } = request.body;
   try {
     if (!user_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessage.msg_empty_param,
-          key: "user_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+        key: "user_id",
+      });
     }
     const check =
       "SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
     connection.query(check, [user_id], async (checkErr, checkRes) => {
       if (checkErr) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            error: checkErr.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          error: checkErr.message,
+        });
       }
       if (checkRes.length == 0) {
         return response
@@ -4630,26 +4455,22 @@ const removePlayerId = async (request, response) => {
           .json({ success: false, msg: languageMessage.userNotFound });
       }
       if (checkRes[0].active_flag == 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.userDeleted,
-            active_flag: 0,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.userDeleted,
+          active_flag: 0,
+        });
       }
 
       const update =
         "UPDATE user_notification SET player_id = NULL WHERE user_id = ?";
       connection.query(update, [user_id], async (updateErr, updateRes) => {
         if (updateErr) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              error: updateErr.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            error: updateErr.message,
+          });
         }
         return response
           .status(200)
@@ -4657,13 +4478,11 @@ const removePlayerId = async (request, response) => {
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      error: error.message,
+    });
   }
 };
 

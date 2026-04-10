@@ -44,5 +44,8 @@
   "fasting_glucose_added_successfully": "Glucose à jeun ajouté avec succès",
   "ppbgs_added_successfully": "PPBGS ajouté avec succès",
   "weight_added_successfully": "Poids ajouté avec succès",
-  "temperature_added_successfully": "Température ajoutée avec succès"
+  "temperature_added_successfully": "Température ajoutée avec succès",
+  "msgUserDeleted": "Votre compte n'est pas enregistré chez nous",
+  "report_not_found": "Rapport non trouvé",
+  "report_deleted_successfully": "Rapport supprimé avec succès"
 }
