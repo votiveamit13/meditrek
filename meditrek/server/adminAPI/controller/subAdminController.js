@@ -9852,6 +9852,7 @@ const getMedicationDiseaseDashboard = (req, res) => {
     exclude_disease = [],
     singleOnly = false,
     combinedOnly = false,
+    includeExtra =false,
     page = 1,
     limit = 10
   } = req.body;
@@ -10037,6 +10038,15 @@ const getMedicationDiseaseDashboard = (req, res) => {
             return (
               matched.length === selectedMeds.length &&
               meds.length === selectedMeds.length
+            );
+          });
+        }
+        else if (includeExtra && selectedMeds.length >= 2) {
+          finalRows = finalRows.filter(p => {
+            const meds = extractMedNames(p.medications);
+
+            return selectedMeds.every(sel =>
+              meds.some(m => m.includes(sel))
             );
           });
         }
