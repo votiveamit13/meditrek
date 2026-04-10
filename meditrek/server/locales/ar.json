@@ -39,5 +39,10 @@
 	"doctor_has_not_been_deleted_please_try_again": "لم يتم حذف الطبيب، يرجى المحاولة مرة أخرى",
 	"data_deleted_successfully": "تم حذف البيانات بنجاح",
 	"data_found": "تم العثور على البيانات",
-	"profile_deleted_successfully": "تم حذف الملف الشخصي بنجاح"
+	"profile_deleted_successfully": "تم حذف الملف الشخصي بنجاح",
+	"bp_added_successfully": "تم إضافة ضغط الدم بنجاح",
+	"fasting_glucose_added_successfully": "تم إضافة الجلوكوز الصائم بنجاح",
+	"ppbgs_added_successfully": "تم إضافة PPBGS بنجاح",
+	"weight_added_successfully": "تم إضافة الوزن بنجاح",
+	"temperature_added_successfully": "تم إضافة درجة الحرارة بنجاح"
 }
