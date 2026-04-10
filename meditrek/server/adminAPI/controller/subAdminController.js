@@ -9023,6 +9023,7 @@ const getSubadminMedicationFull = (req, res) => {
     search,
      singleOnly = false,
   combinedOnly = false,
+  includeExtra = false,
     summary_page = 1,
     summary_limit = 10,
     patient_page = 1,
@@ -9194,6 +9195,15 @@ const getSubadminMedicationFull = (req, res) => {
           );
         });
       }
+       else if (includeExtra && medication.length >= 2) {
+          matchedPatients = matchedPatients.filter(p => {
+            const meds = (p.medications || [])
+              .map(m => m.name.toLowerCase().trim());
+
+            return selectedMeds.every(m => meds.includes(m));
+          });
+        }
+
 
       // ✅ DEFAULT 
       else {
