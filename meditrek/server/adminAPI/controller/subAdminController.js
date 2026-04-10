@@ -7326,6 +7326,141 @@ const getDiseaseDashboard = (req, res) => {
 //     });
 //   });
 // };
+// const getPatientDiseasesMedicineAnalytics = (req, res) => {
+//   const {
+//     doctor_id,
+//     gender,
+//     age_group,
+//     disease = [],
+//     medication = [],
+//     singleOnly = false,
+//   combinedOnly = false,
+//   } = req.body;
+
+//   if (!doctor_id) {
+//     return res.json({ success: false, msg: "doctor_id required" });
+//   }
+
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let params = [doctor_id];
+
+//   if (gender !== undefined && gender !== null && gender !== "") {
+//     where += ` AND u.gender = ?`;
+//     params.push(gender);
+//   }
+
+//   if (age_group) {
+//     if (age_group.includes("+")) {
+//       const min = parseInt(age_group.replace("+", ""));
+//       where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+//       params.push(min);
+//     } else {
+//       const [min, max] = age_group.split("-").map(Number);
+//       where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+//       params.push(min, max);
+//     }
+//   }
+
+// if (Array.isArray(disease) && disease.length > 0) {
+
+//   const countCondition = `
+//     (
+//       LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
+//       - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
+//     ) / LENGTH('name:')
+//   `;
+
+//   // ✅ SINGLE ONLY
+//   if (disease.length === 1 && singleOnly) {
+//     where += ` AND u.diseases LIKE ?`;
+//     params.push(`%${disease[0]}%`);
+
+//     where += ` AND ${countCondition} = 1`;
+//   }
+
+//   // ✅ COMBINED ONLY
+//   else if (combinedOnly && disease.length >= 2) {
+//     const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+//     where += ` AND (${diseaseConditions})`;
+//     disease.forEach(d => params.push(`%${d}%`));
+
+//     where += ` AND ${countCondition} = ?`;
+//     params.push(disease.length);
+//   }
+
+//   // ✅ DEFAULT
+//   else {
+//     const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+//     where += ` AND (${diseaseConditions})`;
+//     disease.forEach(d => params.push(`%${d}%`));
+//   }
+// }
+
+//   if (medication.length) {
+//     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
+//     medication.forEach(m => params.push(`%${m}%`));
+//   }
+
+//   const totalSql = `
+//     SELECT COUNT(DISTINCT p.user_id) as total
+//     FROM patient_master p
+//     WHERE p.doctor_id = ? AND p.delete_flag = 0
+//   `;
+
+//   connection.query(totalSql, [doctor_id], (err, totalResult) => {
+//     if (err) return res.json({ success: false, msg: "Error" });
+
+//     const sql = `
+//       SELECT COUNT(DISTINCT p.user_id) as count
+//       FROM patient_master p
+//       JOIN user_master u ON u.user_id = p.user_id
+//       LEFT JOIN medication_master m ON m.user_id = u.user_id
+//       LEFT JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//       ${where}
+//     `;
+
+//     const topDrugSql = `
+//       SELECT 
+//         m.medicine_id,
+//         med.medicine_name,
+//         COUNT(DISTINCT p.user_id) as patient_count
+//       FROM patient_master p
+//       JOIN user_master u ON u.user_id = p.user_id
+//       JOIN medication_master m ON m.user_id = u.user_id AND m.delete_flag = 0
+//       JOIN medicine_master med ON med.medicine_id = m.medicine_id
+//       ${where}
+//       GROUP BY m.medicine_id
+//       ORDER BY patient_count DESC
+//       LIMIT 1
+//     `;
+
+//     connection.query(sql, params, (err, result) => {
+//       if (err) return res.json({ success: false, msg: "Error" });
+
+//       const total = totalResult[0].total;
+//       const count = result[0].count;
+//       const percentage = total ? ((count / total) * 100).toFixed(2) : 0;
+
+//       connection.query(topDrugSql, params, (err2, topDrugRes) => {
+//         if (err2) return res.json({ success: false, msg: "Error in top drug" });
+
+//         let top_drug = "";
+//         if (topDrugRes.length > 0) {
+//           top_drug = topDrugRes[0].medicine_name;
+//         }
+
+//         return res.json({
+//           success: true,
+//           total_patients: total,
+//           matched_patients: count,
+//           percentage: percentage + "%",
+//           top_drug
+//         });
+//       });
+//     });
+//   });
+// };
+
 const getPatientDiseasesMedicineAnalytics = (req, res) => {
   const {
     doctor_id,
@@ -7333,6 +7468,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
     age_group,
     disease = [],
     medication = [],
+     exclude_medication = [],
     singleOnly = false,
   combinedOnly = false,
   } = req.body;
@@ -7400,7 +7536,17 @@ if (Array.isArray(disease) && disease.length > 0) {
     where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
     medication.forEach(m => params.push(`%${m}%`));
   }
+  let topWhere = where;
+  let topParams = [...params];
 
+  if (exclude_medication.length) {
+    topWhere += ` AND (` + exclude_medication.map(() => `
+      REPLACE(LOWER(med.medicine_name), ' ', '') 
+      NOT LIKE REPLACE(LOWER(?), ' ', '')
+    `).join(" AND ") + `)`;
+
+    exclude_medication.forEach(m => topParams.push(`%${m}%`));
+  }
   const totalSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
@@ -7419,6 +7565,21 @@ if (Array.isArray(disease) && disease.length > 0) {
       ${where}
     `;
 
+    // const topDrugSql = `
+    //   SELECT 
+    //     m.medicine_id,
+    //     med.medicine_name,
+    //     COUNT(DISTINCT p.user_id) as patient_count
+    //   FROM patient_master p
+    //   JOIN user_master u ON u.user_id = p.user_id
+    //   JOIN medication_master m ON m.user_id = u.user_id AND m.delete_flag = 0
+    //   JOIN medicine_master med ON med.medicine_id = m.medicine_id
+    //   ${where}
+    //   GROUP BY m.medicine_id
+    //   ORDER BY patient_count DESC
+    //   LIMIT 1
+    // `;
+
     const topDrugSql = `
       SELECT 
         m.medicine_id,
@@ -7428,20 +7589,20 @@ if (Array.isArray(disease) && disease.length > 0) {
       JOIN user_master u ON u.user_id = p.user_id
       JOIN medication_master m ON m.user_id = u.user_id AND m.delete_flag = 0
       JOIN medicine_master med ON med.medicine_id = m.medicine_id
-      ${where}
+      ${topWhere}
       GROUP BY m.medicine_id
       ORDER BY patient_count DESC
       LIMIT 1
     `;
 
-    connection.query(sql, params, (err, result) => {
+      connection.query(sql, params, (err, result) => {
       if (err) return res.json({ success: false, msg: "Error" });
 
       const total = totalResult[0].total;
       const count = result[0].count;
       const percentage = total ? ((count / total) * 100).toFixed(2) : 0;
 
-      connection.query(topDrugSql, params, (err2, topDrugRes) => {
+      connection.query(topDrugSql, topParams, (err2, topDrugRes) => {
         if (err2) return res.json({ success: false, msg: "Error in top drug" });
 
         let top_drug = "";
