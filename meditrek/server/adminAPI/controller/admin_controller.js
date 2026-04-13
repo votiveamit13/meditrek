@@ -2890,25 +2890,94 @@ const deleteReportCategory = async (request, response) => {
   }
 };
 
+// const getFaq = async (request, response) => {
+//   try {
+//     const getsql = `SELECT faq_id,question,	user_type, answer, DATE_FORMAT(createtime, '%d-%m-%y, %h:%i %p') AS createtime
+//  FROM faq_master WHERE delete_flag=0 ORDER BY faq_id DESC`;
+
+//     connection.query(getsql, (err, results) => {
+//       if (err) {
+//         return response
+//           .status(200)
+//           .json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//       }
+
+//       const faq_arr = [];
+
+//       var s_no = 0;
+
+//       results.forEach((faq) => {
+//         s_no++;
+
+//         faq_arr.push({
+//           s_no: s_no,
+//           faq_id: faq.faq_id,
+//           user_type: faq.user_type,
+//           user_type_label: (faq.user_type == 1) ? "User" : (faq.user_type == 2) ? "Doctor" : "NA",
+//           question: faq.question,
+//           answer: faq.answer,
+//           createtime: faq.createtime,
+//         });
+//       });
+
+//       return response
+//         .status(200)
+//         .json({
+//           success: true,
+//           msg: languageMessages.faqlist,
+//           data: faq_arr,
+//         });
+//     });
+//   } catch (error) {
+//     return response
+//       .status(200)
+//       .json({
+//         success: false,
+//         msg: languageMessages.internalServerError,
+//         error: error.message,
+//       });
+//   }
+// };
+
 const getFaq = async (request, response) => {
   try {
-    const getsql = `SELECT faq_id,question,	user_type, answer, DATE_FORMAT(createtime, '%d-%m-%y, %h:%i %p') AS createtime
- FROM faq_master WHERE delete_flag=0 ORDER BY faq_id DESC`;
+    const { language_code } = request.query;
 
-    connection.query(getsql, (err, results) => {
+    const lang = language_code || "en"; // fallback
+
+    const getsql = `
+      SELECT 
+        fm.faq_id,
+        fm.user_type,
+        COALESCE(ft.question, ft_en.question) AS question,
+        COALESCE(ft.answer, ft_en.answer) AS answer,
+        DATE_FORMAT(fm.createtime, '%d-%m-%y, %h:%i %p') AS createtime
+      FROM faq_master fm
+      LEFT JOIN faq_translation ft 
+        ON fm.faq_id = ft.faq_id 
+        AND ft.language_code = ?
+      LEFT JOIN faq_translation ft_en 
+        ON fm.faq_id = ft_en.faq_id 
+        AND ft_en.language_code = 'en'
+      WHERE fm.delete_flag = 0
+      ORDER BY fm.faq_id DESC
+    `;
+
+    connection.query(getsql, [lang], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const faq_arr = [];
-
-      var s_no = 0;
+      let s_no = 0;
 
       results.forEach((faq) => {
         s_no++;
@@ -2917,29 +2986,30 @@ const getFaq = async (request, response) => {
           s_no: s_no,
           faq_id: faq.faq_id,
           user_type: faq.user_type,
-          user_type_label: (faq.user_type == 1) ? "User" : (faq.user_type == 2) ? "Doctor" : "NA",
-          question: faq.question,
-          answer: faq.answer,
+          user_type_label:
+            faq.user_type == 1
+              ? "User"
+              : faq.user_type == 2
+              ? "Doctor"
+              : "NA",
+          question: faq.question || "N/A",
+          answer: faq.answer || "N/A",
           createtime: faq.createtime,
         });
       });
 
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.faqlist,
-          data: faq_arr,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.faqlist,
+        data: faq_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2996,167 +3066,450 @@ const getFaqDoctor = async (request, response) => {
       });
   }
 };
+// const addFaq = async (request, response) => {
+//   try {
+//     const { question, answer, userType } = request.body;
+
+//     if (!question) {
+//       return response
+//         .status(200)
+//         .json({
+//           success: false,
+//           msg: languageMessages.msg_empty_param,
+//           key: "question",
+//         });
+//     }
+//     if (!answer) {
+//       return response
+//         .status(200)
+//         .json({
+//           success: false,
+//           msg: languageMessages.msg_empty_param,
+//           key: "answer",
+//         });
+//     }
+//     if (!userType) {
+//       return response
+//         .status(200)
+//         .json({
+//           success: false,
+//           msg: languageMessages.msg_empty_param,
+//           key: "userType",
+//         });
+//     }
+
+//     const checkCategorySql =
+//       "SELECT faq_id FROM faq_master WHERE question = ? AND delete_flag = 0";
+
+//     connection.query(checkCategorySql, [question], (err, results) => {
+//       if (err) {
+//         return response
+//           .status(200)
+//           .json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//       }
+
+//       if (results.length > 0) {
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: languageMessages.categoryExists, key: 'exists' });
+//       }
+
+//       const addCategorySql =
+//         "INSERT INTO faq_master (question, answer,user_type, createtime) VALUES (?,?,?, ?)";
+
+//       connection.query(addCategorySql, [question, answer, userType, createtime], (err) => {
+//         if (err) {
+//           return response
+//             .status(200)
+//             .json({
+//               success: false,
+//               msg: languageMessages.internalServerError,
+//               error: err.message,
+//             });
+//         }
+
+//         response
+//           .status(200)
+//           .json({ success: true, msg: languageMessages.categoryAdded });
+//       });
+//     });
+//   } catch (error) {
+//     return response
+//       .status(200)
+//       .json({
+//         success: false,
+//         msg: languageMessages.internalServerError,
+//         error: error.message,
+//       });
+//   }
+// };
+
 const addFaq = async (request, response) => {
   try {
-    const { question, answer, userType } = request.body;
+    const { userType, translations } = request.body;
 
-    if (!question) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "question",
-        });
-    }
-    if (!answer) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "answer",
-        });
-    }
+    const createtime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate userType
     if (!userType) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "userType",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "userType",
+      });
     }
 
-    const checkCategorySql =
-      "SELECT faq_id FROM faq_master WHERE question = ? AND delete_flag = 0";
+    // Validate translations object
+    if (!translations || typeof translations !== "object") {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "translations",
+      });
+    }
 
-    connection.query(checkCategorySql, [question], (err, results) => {
+    // ENGLISH REQUIRED
+    if (!translations.en || !translations.en.question || !translations.en.answer) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
+
+    const englishQuestion = translations.en.question;
+
+    // Check duplicate based on ENGLISH
+    const checkSql = `
+      SELECT ft.faq_id 
+      FROM faq_translation ft
+      JOIN faq_master fm ON fm.faq_id = ft.faq_id
+      WHERE ft.language_code = 'en'
+      AND ft.question = ?
+      AND fm.delete_flag = 0
+    `;
+
+    connection.query(checkSql, [englishQuestion], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (results.length > 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.categoryExists,
+          key: "exists",
+        });
+      }
+
+      // Insert into faq_master (NO question/answer now)
+      const insertFaqSql = `
+        INSERT INTO faq_master (user_type, createtime) 
+        VALUES (?, ?)
+      `;
+
+      connection.query(insertFaqSql, [userType, createtime], (err, result) => {
+        if (err) {
+          return response.status(200).json({
             success: false,
             msg: languageMessages.internalServerError,
             error: err.message,
           });
-      }
+        }
 
-      if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.categoryExists, key: 'exists' });
-      }
+        const faqId = result.insertId;
 
-      const addCategorySql =
-        "INSERT INTO faq_master (question, answer,user_type, createtime) VALUES (?,?,?, ?)";
+        // Insert ALL translations including EN
+        const translationData = Object.entries(translations).map(
+          ([lang, data]) => [
+            faqId,
+            lang,
+            data.question,
+            data.answer,
+          ]
+        );
 
-      connection.query(addCategorySql, [question, answer, userType, createtime], (err) => {
-        if (err) {
-          return response
-            .status(200)
-            .json({
+        const insertTranslationSql = `
+          INSERT INTO faq_translation 
+          (faq_id, language_code, question, answer) 
+          VALUES ?
+        `;
+
+        connection.query(insertTranslationSql, [translationData], (err) => {
+          if (err) {
+            return response.status(200).json({
               success: false,
               msg: languageMessages.internalServerError,
               error: err.message,
             });
-        }
+          }
 
-        response
-          .status(200)
-          .json({ success: true, msg: languageMessages.categoryAdded });
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.faqAdded,
+          });
+        });
       });
     });
+
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
+// const editFaq = async (request, response) => {
+//   try {
+//     const { faq_id, question, answer, userType } = request.body;
+
+//     if (!faq_id) {
+//       return response
+//         .status(200)
+//         .json({
+//           success: false,
+//           msg: languageMessages.msg_empty_param,
+//           key: "faq_id",
+//         });
+//     }
+
+//     if (!question || !answer || !userType) {
+//       return response
+//         .status(200)
+//         .json({
+//           success: false,
+//           msg: languageMessages.msg_empty_param,
+//           key: "1",
+//         });
+//     }
+
+//     const checksql =
+//       "SELECT faq_id FROM faq_master WHERE question = ? AND faq_id != ? AND delete_flag = 0";
+
+//     connection.query(
+//       checksql,
+//       [question, faq_id],
+//       (err, results) => {
+//         if (err) {
+//           return response
+//             .status(200)
+//             .json({
+//               success: false,
+//               msg: languageMessages.internalServerError,
+//               error: err.message,
+//             });
+//         }
+
+//         if (results.length > 0) {
+//           return response
+//             .status(200)
+//             .json({ success: false, msg: 'Faq already exist', key: 'exists' });
+//         }
+
+//         const updatesqls =
+//           "UPDATE faq_master SET question = ?, answer = ?,user_type = ?, updatetime = ? WHERE faq_id = ?";
+
+//         connection.query(
+//           updatesqls,
+//           [question, answer, userType, updatetime, faq_id],
+//           (err) => {
+//             if (err) {
+//               return response
+//                 .status(200)
+//                 .json({
+//                   success: false,
+//                   msg: languageMessages.internalServerError,
+//                   error: err.message,
+//                 });
+//             }
+
+//             response
+//               .status(200)
+//               .json({ success: true, msg: languageMessages.categoryUpdated });
+//           }
+//         );
+//       }
+//     );
+//   } catch (error) {
+//     return response
+//       .status(200)
+//       .json({
+//         success: false,
+//         msg: languageMessages.internalServerError,
+//         error: error.message,
+//       });
+//   }
+// };
 const editFaq = async (request, response) => {
   try {
-    const { faq_id, question, answer, userType } = request.body;
+    const { faq_id, userType, translations } = request.body;
 
+    const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate
     if (!faq_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "faq_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "faq_id",
+      });
     }
 
-    if (!question || !answer || !userType) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "1",
-        });
+    if (!userType) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "userType",
+      });
     }
 
-    const checksql =
-      "SELECT faq_id FROM faq_master WHERE question = ? AND faq_id != ? AND delete_flag = 0";
+    if (!translations || typeof translations !== "object") {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "translations",
+      });
+    }
 
-    connection.query(
-      checksql,
-      [question, faq_id],
-      (err, results) => {
+    // EN required
+    if (!translations.en || !translations.en.question || !translations.en.answer) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
+
+    const englishQuestion = translations.en.question;
+
+    // Duplicate check (EN only)
+    const checkSql = `
+      SELECT ft.faq_id 
+      FROM faq_translation ft
+      JOIN faq_master fm ON fm.faq_id = ft.faq_id
+      WHERE ft.language_code = 'en'
+      AND ft.question = ?
+      AND ft.faq_id != ?
+      AND fm.delete_flag = 0
+    `;
+
+    connection.query(checkSql, [englishQuestion, faq_id], (err, results) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (results.length > 0) {
+        return response.status(200).json({
+          success: false,
+          msg: "Faq already exist",
+          key: "exists",
+        });
+      }
+
+      // Update main table (ONLY user_type + time)
+      const updateFaqSql = `
+        UPDATE faq_master 
+        SET user_type = ?, updatetime = ? 
+        WHERE faq_id = ?
+      `;
+
+      connection.query(updateFaqSql, [userType, updatetime, faq_id], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        // UPSERT translations
+        const tasks = Object.entries(translations).map(([lang, data]) => {
+          return new Promise((resolve, reject) => {
+
+            const checkLangSql = `
+              SELECT id FROM faq_translation 
+              WHERE faq_id = ? AND language_code = ?
+            `;
+
+            connection.query(checkLangSql, [faq_id, lang], (err, result) => {
+              if (err) return reject(err);
+
+              if (result.length > 0) {
+                // 🔁 UPDATE existing language
+                const updateLangSql = `
+                  UPDATE faq_translation 
+                  SET question = ?, answer = ? 
+                  WHERE faq_id = ? AND language_code = ?
+                `;
+
+                connection.query(
+                  updateLangSql,
+                  [data.question, data.answer, faq_id, lang],
+                  (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  }
+                );
+              } else {
+                // ➕ INSERT new language
+                const insertLangSql = `
+                  INSERT INTO faq_translation 
+                  (faq_id, language_code, question, answer) 
+                  VALUES (?, ?, ?, ?)
+                `;
+
+                connection.query(
+                  insertLangSql,
+                  [faq_id, lang, data.question, data.answer],
+                  (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  }
+                );
+              }
+            });
+
+          });
+        });
+
+        Promise.all(tasks)
+          .then(() => {
+            return response.status(200).json({
+              success: true,
+              msg: languageMessages.faqUpdated,
+            });
+          })
+          .catch((error) => {
+            return response.status(200).json({
               success: false,
               msg: languageMessages.internalServerError,
-              error: err.message,
+              error: error.message,
             });
-        }
+          });
 
-        if (results.length > 0) {
-          return response
-            .status(200)
-            .json({ success: false, msg: 'Faq already exist', key: 'exists' });
-        }
-
-        const updatesqls =
-          "UPDATE faq_master SET question = ?, answer = ?,user_type = ?, updatetime = ? WHERE faq_id = ?";
-
-        connection.query(
-          updatesqls,
-          [question, answer, userType, updatetime, faq_id],
-          (err) => {
-            if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: languageMessages.internalServerError,
-                  error: err.message,
-                });
-            }
-
-            response
-              .status(200)
-              .json({ success: true, msg: languageMessages.categoryUpdated });
-          }
-        );
-      }
-    );
-  } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
       });
+    });
+
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
