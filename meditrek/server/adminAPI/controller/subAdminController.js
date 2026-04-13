@@ -8454,7 +8454,293 @@ const getDiseaseMedicineSummary = (req, res) => {
     });
   });
 };
+const getDiseaseMedicineAnalyticsMerged = (req, res) => {
+  const {
+    doctor_id,
+    gender,
+    age_group,
+    disease = [],
+    medication = [],
+    medication_name = "",
+    exclude_medication = [],
+    singleOnly = false,
+    combinedOnly = false,
+    includeExtra = false,
+    page = 1,
+    limit = 10
+  } = req.body;
 
+  if (!doctor_id) {
+    return res.json({ success: false, msg: "doctor_id required" });
+  }
+
+  const offset = (Number(page) - 1) * Number(limit);
+
+  // ── BASE WHERE (gender + age only — no disease/medication here yet) ──
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let params = [doctor_id];
+
+  if (gender !== undefined && gender !== null && gender !== "") {
+    where += ` AND u.gender = ?`;
+    params.push(gender);
+  }
+
+  if (age_group) {
+    if (age_group.includes("+")) {
+      const min = parseInt(age_group.replace("+", ""));
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+      params.push(min);
+    } else {
+      const [min, max] = age_group.split("-").map(Number);
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      params.push(min, max);
+    }
+  }
+
+  // ── SQL DISEASE PRE-FILTER (broad LIKE only — exact logic handled in JS) ──
+  // This narrows rows fetched from DB for performance.
+  // countCondition is intentionally removed — JS handles singleOnly/combinedOnly exactly.
+  if (Array.isArray(disease) && disease.length > 0) {
+    if (singleOnly && disease.length === 1) {
+      // Pre-filter: must contain this disease (JS will enforce dis.length === 1)
+      where += ` AND u.diseases LIKE ?`;
+      params.push(`%${disease[0]}%`);
+
+    } else if (combinedOnly && disease.length >= 2) {
+      // Pre-filter: must contain ALL selected (JS will enforce exact count)
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      where += ` AND (${conditions})`;
+      disease.forEach(d => params.push(`%${d}%`));
+
+    } else if (includeExtra && disease.length >= 2) {
+      // Pre-filter: must contain ALL selected (extras allowed — JS confirms)
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      where += ` AND (${conditions})`;
+      disease.forEach(d => params.push(`%${d}%`));
+
+    } else {
+      // Default: contains ANY selected disease
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+      where += ` AND (${conditions})`;
+      disease.forEach(d => params.push(`%${d}%`));
+    }
+  }
+
+  // ── TOTAL: all patients under this doctor (no filters) ──
+  const totalSql = `
+    SELECT COUNT(DISTINCT p.user_id) AS total
+    FROM patient_master p
+    WHERE p.doctor_id = ? AND p.delete_flag = 0
+  `;
+
+  // ── PATIENT LIST: fetch user_id + name + raw diseases string ──
+  const patientSql = `
+    SELECT DISTINCT u.user_id, u.name, u.diseases,
+    IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
+    u.gender
+    FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
+    ${where}
+    GROUP BY u.user_id, u.name, u.diseases
+    ORDER BY u.name ASC
+  `;
+
+  connection.query(totalSql, [doctor_id], (err0, totalRes) => {
+    if (err0) return res.json({ success: false, msg: "Total query failed" });
+
+    const totalAllPatients = totalRes[0].total;
+
+    connection.query(patientSql, params, (errP, patients) => {
+      if (errP) return res.json({ success: false, msg: "Patient query failed" });
+
+      const promises = patients.map(patient => new Promise((resolve, reject) => {
+
+        let parsedDiseases = [];
+        try {
+          const parsed = JSON.parse(patient.diseases);
+          parsedDiseases = Array.isArray(parsed)
+            ? parsed.map(d => d?.name).filter(Boolean)
+            : [];
+        } catch {
+          const matches = patient.diseases?.match(/name:\s*([^,}\n]+)/g) || [];
+          parsedDiseases = matches.map(m => m.split(":")[1]?.trim()).filter(Boolean);
+        }
+        patient.diseases = parsedDiseases;
+        patient.age = patient.age ?? 0;
+  patient.gender =
+    patient.gender == 1 ? "Male" :
+    patient.gender == 2 ? "Female" :
+    patient.gender == 3 ? "Other" :
+    "Not Specified";
+        const shareSql = `
+          SELECT information_type, createtime
+          FROM report_share_master
+          WHERE user_id = ? AND doctor_id = ? AND share_type = 0 AND delete_flag = 0
+          ORDER BY createtime DESC
+        `;
+
+        connection.query(shareSql, [patient.user_id, doctor_id], (err1, shareList) => {
+          if (err1) return reject(err1);
+
+          const latest = shareList.find(r =>
+            r.information_type.split(",").includes("1")
+          );
+
+          if (!latest) {
+            patient.medications = [];
+            return resolve(patient);
+          }
+
+          const medSql = `
+            SELECT DISTINCT a.medicine_id, a.medicine_name
+            FROM medication_master m
+            JOIN medicine_master a ON a.medicine_id = m.medicine_id
+            JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+            WHERE m.user_id = ?
+              AND m.delete_flag = 0
+              AND tm.delete_flag = 0
+              AND m.createtime <= ?
+            ORDER BY a.medicine_name ASC
+          `;
+
+          connection.query(medSql, [patient.user_id, latest.createtime], (err2, meds) => {
+            if (err2) return reject(err2);
+            patient.medications = meds.map(m => m.medicine_name); // string[]
+            resolve(patient);
+          });
+        });
+      }));
+
+      Promise.all(promises)
+        .then(enriched => {
+
+          // ── STEP 1: medication_name search ──────────────────
+          let filteredPatients = enriched;
+
+          if (medication_name && medication_name.trim() !== "") {
+            filteredPatients = filteredPatients.filter(p =>
+              p.medications.some(m =>
+                m.toLowerCase().includes(medication_name.toLowerCase())
+              )
+            );
+          }
+
+          // ── STEP 2: medication[] filter ─────────────────────
+          // (patients must have specific medications)
+          if (Array.isArray(medication) && medication.length > 0) {
+            const selectedMeds = medication.map(m => m.toLowerCase().trim());
+            filteredPatients = filteredPatients.filter(p =>
+              p.medications.some(m =>
+                selectedMeds.some(sel =>
+                  m.toLowerCase().replace(/\s/g, "").includes(sel.replace(/\s/g, ""))
+                )
+              )
+            );
+          }
+
+          // ── STEP 3: disease filter — exact same logic as custom table ──
+          if (Array.isArray(disease) && disease.length > 0) {
+            const selected = disease.map(d => d.toLowerCase().trim());
+
+            if (singleOnly && disease.length === 1) {
+              // Patient has ONLY this one disease, nothing else
+              filteredPatients = filteredPatients.filter(p => {
+                const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+                return dis.length === 1 && selected.includes(dis[0]);
+              });
+
+            } else if (combinedOnly && disease.length >= 2) {
+              // Patient has EXACTLY the selected diseases — no more, no less
+              filteredPatients = filteredPatients.filter(p => {
+                const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+                return (
+                  dis.length === selected.length &&
+                  selected.every(d => dis.includes(d))
+                );
+              });
+
+            } else if (includeExtra && disease.length >= 2) {
+              // Patient has ALL selected diseases — extras allowed
+              filteredPatients = filteredPatients.filter(p => {
+                const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+                return selected.every(d => dis.includes(d));
+              });
+
+            } else {
+              // Default: patient has ANY of the selected diseases
+              filteredPatients = filteredPatients.filter(p =>
+                (p.diseases || []).some(d =>
+                  selected.includes(d.toLowerCase().trim())
+                )
+              );
+            }
+          }
+
+          // ── STEP 4: build medicine count map ────────────────
+          const map = {};
+          filteredPatients.forEach(p => {
+            p.medications.forEach(med => {
+              map[med] = (map[med] || 0) + 1;
+            });
+          });
+
+          const matchedCount = filteredPatients.length;
+
+          let summary = Object.keys(map).map(name => ({
+            medicine_name: name,
+            patient_count: map[name],
+            percent_matched: matchedCount
+              ? ((map[name] / matchedCount) * 100).toFixed(2)
+              : "0.00",
+            percent_total: totalAllPatients
+              ? ((map[name] / totalAllPatients) * 100).toFixed(2)
+              : "0.00"
+          }));
+
+          summary.sort((a, b) => b.patient_count - a.patient_count);
+
+          // ── STEP 5: exclude_medication ───────────────────────
+          const excludeSet = new Set(
+            (exclude_medication || []).map(m => m.toLowerCase().trim())
+          );
+
+          // top_drug = #1 drug from share-filtered summary, respecting exclusions
+          const top_drug = summary.find(
+            s => !excludeSet.has(s.medicine_name.toLowerCase().trim())
+          )?.medicine_name || "";
+
+          if (excludeSet.size > 0) {
+            summary = summary.filter(
+              s => !excludeSet.has(s.medicine_name.toLowerCase().trim())
+            );
+          }
+
+          // ── STEP 6: graph + pagination ───────────────────────
+          const graph = summary.slice(0, 10).map(d => ({
+            name: d.medicine_name,
+            count: d.patient_count
+          }));
+
+          const paginatedSummary = summary.slice(offset, offset + Number(limit));
+          const paginatedDrilldown = filteredPatients.slice(offset, offset + Number(limit));
+
+          return res.json({
+            success: true,
+            total_patients: totalAllPatients,
+            matched_patients: matchedCount,
+            percentage: totalAllPatients
+              ? ((matchedCount / totalAllPatients) * 100).toFixed(2) + "%"
+              : "0%",
+            top_drug,
+            summary: paginatedSummary,
+            graph,
+            drilldown: paginatedDrilldown
+          });
+        })
+        .catch(err => res.json({ success: false, msg: err.message }));
+    });
+  });
+};
 
 // //  Patient Details (Filtered)
 // const getPatientMedicationDemographicsDetails = (req, res) => {
@@ -10929,5 +11215,5 @@ const getAppContent = (req, res) => {
 module.exports = {
   subAdminLogin, verifyLoginOtp, dashboardGraphs, getProfile, UpdateSubAdminPassword, UpdateSubAdminProfile, ForgotPassword, subAdminForgetNewPassword, subAdminDashboard, getAllPatients, getPatientsDetails, getAllMedications, getAllMeasurements, getAllMedicalReports, addNote, getNotes, getTabularMedication,
   getTabularAdverse, getTabularMeasurement, getTabularLabreport, getSharedTabular, deleteNote, updateNote, medicationDashboard, adverseDashboard, labReportDashboard, measurementDashboard, deleteImage,deleteDoctorAccount, getPatientMeasurements,  getPatientMedicationList, getPatientReport, getAdverseofPatient,sendPush,sendNotificationAll,sendNotificationUsers,getNotificationHistory,getAllDiseases,getAllMedicines,getPatientAnalyticsCustomTable,getPatientDemographicsDetails,getPatientDemographics,getPatientDiseasesMedicineAnalytics,getPatientDiseasesMedicineList,getDiseaseMedicineSummary,getSubadminMedicationFull,getDiseaseDashboard,getMedicationDiseaseDashboard
-,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms, getAppContent 
+,getMedicationReportedHealth,getDocterAllDiseases,getDocterAllMedicines,getDoctorAllSymptoms, getAppContent, getDiseaseMedicineAnalyticsMerged 
 }
