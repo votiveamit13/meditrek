@@ -2493,11 +2493,72 @@ const deleteSymptom = async (request, response) => {
   }
 };
 
+// const getReportCategory = async (request, response) => {
+//   try {
+//     const getReportCategorySql = `SELECT report_category_id,category_name, category_image,createtime FROM report_category WHERE delete_flag=0;`;
+
+//     connection.query(getReportCategorySql, (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       const category_arr = [];
+
+//       var s_no = 0;
+
+//       results.forEach((category) => {
+//         s_no++;
+
+//         category_arr.push({
+//           s_no: s_no,
+
+//           report_category_id: category.report_category_id,
+
+//           category_name: category.category_name,
+
+//           image: category.category_image,
+
+//           createtime: category.createtime,
+//         });
+//       });
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessages.categorylist,
+//         data: category_arr,
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 const getReportCategory = async (request, response) => {
   try {
-    const getReportCategorySql = `SELECT report_category_id,category_name, category_image,createtime FROM report_category WHERE delete_flag=0;`;
+    const sql = `
+      SELECT 
+        rc.report_category_id,
+        rc.category_image,
+        rc.createtime,
+        rct.language_code,
+        rct.category_name
+      FROM report_category rc
+      LEFT JOIN report_category_translation rct 
+        ON rc.report_category_id = rct.report_category_id
+      WHERE rc.delete_flag = 0
+      ORDER BY rc.report_category_id
+    `;
 
-    connection.query(getReportCategorySql, (err, results) => {
+    connection.query(sql, (err, results) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -2506,30 +2567,32 @@ const getReportCategory = async (request, response) => {
         });
       }
 
-      const category_arr = [];
+      const categories = {};
+      let s_no = 0;
 
-      var s_no = 0;
+      results.forEach((row) => {
+        if (!categories[row.report_category_id]) {
+          s_no++;
 
-      results.forEach((category) => {
-        s_no++;
+          categories[row.report_category_id] = {
+            s_no: s_no,
+            report_category_id: row.report_category_id,
+            image: row.category_image,
+            createtime: row.createtime,
+            translations: [],
+          };
+        }
 
-        category_arr.push({
-          s_no: s_no,
-
-          report_category_id: category.report_category_id,
-
-          category_name: category.category_name,
-
-          image: category.category_image,
-
-          createtime: category.createtime,
+        categories[row.report_category_id].translations.push({
+          language_code: row.language_code,
+          category_name: row.category_name,
         });
       });
 
       return response.status(200).json({
         success: true,
         msg: languageMessages.categorylist,
-        data: category_arr,
+        data: Object.values(categories),
       });
     });
   } catch (error) {
