@@ -1412,9 +1412,100 @@ const getReports = async (request, response) => {
 
 //Get Recent added Reports of user
 
-const getResentReports = async (request, response) => {
-  const { user_id } = request.query;
+// const getResentReports = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT 5";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getResentReports = async (request, response) => {
+  const { user_id, page = 1, limit = 10  } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -1469,9 +1560,9 @@ const getResentReports = async (request, response) => {
 
     try {
       const Query =
-        "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT 5";
+        "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -1488,6 +1579,8 @@ const getResentReports = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+          limit: limitNum,
         });
       });
     } catch (error) {
@@ -1501,7 +1594,6 @@ const getResentReports = async (request, response) => {
     }
   });
 };
-
 //end
 
 //Get BP records of user
@@ -4534,9 +4626,182 @@ function calcAverage(records) {
 }
 //  bp data graph api end..
 
-const getTemperatureDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getTemperatureDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // SQL Queries
+//     const weeklyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     // Fetch today's data
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = todayResult.map((row) => ({
+//         measurement_id: row.measurement_id,
+//         temperature: row.temperature ?? 0,
+//         //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//         //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//         date: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("MMMM DD, YYYY"),
+
+//         time: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("hh:mm A"),
+//       }));
+
+//       // Weekly data
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         // Monthly data
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           // Yearly data
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             // Transform data for graphs
+//             const weeklyData = transformWeeklyTemperatureData(
+//               weeklyResult || [],
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyTemperatureData(
+//               monthlyResult || [],
+//             );
+//             const yearlyData = transformYearlyTemperatureData(
+//               yearlyResult || [],
+//               finalLanguage,
+//             );
+
+//             let filteredData = {};
+
+//             if (type == 1) filteredData.weekly = weeklyData;
+//             else if (type == 2) filteredData.monthly = monthlyData;
+//             else if (type == 3) filteredData.yearly = yearlyData;
+//             else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
+const getTemperatureDataStats = async (request, response) => {
+  const { user_id, type, language_code,page = 1, limit = 10  } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
 
@@ -4693,11 +4958,31 @@ const getTemperatureDataStats = async (request, response) => {
               };
             }
 
+            // APPLY PAGINATION
+            const paginateArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.slice(offset, offset + limitNum);
+            };
+
+            if (filteredData.weekly?.records) {
+              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+            }
+
+            if (filteredData.monthly?.records) {
+              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+            }
+
+            if (filteredData.yearly?.records) {
+              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+            }
+
             filteredData.today = todayData;
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+               page: pageNum,
+               limit: limitNum,
             });
           });
         });
