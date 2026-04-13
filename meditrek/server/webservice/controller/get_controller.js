@@ -904,7 +904,7 @@ const getMyMedicationsHistory = async (request, response) => {
 
         mc.weekday,
 
-        mc.updatetime,
+        mc.createtime,
 
      mc.medicine_type_name,
 
@@ -959,9 +959,9 @@ const getMyMedicationsHistory = async (request, response) => {
                 item.timeSlots = formattedTimes.join(",");
               }
 
-              if (item.updatetime) {
-                item.date = moment(item.updatetime).format("DD MMM YYYY");
-                item.time = moment(item.updatetime).format("hh:mm A");
+              if (item.createtime) {
+                item.date = moment(item.createtime).format("DD MMM YYYY");
+                item.time = moment(item.createtime).format("hh:mm A");
               } else {
                 item.date = "NA";
                 item.time = "NA";
