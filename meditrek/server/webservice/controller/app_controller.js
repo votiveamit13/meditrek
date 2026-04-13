@@ -2610,7 +2610,7 @@ const editAdverseReaction = async (request, response) => {
 //Delete Adverse Reaction
 
 const deleteAdverseReaction = async (request, response) => {
-  const { adverse_reaction_id, user_id } = request.body;
+  const { adverse_reaction_id, user_id, language_code } = request.body;
 
   if (!adverse_reaction_id || !user_id) {
     return response.status(200).json({
@@ -2619,6 +2619,12 @@ const deleteAdverseReaction = async (request, response) => {
       msg: languageMessage.msg_empty_param,
     });
   }
+
+  const finalLanguage = language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
 
   // Validate user
 
@@ -2632,7 +2638,7 @@ const deleteAdverseReaction = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
 
         key: err.message,
       });
@@ -2642,14 +2648,14 @@ const deleteAdverseReaction = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
@@ -2673,7 +2679,7 @@ const deleteAdverseReaction = async (request, response) => {
         return response.status(200).json({
           success: false,
 
-          msg: languageMessage.internalServerError,
+          msg: request.__("internal_server_error"),
 
           key: err.message,
         });
@@ -2683,14 +2689,14 @@ const deleteAdverseReaction = async (request, response) => {
         return response.status(200).json({
           success: false,
 
-          msg: languageMessage.dataNotFound,
+          msg: request.__("data_not_found"),
         });
       }
 
       return response.status(200).json({
         success: true,
 
-        msg: languageMessage.dataDeleted,
+        msg: request.__("data_deleted_successfully"),
       });
     });
   });
