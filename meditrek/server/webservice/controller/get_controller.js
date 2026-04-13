@@ -1217,8 +1217,100 @@ const getMedicine = async (request, response) => {
 
 //Get Ducument type
 
+// const getDocumentType = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   if (!user_id) {
+//     return response
+
+//       .status(200)
+
+//       .json({ success: false, msg: languageMessage.msg_empty_param });
+//   }
+
+//   const query1 =
+//     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const values1 = [user_id];
+
+//   connection.query(query1, values1, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: languageMessage.userNotFound });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.userDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     const query2 =
+//       "SELECT report_category_id, category_name, category_image, createtime FROM report_category WHERE delete_flag=0";
+
+//     const values2 = [user_id];
+
+//     connection.query(query2, values2, async (err, subResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       let category_arr = [];
+//       for (let data of subResult) {
+//         let total_items = await getDocumentCountByCategory(
+//           data.report_category_id,
+//           user_id,
+//         );
+//         let file_size = await getDocumentFileSizeByCategory(
+//           data.report_category_id,
+//           user_id,
+//         );
+//         category_arr.push({
+//           report_category_id: data.report_category_id,
+//           category_name: data.category_name,
+//           category_image: data.category_image,
+//           createtime: data.createtime,
+//           total_items: total_items,
+//           file_size: file_size,
+//         });
+//       }
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataFound,
+//         dataArray: category_arr,
+//       });
+//     });
+//   });
+// };
 const getDocumentType = async (request, response) => {
   const { user_id, language_code } = request.query;
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
 
   if (!user_id) {
     return response
@@ -1306,6 +1398,7 @@ const getDocumentType = async (request, response) => {
           file_size: file_size,
         });
       }
+      const paginatedData = category_arr.slice(offset, offset + limitNum);
       return response.status(200).json({
         success: true,
         msg: request.__("data_found"),
@@ -1314,7 +1407,6 @@ const getDocumentType = async (request, response) => {
     });
   });
 };
-
 //end
 
 //Get Laboratory Reports
