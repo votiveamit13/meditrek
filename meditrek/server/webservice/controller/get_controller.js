@@ -4487,7 +4487,8 @@ const offset = (parseInt(page) - 1) * parseInt(limit);
           filteredData.yearly.records = paginateArray(filteredData.yearly.records);
         }
             // Always include today's reading
-            filteredData.today = todayData;
+            // filteredData.today = todayData;
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
@@ -5550,7 +5551,8 @@ const getFastingGlucoseDataStats = async (request, response) => {
               filteredData.yearly.records = paginateArray(filteredData.yearly.records);
             }
 
-            filteredData.today = todayData;
+            // filteredData.today = todayData;
+            filteredData.today = todayData.slice(offset, offset + limitNum);
 
             return response.status(200).json({
               success: true,
