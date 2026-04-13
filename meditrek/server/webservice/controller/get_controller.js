@@ -5078,7 +5078,7 @@ const getTemperatureDataStats = async (request, response) => {
               filteredData.yearly.records = paginateArray(filteredData.yearly.records);
             }
 
-            filteredData.today = todayData;
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
@@ -6117,7 +6117,8 @@ const getPPBGSDataStats = async (request, response) => {
               filteredData.yearly.records = paginateArray(filteredData.yearly.records);
             }
 
-            filteredData.today = todayData;
+            // filteredData.today = todayData;
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
@@ -6812,7 +6813,9 @@ const getWeightMeasurementDataStats = async (request, response) => {
                     filteredData.yearly.records = paginateArray(filteredData.yearly.records);
                   }
 
-                  filteredData.today = todayData;
+                  // filteredData.today = todayData;
+                  filteredData.today = paginateArray(todayData);
+
 
                   return response.status(200).json({
                     success: true,
