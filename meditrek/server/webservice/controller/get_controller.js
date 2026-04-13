@@ -3265,31 +3265,127 @@ const getDisease = async (request, response) => {
   });
 };
 
+// const getFaq = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT faq_id ,question,answer FROM faq_master WHERE delete_flag = 0  AND user_type = 1 ORDER BY faq_id DESC";
+//       connection.query(Query, async (err, faq) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessage.internalServerError,
+//             key: err.message,
+//           });
+//         }
+//         if (faq.length <= 0) {
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessage.dataNotFound,
+//             faq: "NA",
+//           });
+//         }
+//         faq.map((item) => {
+//           item.status = false;
+//         });
+//         return response
+//           .status(200)
+//           .json({ success: true, msg: languageMessage.msgDataFound, faq });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+
+
+//  new api - get reports by category wise
 const getFaq = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   if (!user_id) {
     return response.status(200).json({
       success: false,
-
       msg: languageMessage.msg_empty_param,
     });
   }
 
+  const finalLanguage = language_code && language_code.trim() !== ""
+  ? language_code
+  : await getUserLanguage({ user_id });
+
+  //const lang = language_code || "en"; // fallback
+  request.setLocale(finalLanguage);
+
   // Validate user
-
   const userQuery =
-    "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
-
+    "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
   const userValues = [user_id];
 
   connection.query(userQuery, userValues, async (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -3297,17 +3393,14 @@ const getFaq = async (request, response) => {
     if (result.length === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userDeleted,
-
+        msg: request.__("user_deactivated"),
         active_flag: 0,
       });
     }
@@ -3315,49 +3408,68 @@ const getFaq = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
 
     try {
-      const Query =
-        "SELECT faq_id ,question,answer FROM faq_master WHERE delete_flag = 0  AND user_type = 1 ORDER BY faq_id DESC";
-      connection.query(Query, async (err, faq) => {
+      const Query = `
+        SELECT 
+          fm.faq_id,
+          COALESCE(ft.question, ft_en.question) AS question,
+          COALESCE(ft.answer, ft_en.answer) AS answer
+        FROM faq_master fm
+        LEFT JOIN faq_translation ft 
+          ON fm.faq_id = ft.faq_id 
+          AND ft.language_code = ?
+        LEFT JOIN faq_translation ft_en 
+          ON fm.faq_id = ft_en.faq_id 
+          AND ft_en.language_code = 'en'
+        WHERE fm.delete_flag = 0 
+        AND fm.user_type = 1
+        ORDER BY fm.faq_id DESC
+      `;
+
+      connection.query(Query, [finalLanguage], async (err, faq) => {
         if (err) {
           return response.status(200).json({
             success: false,
-            msg: languageMessage.internalServerError,
+            msg: request.__("internal_server_error"),
             key: err.message,
           });
         }
+
         if (faq.length <= 0) {
           return response.status(200).json({
             success: true,
-            msg: languageMessage.dataNotFound,
+            msg: request.__("data_not_found"),
             faq: "NA",
           });
         }
+
+        // Keep your existing structure
         faq.map((item) => {
           item.status = false;
         });
-        return response
-          .status(200)
-          .json({ success: true, msg: languageMessage.msgDataFound, faq });
+
+        return response.status(200).json({
+          success: true,
+          msg: request.__("data_found"),
+          faq,
+        });
       });
+
     } catch (error) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         error: error.message,
       });
     }
   });
 };
 
-//  new api - get reports by category wise
 const getDocumentsByReportCategory = async (request, response) => {
   const { user_id } = request.query;
   try {
