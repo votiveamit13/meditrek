@@ -1306,17 +1306,14 @@ const getMedicine = async (request, response) => {
 //   });
 // };
 const getDocumentType = async (request, response) => {
-  const { user_id, language_code } = request.query;
-  const { user_id, page = 1, limit = 10 } = request.query;
+  const { user_id, page = 1, limit = 10 ,language_code } = request.query;
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
 
   if (!user_id) {
     return response
-
       .status(200)
-
       .json({ success: false, msg: languageMessage.msg_empty_param });
   }
 
