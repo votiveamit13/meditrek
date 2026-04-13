@@ -222,73 +222,130 @@ module.exports = {
 
 
 
-    async getAllContentUrlData(content_type) {
+    // async getAllContentUrlData(content_type) {
+
+    //     return new Promise((resolve, reject) => {
+
+    //         const sqlSelect =
+
+    //             "SELECT content_id, content_type, content FROM content_master WHERE delete_flag = 0 AND content_type = ?";
+
+
+
+    //         connection.query(sqlSelect, [content_type], (error, result) => {
+
+    //             if (error) {
+
+    //                 return reject(error);
+
+    //             }
+
+
+
+    //             let content_en = "NA";
+
+    //             if (result.length > 0) {
+
+    //                 content_en = result[0].content;
+
+    //             }
+
+
+
+    //             // const htmlContent = `
+
+    //             //   <html>
+
+    //             //     <head>
+
+    //             //       <meta charset="utf-8">
+
+    //             //       <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:">
+
+    //             //       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
+
+    //             //       <title>Data</title>
+
+    //             //     </head>
+
+    //             //     <body style="word-break: break-all;">
+
+    //             //       ${content_en}
+
+    //             //     </body>
+
+    //             //   </html>
+
+    //             // `;
+
+
+
+    //             resolve(content_en);
+
+    //         });
+
+    //     });
+
+    // },
+
+    async getAllContentUrlData(content_type, language_code = "en", isForced = false) {
 
         return new Promise((resolve, reject) => {
 
-            const sqlSelect =
+            let sql = "";
+            let params = [];
 
-                "SELECT content_id, content_type, content FROM content_master WHERE delete_flag = 0 AND content_type = ?";
+            // CASE 1: language forced → NO fallback
+            if (isForced) {
+                sql = `
+                    SELECT ct.content
+                    FROM content_master cm
+                    LEFT JOIN content_translation ct 
+                    ON cm.content_id = ct.content_id 
+                    AND ct.language_code = ?
+                    WHERE cm.delete_flag = 0 
+                    AND cm.content_type = ?
+                    LIMIT 1
+                `;
+                params = [language_code, content_type];
+            }
 
+            // CASE 2: fallback allowed
+            else {
+                sql = `
+                    SELECT 
+                    COALESCE(ct.content, ct_en.content) AS content
+                    FROM content_master cm
+                    LEFT JOIN content_translation ct 
+                    ON cm.content_id = ct.content_id 
+                    AND ct.language_code = ?
+                    LEFT JOIN content_translation ct_en 
+                    ON cm.content_id = ct_en.content_id 
+                    AND ct_en.language_code = 'en'
+                    WHERE cm.delete_flag = 0 
+                    AND cm.content_type = ?
+                    LIMIT 1
+                `;
+                params = [language_code, content_type];
+            }
 
+            connection.query(sql, params, (error, result) => {
 
-            connection.query(sqlSelect, [content_type], (error, result) => {
+                if (error) return reject(error);
 
-                if (error) {
+                let content_data = "";
 
-                    return reject(error);
-
+                if (result.length > 0 && result[0].content) {
+                    content_data = result[0].content;
                 }
 
-
-
-                let content_en = "NA";
-
-                if (result.length > 0) {
-
-                    content_en = result[0].content;
-
-                }
-
-
-
-                // const htmlContent = `
-
-                //   <html>
-
-                //     <head>
-
-                //       <meta charset="utf-8">
-
-                //       <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:">
-
-                //       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
-
-                //       <title>Data</title>
-
-                //     </head>
-
-                //     <body style="word-break: break-all;">
-
-                //       ${content_en}
-
-                //     </body>
-
-                //   </html>
-
-                // `;
-
-
-
-                resolve(content_en);
+                resolve(content_data);
 
             });
 
         });
 
     },
-
-
 
     async getCategory() {
 

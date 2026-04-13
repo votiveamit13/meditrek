@@ -4841,20 +4841,78 @@ const getContent = async (request, response) => {
 
 //get content url
 
+// const getContentUrl = (request, response) => {
+//   const { content_type } = request.query;
+
+//   try {
+//     const query =
+//       "SELECT content, content_1, content_2 FROM content_master WHERE delete_flag = 0 AND content_type = ?";
+
+//     connection.query(query, [content_type], (error, result) => {
+//       if (error) {
+//         return response.status(200).json({
+//           success: false,
+
+//           message: languageMessages.internalServerError,
+
+//           error: error.message,
+//         });
+//       }
+
+//       if (result.length === 0) {
+//         return response.status(200).json({
+//           success: false,
+
+//           message: languageMessages.msgDataNotFound,
+//         });
+//       }
+
+//       // let content = result[0].content;
+
+//       // let new_url = '<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui"><title>Data</title></head><body style="word-break: break-all;">' + content + '</body></html>';
+
+//       // return response.send(new_url);
+
+//       return response.status(200).json({
+//         success: true,
+
+//         message: languageMessages.msgDataFound,
+
+//         result: result,
+//       });
+//     });
+//   } catch (err) {
+//     return response.status(200).json({
+//       success: false,
+
+//       message: languageMessages.internalServerError,
+
+//       error: err.message,
+//     });
+//   }
+// };
 const getContentUrl = (request, response) => {
   const { content_type } = request.query;
 
   try {
-    const query =
-      "SELECT content, content_1, content_2 FROM content_master WHERE delete_flag = 0 AND content_type = ?";
+    const query = `
+      SELECT 
+        cm.content_id,
+        cm.content_type,
+        ct.language_code,
+        ct.content
+      FROM content_master cm
+      LEFT JOIN content_translation ct 
+        ON cm.content_id = ct.content_id
+      WHERE cm.delete_flag = 0 
+      AND cm.content_type = ?
+    `;
 
     connection.query(query, [content_type], (error, result) => {
       if (error) {
         return response.status(200).json({
           success: false,
-
           message: languageMessages.internalServerError,
-
           error: error.message,
         });
       }
@@ -4862,148 +4920,242 @@ const getContentUrl = (request, response) => {
       if (result.length === 0) {
         return response.status(200).json({
           success: false,
-
           message: languageMessages.msgDataNotFound,
         });
       }
 
-      // let content = result[0].content;
+      // Group translations
+      const data = {
+        content_id: result[0].content_id,
+        content_type: result[0].content_type,
+        translations: {},
+      };
 
-      // let new_url = '<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui"><title>Data</title></head><body style="word-break: break-all;">' + content + '</body></html>';
-
-      // return response.send(new_url);
+      result.forEach((row) => {
+        if (row.language_code) {
+          data.translations[row.language_code] = row.content;
+        }
+      });
 
       return response.status(200).json({
         success: true,
-
         message: languageMessages.msgDataFound,
-
-        result: result,
+        result: data,
       });
     });
+
   } catch (err) {
     return response.status(200).json({
       success: false,
-
       message: languageMessages.internalServerError,
-
       error: err.message,
     });
   }
 };
 
+// const updateContent = async (request, response) => {
+//   const contentType = request.body.contentType;
+
+//   const content = request.body.content;
+
+//   const language = request.body.lang;
+
+//   console.log("Received contentType:", contentType);
+
+//   console.log("Received content:", content);
+
+//   // Check if contentType or content is missing
+
+//   if (contentType === undefined || content === undefined) {
+//     console.log("Missing parameters");
+
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessages.msg_empty_param,
+
+//       key: "none",
+//     });
+//   }
+
+//   // if (language === undefined) {
+
+//   //   console.log("Missing parameters");
+
+//   //   return response.status(200).json({
+
+//   //     success: false,
+
+//   //     msg: languageMessages.msg_empty_param,
+
+//   //     key: "language",
+
+//   //   });
+
+//   // }
+
+//   const language_type = language === "english" ? "content" : "content";
+
+//   try {
+//     const check =
+//       "SELECT content_type FROM content_master WHERE content_type = ? AND delete_flag = 0";
+
+//     connection.query(check, [contentType], async (err, res) => {
+//       if (err) {
+//         console.error("Error executing SELECT query:", err);
+
+//         return response
+
+//           .status(200)
+
+//           .json({ success: false, msg: languageMessages.internalServerError });
+//       }
+
+//       console.log("SELECT query result:", res);
+
+//       if (res.length <= 0) {
+//         return response
+
+//           .status(200)
+
+//           .json({ success: false, msg: languageMessages.msgDataNotFound });
+//       }
+
+//       const updateQuery = `UPDATE content_master SET ${language_type} = ? WHERE content_type = ?`;
+
+//       connection.query(
+//         updateQuery,
+
+//         [content, contentType],
+
+//         async (err, res1) => {
+//           if (err) {
+//             console.error("Error executing UPDATE query:", err);
+
+//             return response.status(200).json({
+//               success: false,
+
+//               msg: languageMessages.internalServerError,
+//             });
+//           }
+
+//           console.log("UPDATE query result:", res1);
+
+//           if (res1.affectedRows > 0) {
+//             return response
+
+//               .status(200)
+
+//               .json({ success: true, msg: languageMessages.ContentUpdated });
+//           } else {
+//             return response
+
+//               .status(200)
+
+//               .json({ success: false, msg: "No rows affected" });
+//           }
+//         }
+//       );
+//     });
+//   } catch (error) {
+//     console.error("Error updating content:", error);
+
+//     response
+
+//       .status(200)
+
+//       .json({ success: false, msg: languageMessages.internalServerError });
+//   }
+// };
+
 const updateContent = async (request, response) => {
-  const contentType = request.body.contentType;
-
-  const content = request.body.content;
-
-  const language = request.body.lang;
-
-  console.log("Received contentType:", contentType);
-
-  console.log("Received content:", content);
-
-  // Check if contentType or content is missing
-
-  if (contentType === undefined || content === undefined) {
-    console.log("Missing parameters");
-
-    return response.status(200).json({
-      success: false,
-
-      msg: languageMessages.msg_empty_param,
-
-      key: "none",
-    });
-  }
-
-  // if (language === undefined) {
-
-  //   console.log("Missing parameters");
-
-  //   return response.status(200).json({
-
-  //     success: false,
-
-  //     msg: languageMessages.msg_empty_param,
-
-  //     key: "language",
-
-  //   });
-
-  // }
-
-  const language_type = language === "english" ? "content" : "content";
-
   try {
-    const check =
-      "SELECT content_type FROM content_master WHERE content_type = ? AND delete_flag = 0";
+    const { contentType, content, lang } = request.body;
 
-    connection.query(check, [contentType], async (err, res) => {
+    const language_code = lang || "en"; // default
+    const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    console.log("Received contentType:", contentType);
+    console.log("Received content:", content);
+
+    // ✅ Validation
+    if (contentType === undefined || !content) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "none",
+      });
+    }
+
+    // ✅ Step 1: Get content_id from content_master
+    const checkSql = `
+      SELECT content_id 
+      FROM content_master 
+      WHERE content_type = ? 
+      AND delete_flag = 0
+    `;
+
+    connection.query(checkSql, [contentType], (err, res) => {
       if (err) {
-        console.error("Error executing SELECT query:", err);
-
-        return response
-
-          .status(200)
-
-          .json({ success: false, msg: languageMessages.internalServerError });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
-      console.log("SELECT query result:", res);
-
-      if (res.length <= 0) {
-        return response
-
-          .status(200)
-
-          .json({ success: false, msg: languageMessages.msgDataNotFound });
+      if (res.length === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataNotFound,
+        });
       }
 
-      const updateQuery = `UPDATE content_master SET ${language_type} = ? WHERE content_type = ?`;
+      const contentId = res[0].content_id;
+
+      // ✅ Step 2: UPSERT into translation table
+      const upsertSql = `
+        INSERT INTO content_translation (content_id, language_code, content)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+        content = VALUES(content)
+      `;
 
       connection.query(
-        updateQuery,
-
-        [content, contentType],
-
-        async (err, res1) => {
+        upsertSql,
+        [contentId, language_code, content],
+        (err, result) => {
           if (err) {
-            console.error("Error executing UPDATE query:", err);
-
             return response.status(200).json({
               success: false,
-
               msg: languageMessages.internalServerError,
+              error: err.message,
             });
           }
 
-          console.log("UPDATE query result:", res1);
+          // ✅ Step 3: Update timestamp (optional)
+          const updateMasterSql = `
+            UPDATE content_master 
+            SET updatetime = ? 
+            WHERE content_id = ?
+          `;
 
-          if (res1.affectedRows > 0) {
-            return response
+          connection.query(updateMasterSql, [updatetime, contentId]);
 
-              .status(200)
-
-              .json({ success: true, msg: languageMessages.ContentUpdated });
-          } else {
-            return response
-
-              .status(200)
-
-              .json({ success: false, msg: "No rows affected" });
-          }
-        },
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.ContentUpdated,
+          });
+        }
       );
     });
+
   } catch (error) {
-    console.error("Error updating content:", error);
-
-    response
-
-      .status(200)
-
-      .json({ success: false, msg: languageMessages.internalServerError });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
