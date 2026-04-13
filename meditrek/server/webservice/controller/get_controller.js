@@ -1310,9 +1310,108 @@ const getDocumentType = async (request, response) => {
 
 //Get Laboratory Reports
 
-const getReports = async (request, response) => {
-  const { user_id, report_category_id } = request.query;
+// const getReports = async (request, response) => {
+//   const { user_id, report_category_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   if (!report_category_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0";
+
+//       const Values = [user_id, report_category_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getReports = async (request, response) => {
+  const { user_id, report_category_id ,page=1,limit=10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -1375,9 +1474,9 @@ const getReports = async (request, response) => {
 
     try {
       const Query =
-        "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0";
+        "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0 LIMIT ? OFFSET ?";
 
-      const Values = [user_id, report_category_id];
+      const Values = [user_id, report_category_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -1394,6 +1493,8 @@ const getReports = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+           limit: limitNum,
         });
       });
     } catch (error) {
