@@ -46,3 +46,4 @@ node_modules/
 
 meditrek/server/env
 .env
+meditrek/server/uploads

@@ -1524,6 +1524,7 @@ const deleteMedicalReport = async (request, response) => {
   if (!user_id) {
     return response.status(200).json({
       success: false,
+
       msg: languageMessage.msg_empty_param,
     });
   }
@@ -1642,7 +1643,6 @@ const deleteMedicalReport = async (request, response) => {
             success: true,
 
             msg: languageMessage.reportDeleted,
-            msg: request.__("report_deleted_successfully"),
           });
         },
       );
