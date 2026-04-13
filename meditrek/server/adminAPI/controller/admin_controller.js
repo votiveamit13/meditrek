@@ -2577,6 +2577,7 @@ const getReportCategory = async (request, response) => {
           categories[row.report_category_id] = {
             s_no: s_no,
             report_category_id: row.report_category_id,
+            category_name: row.category_name,
             image: row.category_image,
             createtime: row.createtime,
             translations: [],
