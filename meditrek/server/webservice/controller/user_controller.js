@@ -3605,10 +3605,54 @@ const getUserNotification = async (request, response) => {
 
                     }));
                     // APPLY PAGINATION ON GROUPED DATA
-                    const paginatedArr = finalArr.slice(offset, offset + limitNum);
-                    paginatedArr.forEach(item => {
-                        item.notifications = item.notifications.slice(0, limitNum);
+                    // const paginatedArr = finalArr.slice(offset, offset + limitNum);
+                    // paginatedArr.forEach(item => {
+                    //     item.notifications = item.notifications.slice(0, limitNum);
+                    // });
+                    // FLATTEN ALL NOTIFICATIONS
+                    let flat = [];
+
+                    finalArr.forEach(group => {
+                        group.notifications.forEach(n => {
+                            flat.push({
+                                date: group.date,
+                                notification_message_id: n.notification_message_id,
+                                action: n.action,
+                                title: n.title,
+                                message: n.message,
+                                updatetime: n.updatetime,
+                                time: n.time
+                            });
+                        });
                     });
+
+                    // APPLY PAGINATION ON TOTAL NOTIFICATIONS
+                    const paginatedFlat = flat.slice(offset, offset + limitNum);
+
+                    // REGROUP BY DATE
+                    let grouped = {};
+
+                    paginatedFlat.forEach(n => {
+                        if (!grouped[n.date]) {
+                            grouped[n.date] = [];
+                        }
+
+                        grouped[n.date].push({
+                            notification_message_id: n.notification_message_id,
+                            action: n.action,
+                            title: n.title,
+                            message: n.message,
+                            updatetime: n.updatetime,
+                            time: n.time
+                        });
+                    });
+
+                    const paginatedArr = Object.keys(grouped)
+                        .sort((a, b) => new Date(b) - new Date(a))
+                        .map(date => ({
+                            date,
+                            notifications: grouped[date]
+                        }));
 
 
                 //  Update read status
