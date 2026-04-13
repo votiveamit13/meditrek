@@ -1362,10 +1362,20 @@ const getDocumentType = async (request, response) => {
       });
     }
 
-    const query2 =
-      "SELECT report_category_id, category_name, category_image, createtime FROM report_category WHERE delete_flag=0";
+    const query2 = `
+      SELECT 
+        rc.report_category_id,
+        rc.category_image,
+        rc.createtime,
+        COALESCE(rct.category_name, rc.category_name) AS category_name
+      FROM report_category rc
+      LEFT JOIN report_category_translation rct 
+        ON rc.report_category_id = rct.report_category_id
+        AND rct.language_code = ?
+      WHERE rc.delete_flag = 0
+    `;
 
-    const values2 = [user_id];
+    const values2 = [finalLanguage];
 
     connection.query(query2, values2, async (err, subResult) => {
       if (err) {
