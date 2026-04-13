@@ -161,7 +161,11 @@ var message = {
 
   msgProfileUpdateSuccess: ["Profile updated Successfully"],
 
-  wrongPassword : ["Incorrect Password"]
+  wrongPassword : ["Incorrect Password"],
+
+  faqAdded: ["FAQ Added Successfully"],
+
+  faqUpdated: ["FAQ Updated Successfully"],
 };
 
 
