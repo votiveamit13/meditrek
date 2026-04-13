@@ -830,9 +830,160 @@ const getDateMedication = async (request, response) => {
 
 //Get Medication History
 
-const getMyMedicationsHistory = async (request, response) => {
-  const { user_id } = request.query;
+// const getMyMedicationsHistory = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response
+//       .status(200)
+//       .json({ success: false, msg: languageMessage.msg_empty_param });
+//   }
+
+//   const query1 =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+//   const values1 = [user_id];
+
+//   connection.query(query1, values1, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: languageMessage.userNotFound });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.userDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     const query1 = `SELECT  mc.medication_id, 
+
+//         mc.medicine_id, 
+
+//         md.medicine_name,
+
+//         mc.dosage, 
+
+//         mc.type,
+
+//         '1=pill, 2=syrup' AS type_label,
+
+//         NULLIF(mc.instruction, '') AS instruction, 
+
+//         mc.schedule,
+
+//         '0=daily, 1=weekly, 2=monthly' AS schedule_label,
+
+//         mc.remaining_quantity,
+
+//         mc.pause_status,
+
+//         mc.number_of_times,
+
+//         mc.remainder_quantity,
+
+//         mc.schedule_date,
+
+//         mc.weekday,
+
+//         mc.createtime,
+
+//      mc.medicine_type_name,
+
+//         '0=Not_Paused, 1=Paused' AS pause_label
+
+//         FROM 
+
+//         medication_master AS mc 
+
+//         LEFT JOIN 
+
+//         medicine_master AS md
+
+//         ON
+
+//         mc.medicine_id = md.medicine_id
+
+//         WHERE mc.user_id = ? AND mc.final_delete_flag = 0`;
+
+//     connection.query(query1, values1, async (err, subResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       if (subResult.length === 0) {
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataNotFound,
+//           dataArray: "NA",
+//         });
+//       }
+
+//       const enrichedResults = await Promise.all(
+//         subResult.map((item) => {
+//           return new Promise((resolve) => {
+//             const getsql = `
+//         SELECT DATE_FORMAT(time,  '%h:%i %p') AS formatted_time 
+//         FROM time_slots_master 
+//         WHERE medication_id = ? AND delete_flag = 0
+//       `;
+//             connection.query(getsql, [item.medication_id], (err, timeslots) => {
+//               if (err || timeslots.length === 0) {
+//                 item.timeSlots = "NA";
+//               } else {
+//                 const formattedTimes = timeslots.map(
+//                   (slot) => slot.formatted_time,
+//                 );
+//                 item.timeSlots = formattedTimes.join(",");
+//               }
+
+//               if (item.createtime) {
+//                 item.date = moment(item.createtime).format("DD MMM YYYY");
+//                 item.time = moment(item.createtime).format("hh:mm A");
+//               } else {
+//                 item.date = "NA";
+//                 item.time = "NA";
+//               }
+//               resolve(item);
+//             });
+//           });
+//         }),
+//       );
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataFound,
+//         dataArray: subResult,
+//       });
+//     });
+//   });
+// };
+
+const getMyMedicationsHistory = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
   if (!user_id) {
     return response
       .status(200)
@@ -842,7 +993,11 @@ const getMyMedicationsHistory = async (request, response) => {
   const query1 =
     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
   const values1 = [user_id];
-
+    const values2 = [
+    user_id,
+    parseInt(limit),
+    parseInt(offset),
+  ];
   connection.query(query1, values1, async (err, result) => {
     if (err) {
       return response.status(200).json({
@@ -922,9 +1077,10 @@ const getMyMedicationsHistory = async (request, response) => {
 
         mc.medicine_id = md.medicine_id
 
-        WHERE mc.user_id = ? AND mc.final_delete_flag = 0`;
+        WHERE mc.user_id = ? AND mc.final_delete_flag = 0
+        LIMIT ? OFFSET ?`;
 
-    connection.query(query1, values1, async (err, subResult) => {
+    connection.query(query1, values2, async (err, subResult) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -976,6 +1132,8 @@ const getMyMedicationsHistory = async (request, response) => {
         success: true,
         msg: languageMessage.dataFound,
         dataArray: subResult,
+         page: parseInt(page),
+         limit: parseInt(limit),
       });
     });
   });
@@ -4539,9 +4697,185 @@ const deleteDoctor = async (request, response) => {
 // delete doctor end
 
 // Fasting Glucose API with Weekly/Monthly/Yearly Breakdown
-const getFastingGlucoseDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getFastingGlucoseDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // Queries
+//     const weeklyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1  AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1  AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 1 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = (() => {
+//         if (todayResult.length === 0) return [];
+
+//         return todayResult.map((row) => {
+//           // let new_createtime = new Date(new Date(row.createtime).getTime() + 2 * 60 * 60 * 1000);
+
+//           return {
+//             measurement_id: row.measurement_id,
+//             fasting_glucose: row.fasting_glucose,
+//             //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//             //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//             date: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("MMMM DD, YYYY"),
+
+//             time: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("hh:mm A"),
+//           };
+//         });
+//       })();
+
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             const weeklyData = transformWeeklyGlucoseData(
+//               weeklyResult,
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyGlucoseData(monthlyResult);
+//             const yearlyData = transformYearlyGlucoseData(
+//               yearlyResult,
+//               finalLanguage,
+//             );
+
+//             let filteredData = {};
+
+//             if (type == 1) {
+//               filteredData.weekly = weeklyData;
+//             } else if (type == 2) {
+//               filteredData.monthly = monthlyData;
+//             } else if (type == 3) {
+//               filteredData.yearly = yearlyData;
+//             } else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
+const getFastingGlucoseDataStats = async (request, response) => {
+  const { user_id, type, language_code, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
 
@@ -4700,12 +5034,31 @@ const getFastingGlucoseDataStats = async (request, response) => {
                 yearly: yearlyData,
               };
             }
+            // APPLY PAGINATION
+            const paginateArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.slice(offset, offset + limitNum);
+            };
+
+            if (filteredData.weekly?.records) {
+              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+            }
+
+            if (filteredData.monthly?.records) {
+              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+            }
+
+            if (filteredData.yearly?.records) {
+              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+            }
 
             filteredData.today = todayData;
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+               page: pageNum,
+                limit: limitNum
             });
           });
         });
