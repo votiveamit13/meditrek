@@ -3255,9 +3255,206 @@ const verifyUserLoginOtp = async (req, res) => {
 
 // };
 
+// const getUserNotification = async (request, response) => {
+
+//     let { user_id, language_code } = request.query;
+
+//     if (!user_id) {
+
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+
+//     }
+
+//     const finalLanguage = language_code && language_code.trim() !== ""
+//         ? language_code
+//         : await getUserLanguage({ user_id });
+
+//     request.setLocale(finalLanguage);
+
+//     try {
+
+//         //   Validate user
+
+//         const query1 = "SELECT mobile, active_flag, delete_flag FROM user_master WHERE user_id = ?";
+
+//         connection.query(query1, [user_id], async (err, result) => {
+
+//             if (err) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//             }
+
+//             if (result.length === 0) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('user_not_found') });
+
+//             }
+
+//             if (result[0]?.active_flag === 0) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('user_deactivated'), active_flag: 0 });
+
+//             }
+
+//             if (result[0]?.delete_flag == 1) {
+
+//                 return response.status(200).json({ success: false, msg: request.__('your_account_is_not_registered_with_us'), active_flag: 0 });
+
+//             }
+
+
+
+//             //  Fetch notifications sorted by latest first
+
+//             const query2 = `
+
+//                 SELECT notification_message_id, action, title, message, updatetime, createtime, action_json_lang,title_json_lang,message_json_lang
+
+//                 FROM user_notification_message
+
+//                 WHERE other_user_id = ? AND delete_flag = 0
+
+//                 ORDER BY createtime DESC
+
+//             `;
+
+//             connection.query(query2, [user_id], async (err, notifications) => {
+
+//                 if (err) {
+
+//                     return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//                 }
+
+
+
+//                 if (notifications.length === 0) {
+
+//                     return response.status(200).json({ success: true, msg: request.__('data_not_found'), notifications: [] });
+
+//                 }
+
+
+
+//                 //  Group by date
+
+//                 let groupedData = {};
+
+//                 notifications.forEach(data => {
+//                     //moment.locale(finalLanguage);
+
+//                     const dateKey = moment(data.createtime)
+//                     .locale(finalLanguage)
+//                     .format("DD MMM, YYYY");
+
+//                     if (!groupedData[dateKey]) {
+
+//                         groupedData[dateKey] = [];
+
+//                     }
+//                     const tz = request.query.timezone || 'UTC';
+
+//                     const actionLangObj = safeParse(data.action_json_lang);
+//                     const titleLangObj = safeParse(data.title_json_lang);
+//                     const messageLangObj = safeParse(data.message_json_lang);
+                    
+//                     const selectedAction =
+//                     actionLangObj[finalLanguage] ||
+//                     actionLangObj["en"] ||
+//                     data.title;
+
+//                     const selectedTitle =
+//                     titleLangObj[finalLanguage] ||
+//                     titleLangObj["en"] ||
+//                     data.title;
+
+//                     const selectedMessage =
+//                     messageLangObj[finalLanguage] ||
+//                     messageLangObj["en"] ||
+//                     data.message;
+
+//                     groupedData[dateKey].push({
+
+//                         notification_message_id: data.notification_message_id,
+
+//                         action: selectedAction,
+//                         title: selectedTitle,
+//                         message: selectedMessage,
+
+//                         updatetime: moment.utc(data.createtime).tz(tz).format("YYYY-MM-DD HH:mm:ss"),
+
+//                         time: moment.utc(data.createtime)
+//                             .tz(tz)
+//                             .format("hh:mm A")
+
+//                     });
+
+//                 });
+
+
+
+//                 //  Convert object to array sorted by date desc
+
+//                 let finalArr = Object.keys(groupedData)
+
+//                     .sort((a, b) => new Date(b) - new Date(a))
+
+//                     .map(date => ({
+
+//                         date: date,
+
+//                         notifications: groupedData[date]
+
+//                     }));
+
+
+
+//                 //  Update read status
+
+//                 const update = `
+
+//                     UPDATE user_notification_message 
+
+//                     SET read_status = 1 
+
+//                     WHERE other_user_id = ? AND delete_flag = 0
+
+//                 `;
+
+//                 connection.query(update, [user_id], async (updateErr) => {
+
+//                     if (updateErr) {
+
+//                         return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: updateErr.message });
+
+//                     }
+
+
+
+//                     return response.status(200).json({ success: true, msg: request.__('data_found'), notifications: finalArr });
+
+//                 });
+
+//             });
+
+//         });
+
+
+
+//     } catch (err) {
+
+//         return response.status(200).json({ success: false, msg: request.__('internal_server_error'), key: err.message });
+
+//     }
+
+// };
 const getUserNotification = async (request, response) => {
 
-    let { user_id, language_code } = request.query;
+    let { user_id, language_code , page = 1, limit = 10 } = request.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const offset = (pageNum - 1) * limitNum;
 
     if (!user_id) {
 
@@ -3407,7 +3604,11 @@ const getUserNotification = async (request, response) => {
                         notifications: groupedData[date]
 
                     }));
-
+                    // APPLY PAGINATION ON GROUPED DATA
+                    const paginatedArr = finalArr.slice(offset, offset + limitNum);
+                    paginatedArr.forEach(item => {
+                        item.notifications = item.notifications.slice(0, limitNum);
+                    });
 
 
                 //  Update read status
@@ -3432,7 +3633,7 @@ const getUserNotification = async (request, response) => {
 
 
 
-                    return response.status(200).json({ success: true, msg: request.__('data_found'), notifications: finalArr });
+                    return response.status(200).json({ success: true, msg: request.__('data_found'), notifications: paginatedArr });
 
                 });
 

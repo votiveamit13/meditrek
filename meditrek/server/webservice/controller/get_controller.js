@@ -3090,9 +3090,96 @@ const getSymtoms = async (request, response) => {
 
 //Get Adverse Reaction
 
-const getAdverseReaction = async (request, response) => {
-  const { user_id } = request.query;
+// const getAdverseReaction = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessage.internalServerError,
+//             key: err.message,
+//           });
+//         }
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+
+const getAdverseReaction = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -3145,9 +3232,9 @@ const getAdverseReaction = async (request, response) => {
 
     try {
       const Query =
-        "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC";
+        "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -3161,6 +3248,8 @@ const getAdverseReaction = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+            page: pageNum,
+            limit: limitNum,
         });
       });
     } catch (error) {
@@ -3174,7 +3263,6 @@ const getAdverseReaction = async (request, response) => {
     }
   });
 };
-
 //end
 
 //Get Adverse Reaction Details
@@ -3389,9 +3477,97 @@ const getDoctors = async (request, response) => {
 
 //Get My Doctors
 
-const getMyDoctors = async (request, response) => {
-  const { user_id } = request.query;
+// const getMyDoctors = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ?";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getMyDoctors = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -3446,9 +3622,9 @@ const getMyDoctors = async (request, response) => {
 
     try {
       const Query =
-        "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0";
+        "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0 LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -3464,6 +3640,8 @@ const getMyDoctors = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+           limit: limitNum,
         });
       });
     } catch (error) {
@@ -3475,7 +3653,6 @@ const getMyDoctors = async (request, response) => {
     }
   });
 };
-
 //end
 
 const ShareInformation = async (request, response) => {
