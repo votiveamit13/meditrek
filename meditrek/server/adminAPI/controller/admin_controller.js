@@ -2945,21 +2945,16 @@ const deleteReportCategory = async (request, response) => {
 
 const getFaq = async (request, response) => {
   try {
-    const { language_code } = request.query;
 
-    const lang = language_code || "en"; // fallback
-
+    // Main query (KEEP ORDER EXACTLY SAME)
     const getsql = `
       SELECT 
         fm.faq_id,
         fm.user_type,
-        COALESCE(ft.question, ft_en.question) AS question,
-        COALESCE(ft.answer, ft_en.answer) AS answer,
+        COALESCE(ft_en.question, '') AS question,
+        COALESCE(ft_en.answer, '') AS answer,
         DATE_FORMAT(fm.createtime, '%d-%m-%y, %h:%i %p') AS createtime
       FROM faq_master fm
-      LEFT JOIN faq_translation ft 
-        ON fm.faq_id = ft.faq_id 
-        AND ft.language_code = ?
       LEFT JOIN faq_translation ft_en 
         ON fm.faq_id = ft_en.faq_id 
         AND ft_en.language_code = 'en'
@@ -2967,7 +2962,7 @@ const getFaq = async (request, response) => {
       ORDER BY fm.faq_id DESC
     `;
 
-    connection.query(getsql, [lang], (err, results) => {
+    connection.query(getsql, (err, results) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -2976,34 +2971,78 @@ const getFaq = async (request, response) => {
         });
       }
 
-      const faq_arr = [];
-      let s_no = 0;
+      if (results.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.dataNotFound,
+          data: [],
+        });
+      }
 
-      results.forEach((faq) => {
-        s_no++;
+      // Get all translations separately
+      const translationSql = `
+        SELECT faq_id, language_code, question, answer
+        FROM faq_translation
+      `;
 
-        faq_arr.push({
-          s_no: s_no,
-          faq_id: faq.faq_id,
-          user_type: faq.user_type,
-          user_type_label:
-            faq.user_type == 1
-              ? "User"
-              : faq.user_type == 2
-              ? "Doctor"
-              : "NA",
-          question: faq.question || "N/A",
-          answer: faq.answer || "N/A",
-          createtime: faq.createtime,
+      connection.query(translationSql, (err, translations) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        // Map translations by faq_id
+        const translationMap = {};
+
+        translations.forEach((t) => {
+          if (!translationMap[t.faq_id]) {
+            translationMap[t.faq_id] = {};
+          }
+
+          translationMap[t.faq_id][t.language_code] = {
+            question: t.question,
+            answer: t.answer,
+          };
+        });
+
+        // Build final array (KEEP ORDER)
+        let s_no = 0;
+
+        const faq_arr = results.map((faq) => {
+          s_no++;
+
+          return {
+            s_no: s_no,
+            faq_id: faq.faq_id,
+            user_type: faq.user_type,
+            user_type_label:
+              faq.user_type == 1
+                ? "User"
+                : faq.user_type == 2
+                ? "Doctor"
+                : "NA",
+
+            // EXISTING KEYS (unchanged)
+            question: faq.question || "N/A",
+            answer: faq.answer || "N/A",
+            createtime: faq.createtime,
+
+            // NEW KEY (added only)
+            translations: translationMap[faq.faq_id] || {},
+          };
+        });
+
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.faqlist,
+          data: faq_arr,
         });
       });
-
-      return response.status(200).json({
-        success: true,
-        msg: languageMessages.faqlist,
-        data: faq_arr,
-      });
     });
+
   } catch (error) {
     return response.status(200).json({
       success: false,
