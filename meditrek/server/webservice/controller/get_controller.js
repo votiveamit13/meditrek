@@ -165,8 +165,159 @@ const getAllContentUrl = async (request, response) => {
 
 //Get My Medications
 
+// const getMyMedications = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   if (!user_id) {
+//     return response
+
+//       .status(200)
+
+//       .json({ success: false, msg: languageMessage.msg_empty_param });
+//   }
+
+//   const query1 =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const values1 = [user_id];
+
+//   connection.query(query1, values1, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: languageMessage.userNotFound });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.userDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     const query1 = `
+
+//         SELECT 
+
+//         mc.medication_id, 
+
+//         mc.medicine_id, 
+
+//         md.medicine_name,
+
+//         mc.dosage, 
+
+//         mc.type,
+
+//         '1=pill, 2=syrup' AS type_label,
+
+//         NULLIF(mc.instruction, '') AS instruction, 
+
+//         mc.schedule,
+
+//         '0=daily, 1=weekly, 2=monthly' AS schedule_label,
+
+//         mc.remaining_quantity,
+
+//         mc.pause_status,
+
+//         mc.number_of_times,
+
+//         mc.remainder_quantity,
+
+//         mc.schedule_date,
+
+//         mc.weekday,
+
+//         mc.medicine_type_name,
+//         mc.toggle_status,
+
+//         '0=Not_Paused, 1=Paused' AS pause_label
+
+//         FROM 
+
+//         medication_master AS mc 
+
+//         LEFT JOIN 
+
+//         medicine_master AS md
+
+//         ON
+
+//         mc.medicine_id = md.medicine_id
+
+//         WHERE mc.user_id = ? 
+
+//         AND mc.delete_flag=0`;
+
+//     connection.query(query1, values1, async (err, subResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       if (subResult.length === 0) {
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataNotFound,
+//           dataArray: "NA",
+//         });
+//       }
+
+//       const enrichedResults = await Promise.all(
+//         subResult.map((item) => {
+//           return new Promise((resolve) => {
+//             const getsql = `
+//         SELECT DATE_FORMAT(time, '%h:%i %p') AS formatted_time 
+//         FROM time_slots_master 
+//         WHERE medication_id = ? AND delete_flag = 0
+//       `;
+//             connection.query(getsql, [item.medication_id], (err, timeslots) => {
+//               if (err || timeslots.length === 0) {
+//                 item.timeSlots = "NA";
+//               } else {
+//                 const formattedTimes = timeslots.map(
+//                   (slot) => slot.formatted_time,
+//                 );
+//                 item.timeSlots = formattedTimes.join(",");
+//               }
+//               resolve(item);
+//             });
+//           });
+//         }),
+//       );
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataFound,
+//         dataArray: subResult,
+//       });
+//     });
+//   });
+// };
+
 const getMyMedications = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id,page = 1 ,limit = 10 } = request.query;
 
   if (!user_id) {
     return response
@@ -178,8 +329,13 @@ const getMyMedications = async (request, response) => {
 
   const query1 =
     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
-
+  const offset = (parseInt(page) - 1) * parseInt(limit);
   const values1 = [user_id];
+  const values2 = [
+  user_id,
+  parseInt(limit),
+  parseInt(offset),
+];
 
   connection.query(query1, values1, async (err, result) => {
     if (err) {
@@ -265,9 +421,10 @@ const getMyMedications = async (request, response) => {
 
         WHERE mc.user_id = ? 
 
-        AND mc.delete_flag=0`;
+        AND mc.delete_flag=0
+        LIMIT ? OFFSET ?`;
 
-    connection.query(query1, values1, async (err, subResult) => {
+    connection.query(query1, values2, async (err, subResult) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -311,6 +468,8 @@ const getMyMedications = async (request, response) => {
         success: true,
         msg: languageMessage.dataFound,
         dataArray: subResult,
+        page: parseInt(page),
+        limit: parseInt(limit),
       });
     });
   });
@@ -710,9 +869,160 @@ const getDateMedication = async (request, response) => {
 
 //Get Medication History
 
-const getMyMedicationsHistory = async (request, response) => {
-  const { user_id } = request.query;
+// const getMyMedicationsHistory = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response
+//       .status(200)
+//       .json({ success: false, msg: languageMessage.msg_empty_param });
+//   }
+
+//   const query1 =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+//   const values1 = [user_id];
+
+//   connection.query(query1, values1, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: languageMessage.userNotFound });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.userDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     const query1 = `SELECT  mc.medication_id, 
+
+//         mc.medicine_id, 
+
+//         md.medicine_name,
+
+//         mc.dosage, 
+
+//         mc.type,
+
+//         '1=pill, 2=syrup' AS type_label,
+
+//         NULLIF(mc.instruction, '') AS instruction, 
+
+//         mc.schedule,
+
+//         '0=daily, 1=weekly, 2=monthly' AS schedule_label,
+
+//         mc.remaining_quantity,
+
+//         mc.pause_status,
+
+//         mc.number_of_times,
+
+//         mc.remainder_quantity,
+
+//         mc.schedule_date,
+
+//         mc.weekday,
+
+//         mc.createtime,
+
+//      mc.medicine_type_name,
+
+//         '0=Not_Paused, 1=Paused' AS pause_label
+
+//         FROM 
+
+//         medication_master AS mc 
+
+//         LEFT JOIN 
+
+//         medicine_master AS md
+
+//         ON
+
+//         mc.medicine_id = md.medicine_id
+
+//         WHERE mc.user_id = ? AND mc.final_delete_flag = 0`;
+
+//     connection.query(query1, values1, async (err, subResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       if (subResult.length === 0) {
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataNotFound,
+//           dataArray: "NA",
+//         });
+//       }
+
+//       const enrichedResults = await Promise.all(
+//         subResult.map((item) => {
+//           return new Promise((resolve) => {
+//             const getsql = `
+//         SELECT DATE_FORMAT(time,  '%h:%i %p') AS formatted_time 
+//         FROM time_slots_master 
+//         WHERE medication_id = ? AND delete_flag = 0
+//       `;
+//             connection.query(getsql, [item.medication_id], (err, timeslots) => {
+//               if (err || timeslots.length === 0) {
+//                 item.timeSlots = "NA";
+//               } else {
+//                 const formattedTimes = timeslots.map(
+//                   (slot) => slot.formatted_time,
+//                 );
+//                 item.timeSlots = formattedTimes.join(",");
+//               }
+
+//               if (item.createtime) {
+//                 item.date = moment(item.createtime).format("DD MMM YYYY");
+//                 item.time = moment(item.createtime).format("hh:mm A");
+//               } else {
+//                 item.date = "NA";
+//                 item.time = "NA";
+//               }
+//               resolve(item);
+//             });
+//           });
+//         }),
+//       );
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataFound,
+//         dataArray: subResult,
+//       });
+//     });
+//   });
+// };
+
+const getMyMedicationsHistory = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
   if (!user_id) {
     return response
       .status(200)
@@ -722,7 +1032,11 @@ const getMyMedicationsHistory = async (request, response) => {
   const query1 =
     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
   const values1 = [user_id];
-
+    const values2 = [
+    user_id,
+    parseInt(limit),
+    parseInt(offset),
+  ];
   connection.query(query1, values1, async (err, result) => {
     if (err) {
       return response.status(200).json({
@@ -784,7 +1098,7 @@ const getMyMedicationsHistory = async (request, response) => {
 
         mc.weekday,
 
-        mc.updatetime,
+        mc.createtime,
 
      mc.medicine_type_name,
 
@@ -802,9 +1116,10 @@ const getMyMedicationsHistory = async (request, response) => {
 
         mc.medicine_id = md.medicine_id
 
-        WHERE mc.user_id = ? AND mc.final_delete_flag = 0`;
+        WHERE mc.user_id = ? AND mc.final_delete_flag = 0
+        LIMIT ? OFFSET ?`;
 
-    connection.query(query1, values1, async (err, subResult) => {
+    connection.query(query1, values2, async (err, subResult) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -839,9 +1154,9 @@ const getMyMedicationsHistory = async (request, response) => {
                 item.timeSlots = formattedTimes.join(",");
               }
 
-              if (item.updatetime) {
-                item.date = moment(item.updatetime).format("DD MMM YYYY");
-                item.time = moment(item.updatetime).format("hh:mm A");
+              if (item.createtime) {
+                item.date = moment(item.createtime).format("DD MMM YYYY");
+                item.time = moment(item.createtime).format("hh:mm A");
               } else {
                 item.date = "NA";
                 item.time = "NA";
@@ -856,6 +1171,8 @@ const getMyMedicationsHistory = async (request, response) => {
         success: true,
         msg: languageMessage.dataFound,
         dataArray: subResult,
+         page: parseInt(page),
+         limit: parseInt(limit),
       });
     });
   });
@@ -939,8 +1256,100 @@ const getMedicine = async (request, response) => {
 
 //Get Ducument type
 
+// const getDocumentType = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   if (!user_id) {
+//     return response
+
+//       .status(200)
+
+//       .json({ success: false, msg: languageMessage.msg_empty_param });
+//   }
+
+//   const query1 =
+//     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const values1 = [user_id];
+
+//   connection.query(query1, values1, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: languageMessage.userNotFound });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.userDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     const query2 =
+//       "SELECT report_category_id, category_name, category_image, createtime FROM report_category WHERE delete_flag=0";
+
+//     const values2 = [user_id];
+
+//     connection.query(query2, values2, async (err, subResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       let category_arr = [];
+//       for (let data of subResult) {
+//         let total_items = await getDocumentCountByCategory(
+//           data.report_category_id,
+//           user_id,
+//         );
+//         let file_size = await getDocumentFileSizeByCategory(
+//           data.report_category_id,
+//           user_id,
+//         );
+//         category_arr.push({
+//           report_category_id: data.report_category_id,
+//           category_name: data.category_name,
+//           category_image: data.category_image,
+//           createtime: data.createtime,
+//           total_items: total_items,
+//           file_size: file_size,
+//         });
+//       }
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataFound,
+//         dataArray: category_arr,
+//       });
+//     });
+//   });
+// };
 const getDocumentType = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
 
   if (!user_id) {
     return response
@@ -955,11 +1364,20 @@ const getDocumentType = async (request, response) => {
 
   const values1 = [user_id];
 
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+    ? language_code
+    : await getUserLanguage({ user_id });
+
+    //const lang = language_code || "en"; // fallback
+    request.setLocale(finalLanguage);
+
+
   connection.query(query1, values1, async (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -967,13 +1385,13 @@ const getDocumentType = async (request, response) => {
     if (result.length === 0) {
       return response
         .status(200)
-        .json({ success: false, msg: languageMessage.userNotFound });
+        .json({ success: false, msg: request.__("user_not_found") });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.userDeleted,
+        msg: request.__("user_deleted"),
         active_flag: 0,
       });
     }
@@ -981,7 +1399,7 @@ const getDocumentType = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("user_deleted"),
         active_flag: 0,
       });
     }
@@ -995,7 +1413,7 @@ const getDocumentType = async (request, response) => {
       if (err) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.internalServerError,
+          msg: request.__("internal_server_error"),
           key: err.message,
         });
       }
@@ -1019,22 +1437,121 @@ const getDocumentType = async (request, response) => {
           file_size: file_size,
         });
       }
+      const paginatedData = category_arr.slice(offset, offset + limitNum);
       return response.status(200).json({
         success: true,
-        msg: languageMessage.dataFound,
+        msg: request.__("data_found"),
         dataArray: category_arr,
       });
     });
   });
 };
-
 //end
 
 //Get Laboratory Reports
 
-const getReports = async (request, response) => {
-  const { user_id, report_category_id } = request.query;
+// const getReports = async (request, response) => {
+//   const { user_id, report_category_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   if (!report_category_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0";
+
+//       const Values = [user_id, report_category_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getReports = async (request, response) => {
+  const { user_id, report_category_id ,page=1,limit=10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -1097,9 +1614,9 @@ const getReports = async (request, response) => {
 
     try {
       const Query =
-        "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0";
+        "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0 LIMIT ? OFFSET ?";
 
-      const Values = [user_id, report_category_id];
+      const Values = [user_id, report_category_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -1116,6 +1633,8 @@ const getReports = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+           limit: limitNum,
         });
       });
     } catch (error) {
@@ -1134,9 +1653,100 @@ const getReports = async (request, response) => {
 
 //Get Recent added Reports of user
 
-const getResentReports = async (request, response) => {
-  const { user_id } = request.query;
+// const getResentReports = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT 5";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getResentReports = async (request, response) => {
+  const { user_id, page = 1, limit = 10  } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -1191,9 +1801,9 @@ const getResentReports = async (request, response) => {
 
     try {
       const Query =
-        "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT 5";
+        "SELECT mrm.medical_report_id, mrm.report_category_id, rc.category_name, mrm.file, mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON rc.report_category_id = mrm.report_category_id  WHERE mrm.user_id = ? AND mrm.delete_flag=0 ORDER BY mrm.medical_report_id DESC LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -1210,6 +1820,8 @@ const getResentReports = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+          limit: limitNum,
         });
       });
     } catch (error) {
@@ -1223,7 +1835,6 @@ const getResentReports = async (request, response) => {
     }
   });
 };
-
 //end
 
 //Get BP records of user
@@ -2619,9 +3230,96 @@ const getSymtoms = async (request, response) => {
 
 //Get Adverse Reaction
 
-const getAdverseReaction = async (request, response) => {
-  const { user_id } = request.query;
+// const getAdverseReaction = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessage.internalServerError,
+//             key: err.message,
+//           });
+//         }
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+
+const getAdverseReaction = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -2674,9 +3372,9 @@ const getAdverseReaction = async (request, response) => {
 
     try {
       const Query =
-        "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC";
+        "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -2690,6 +3388,8 @@ const getAdverseReaction = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+            page: pageNum,
+            limit: limitNum,
         });
       });
     } catch (error) {
@@ -2703,7 +3403,6 @@ const getAdverseReaction = async (request, response) => {
     }
   });
 };
-
 //end
 
 //Get Adverse Reaction Details
@@ -2918,9 +3617,97 @@ const getDoctors = async (request, response) => {
 
 //Get My Doctors
 
-const getMyDoctors = async (request, response) => {
-  const { user_id } = request.query;
+// const getMyDoctors = async (request, response) => {
+//   const { user_id } = request.query;
 
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ?";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0";
+
+//       const Values = [user_id];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+const getMyDoctors = async (request, response) => {
+  const { user_id, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   if (!user_id) {
     return response.status(200).json({
       success: false,
@@ -2975,9 +3762,9 @@ const getMyDoctors = async (request, response) => {
 
     try {
       const Query =
-        "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0";
+        "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0 LIMIT ? OFFSET ?";
 
-      const Values = [user_id];
+      const Values = [user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
@@ -2993,6 +3780,8 @@ const getMyDoctors = async (request, response) => {
           success: true,
           msg: languageMessage.dataFound,
           dataArray: subResult,
+           page: pageNum,
+           limit: limitNum,
         });
       });
     } catch (error) {
@@ -3004,7 +3793,6 @@ const getMyDoctors = async (request, response) => {
     }
   });
 };
-
 //end
 
 const ShareInformation = async (request, response) => {
@@ -3696,8 +4484,184 @@ async function getDocumentFileSizeByCategory(category_id, user_id) {
 }
 
 // get bp data graph
+// const getBPDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // SQL Queries
+//     const weeklyQuery = `
+//             SELECT createtime, systolic_bp, diastolic_bp, pulse, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 0 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//           ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, systolic_bp, diastolic_bp, pulse, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 0 AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, systolic_bp, diastolic_bp, pulse, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 0 AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT systolic_bp, diastolic_bp, pulse, createtime, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 0 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     // Fetch today's data first
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = (() => {
+//         if (todayResult.length === 0) return [];
+
+//         return todayResult.map((row) => {
+//           // let new_createtime = new Date(new Date(row.createtime).getTime() + 2 * 60 * 60 * 1000);
+//           // Add 5:30 offset
+
+//           return {
+//             measurement_id: row.measurement_id,
+//             systolic_bp: row.systolic_bp,
+//             diastolic_bp: row.diastolic_bp,
+//             pulse: row.pulse == 0 ? "NA" : row.pulse,
+//             //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//             //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//             date: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("MMMM DD, YYYY"),
+
+//             time: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("hh:mm A"),
+//           };
+//         });
+//       })();
+
+//       // Fetch weekly, monthly, yearly
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             // Transform data with proper averaging
+//             const weeklyData = transformWeeklyData(
+//               weeklyResult,
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyData(monthlyResult);
+//             const yearlyData = transformYearlyData(yearlyResult, finalLanguage);
+
+//             let filteredData = {};
+
+//             if (type == 1) {
+//               filteredData.weekly = weeklyData;
+//             } else if (type == 2) {
+//               filteredData.monthly = monthlyData;
+//             } else if (type == 3) {
+//               filteredData.yearly = yearlyData;
+//             } else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             // Always include today's reading
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
 const getBPDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+  const { user_id, type, language_code,page = 1, limit = 10  } = request.query;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
   if (!user_id) {
@@ -3714,7 +4678,7 @@ const getBPDataStats = async (request, response) => {
       key: "type",
     });
   }
-
+const offset = (parseInt(page) - 1) * parseInt(limit);
   const finalLanguage =
     language_code && language_code.trim() !== ""
       ? language_code
@@ -3859,12 +4823,32 @@ const getBPDataStats = async (request, response) => {
               };
             }
 
+            // APPLY PAGINATION
+          const paginateArray = (arr) => {
+            if (!Array.isArray(arr)) return arr;
+            return arr.slice(offset, offset + parseInt(limit));
+          };
+
+        if (filteredData.monthly?.records) {
+          filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+        }
+
+        if (filteredData.weekly?.records) {
+          filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+        }
+
+        if (filteredData.yearly?.records) {
+          filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+        }
             // Always include today's reading
-            filteredData.today = todayData;
+            // filteredData.today = todayData;
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+                page: parseInt(page),
+                limit: parseInt(limit),
             });
           });
         });
@@ -4098,9 +5082,182 @@ function calcAverage(records) {
 }
 //  bp data graph api end..
 
-const getTemperatureDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getTemperatureDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // SQL Queries
+//     const weeklyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT createtime, temperature, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 4 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     // Fetch today's data
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = todayResult.map((row) => ({
+//         measurement_id: row.measurement_id,
+//         temperature: row.temperature ?? 0,
+//         //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//         //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//         date: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("MMMM DD, YYYY"),
+
+//         time: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("hh:mm A"),
+//       }));
+
+//       // Weekly data
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         // Monthly data
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           // Yearly data
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             // Transform data for graphs
+//             const weeklyData = transformWeeklyTemperatureData(
+//               weeklyResult || [],
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyTemperatureData(
+//               monthlyResult || [],
+//             );
+//             const yearlyData = transformYearlyTemperatureData(
+//               yearlyResult || [],
+//               finalLanguage,
+//             );
+
+//             let filteredData = {};
+
+//             if (type == 1) filteredData.weekly = weeklyData;
+//             else if (type == 2) filteredData.monthly = monthlyData;
+//             else if (type == 3) filteredData.yearly = yearlyData;
+//             else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
+const getTemperatureDataStats = async (request, response) => {
+  const { user_id, type, language_code,page = 1, limit = 10  } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
 
@@ -4257,11 +5414,31 @@ const getTemperatureDataStats = async (request, response) => {
               };
             }
 
-            filteredData.today = todayData;
+            // APPLY PAGINATION
+            const paginateArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.slice(offset, offset + limitNum);
+            };
+
+            if (filteredData.weekly?.records) {
+              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+            }
+
+            if (filteredData.monthly?.records) {
+              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+            }
+
+            if (filteredData.yearly?.records) {
+              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+            }
+
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+               page: pageNum,
+               limit: limitNum,
             });
           });
         });
@@ -4373,9 +5550,185 @@ const deleteDoctor = async (request, response) => {
 // delete doctor end
 
 // Fasting Glucose API with Weekly/Monthly/Yearly Breakdown
-const getFastingGlucoseDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getFastingGlucoseDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // Queries
+//     const weeklyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1  AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id 
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 1  AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT createtime, fasting_glucose, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 1 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = (() => {
+//         if (todayResult.length === 0) return [];
+
+//         return todayResult.map((row) => {
+//           // let new_createtime = new Date(new Date(row.createtime).getTime() + 2 * 60 * 60 * 1000);
+
+//           return {
+//             measurement_id: row.measurement_id,
+//             fasting_glucose: row.fasting_glucose,
+//             //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//             //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//             date: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("MMMM DD, YYYY"),
+
+//             time: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("hh:mm A"),
+//           };
+//         });
+//       })();
+
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             const weeklyData = transformWeeklyGlucoseData(
+//               weeklyResult,
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyGlucoseData(monthlyResult);
+//             const yearlyData = transformYearlyGlucoseData(
+//               yearlyResult,
+//               finalLanguage,
+//             );
+
+//             let filteredData = {};
+
+//             if (type == 1) {
+//               filteredData.weekly = weeklyData;
+//             } else if (type == 2) {
+//               filteredData.monthly = monthlyData;
+//             } else if (type == 3) {
+//               filteredData.yearly = yearlyData;
+//             } else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
+const getFastingGlucoseDataStats = async (request, response) => {
+  const { user_id, type, language_code, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
 
@@ -4534,12 +5887,32 @@ const getFastingGlucoseDataStats = async (request, response) => {
                 yearly: yearlyData,
               };
             }
+            // APPLY PAGINATION
+            const paginateArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.slice(offset, offset + limitNum);
+            };
 
-            filteredData.today = todayData;
+            if (filteredData.weekly?.records) {
+              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+            }
+
+            if (filteredData.monthly?.records) {
+              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+            }
+
+            if (filteredData.yearly?.records) {
+              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+            }
+
+            // filteredData.today = todayData;
+            filteredData.today = todayData.slice(offset, offset + limitNum);
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+               page: pageNum,
+                limit: limitNum
             });
           });
         });
@@ -4734,9 +6107,189 @@ function calcGlucoseAverage(records) {
 //  Fasting Glucose Graph API End
 
 //  get ppbgs data stats graph new api...
-const getPPBGSDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getPPBGSDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery =
+//     "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response
+//         .status(200)
+//         .json({ success: false, msg: request.__("user_not_found") });
+//     }
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     // Queries
+//     const weeklyQuery = `
+//             SELECT createtime, ppbgs,measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 2 AND delete_flag = 0
+//             AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = `
+//             SELECT createtime, ppbgs,measurement_id
+//             FROM measurement_master 
+//             WHERE user_id = ? AND type = 2 AND delete_flag = 0
+//             AND MONTH(createtime) = MONTH(CURDATE()) 
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const yearlyQuery = `
+//             SELECT createtime, ppbgs, measurement_id
+//             FROM measurement_master  
+//             WHERE user_id = ? AND type = 2 AND delete_flag = 0
+//             AND YEAR(createtime) = YEAR(CURDATE())
+//             ORDER BY createtime DESC
+//         `;
+
+//     const todayQuery = `
+//             SELECT createtime, ppbgs, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ? AND type = 2 AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     // Get Today's Data
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err)
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+
+//       const todayData = (() => {
+//         if (todayResult.length === 0) return [];
+
+//         return todayResult.map((row) => {
+//           // let new_createtime = new Date(new Date(row.createtime).getTime() + 2 * 60 * 60 * 1000);
+
+//           return {
+//             measurement_id: row.measurement_id,
+//             ppbgs: row.ppbgs,
+//             //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//             //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//             date: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("MMMM DD, YYYY"),
+
+//             time: moment
+//               .utc(row.createtime)
+//               .tz(timezone)
+//               .locale(finalLanguage)
+//               .format("hh:mm A"),
+//           };
+//         });
+//       })();
+
+//       // Weekly Data
+//       connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+//         if (err)
+//           return response.status(200).json({
+//             success: false,
+//             msg: request.__("internal_server_error"),
+//             error: err.message,
+//           });
+
+//         // Monthly Data
+//         connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+//           if (err)
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+
+//           // Yearly Data
+//           connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+//             if (err)
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: request.__("internal_server_error"),
+//                 error: err.message,
+//               });
+
+//             const weeklyData = transformWeeklyPPBGSData(
+//               weeklyResult,
+//               timezone,
+//               finalLanguage,
+//             );
+//             const monthlyData = transformMonthlyPPBGSData(monthlyResult);
+//             const yearlyData = transformYearlyPPBGSData(
+//               yearlyResult,
+//               finalLanguage,
+//             );
+
+//             let filteredData = {};
+
+//             if (type == 1) {
+//               filteredData.weekly = weeklyData;
+//             } else if (type == 2) {
+//               filteredData.monthly = monthlyData;
+//             } else if (type == 3) {
+//               filteredData.yearly = yearlyData;
+//             } else {
+//               filteredData = {
+//                 weekly: weeklyData,
+//                 monthly: monthlyData,
+//                 yearly: yearlyData,
+//               };
+//             }
+
+//             filteredData.today = todayData;
+
+//             return response.status(200).json({
+//               success: true,
+//               data: filteredData,
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// };
+const getPPBGSDataStats = async (request, response) => {
+  const { user_id, type, language_code, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
 
@@ -4900,11 +6453,32 @@ const getPPBGSDataStats = async (request, response) => {
               };
             }
 
-            filteredData.today = todayData;
+            // APPLY PAGINATION
+            const paginateArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.slice(offset, offset + limitNum);
+            };
+
+            if (filteredData.weekly?.records) {
+              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+            }
+
+            if (filteredData.monthly?.records) {
+              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+            }
+
+            if (filteredData.yearly?.records) {
+              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+            }
+
+            // filteredData.today = todayData;
+            filteredData.today = paginateArray(todayData);
 
             return response.status(200).json({
               success: true,
               data: filteredData,
+               page: pageNum,
+              limit: limitNum,
             });
           });
         });
@@ -5099,9 +6673,256 @@ function calcPPBGSAverage(records) {
 //  ppbgs data graph api end
 
 //  get weight graph api
-const getWeightMeasurementDataStats = async (request, response) => {
-  const { user_id, type, language_code } = request.query;
+// const getWeightMeasurementDataStats = async (request, response) => {
+//   const { user_id, type, language_code } = request.query;
 
+//   // ✅ Read device timezone (fallback to UTC)
+//   const timezone =
+//     request.headers["x-timezone"] || request.query.timezone || "UTC";
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "user_id",
+//     });
+//   }
+
+//   if (!type) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessage.msg_empty_param,
+//       key: "type",
+//     });
+//   }
+
+//   const finalLanguage =
+//     language_code && language_code.trim() !== ""
+//       ? language_code
+//       : await getUserLanguage({ user_id });
+
+//   request.setLocale(finalLanguage);
+
+//   const userQuery = `
+//         SELECT active_flag, delete_flag
+//         FROM user_master
+//         WHERE user_id = ? AND delete_flag = 0
+//     `;
+
+//   connection.query(userQuery, [user_id], (err, result) => {
+//     if (err || result.length === 0 || result[0].active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("user_not_found"),
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: request.__("your_account_is_not_registered_with_us"),
+//         active_flag: 0,
+//       });
+//     }
+
+//     /* -------------------------------------------------
+//            ✅ TIME RANGES (DEVICE TZ → UTC)
+//         ------------------------------------------------- */
+
+//     const todayStartUTC = moment()
+//       .tz(timezone)
+//       .startOf("day")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+//     const todayEndUTC = moment()
+//       .tz(timezone)
+//       .endOf("day")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+
+//     const weekStartUTC = moment()
+//       .tz(timezone)
+//       .startOf("week")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+//     const weekEndUTC = moment()
+//       .tz(timezone)
+//       .endOf("week")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+
+//     const monthStartUTC = moment()
+//       .tz(timezone)
+//       .startOf("month")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+//     const monthEndUTC = moment()
+//       .tz(timezone)
+//       .endOf("month")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+
+//     const yearStartUTC = moment()
+//       .tz(timezone)
+//       .startOf("year")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+//     const yearEndUTC = moment()
+//       .tz(timezone)
+//       .endOf("year")
+//       .utc()
+//       .format("YYYY-MM-DD HH:mm:ss");
+
+//     /* -------------------------------------------------
+//            ✅ QUERIES (UTC SAFE)
+//         ------------------------------------------------- */
+
+//     const todayQuery = `
+//             SELECT createtime, weight, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ?
+//               AND type = 3
+//               AND delete_flag = 0
+//             ORDER BY createtime DESC
+//         `;
+
+//     const weeklyQuery = `
+//             SELECT createtime, weight, measurement_id
+//             FROM measurement_master
+//             WHERE user_id = ?
+//               AND type = 3
+//               AND delete_flag = 0
+//               AND createtime BETWEEN ? AND ?
+//             ORDER BY createtime DESC
+//         `;
+
+//     const monthlyQuery = weeklyQuery;
+//     const yearlyQuery = weeklyQuery;
+
+//     /* -------------------------------------------------
+//            ✅ TODAY DATA (UTC → DEVICE TIME)
+//         ------------------------------------------------- */
+
+//     connection.query(todayQuery, [user_id], (err, todayResult) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: request.__("internal_server_error"),
+//           error: err.message,
+//         });
+//       }
+
+//       const todayData = todayResult.map((row) => ({
+//         measurement_id: row.measurement_id,
+//         weight: row.weight,
+//         //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
+//         //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
+//         date: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("MMMM DD, YYYY"),
+
+//         time: moment
+//           .utc(row.createtime)
+//           .tz(timezone)
+//           .locale(finalLanguage)
+//           .format("hh:mm A"),
+//       }));
+
+//       /* -------------------------------------------------
+//                    ✅ WEEKLY
+//                 ------------------------------------------------- */
+//       connection.query(
+//         weeklyQuery,
+//         [user_id, weekStartUTC, weekEndUTC],
+//         (err, weeklyResult) => {
+//           if (err) {
+//             return response.status(200).json({
+//               success: false,
+//               msg: request.__("internal_server_error"),
+//               error: err.message,
+//             });
+//           }
+
+//           /* -------------------------------------------------
+//                            ✅ MONTHLY
+//                         ------------------------------------------------- */
+//           connection.query(
+//             monthlyQuery,
+//             [user_id, monthStartUTC, monthEndUTC],
+//             (err, monthlyResult) => {
+//               if (err) {
+//                 return response.status(200).json({
+//                   success: false,
+//                   msg: request.__("internal_server_error"),
+//                   error: err.message,
+//                 });
+//               }
+
+//               /* -------------------------------------------------
+//                                    ✅ YEARLY
+//                                 ------------------------------------------------- */
+//               connection.query(
+//                 yearlyQuery,
+//                 [user_id, yearStartUTC, yearEndUTC],
+//                 (err, yearlyResult) => {
+//                   if (err) {
+//                     return response.status(200).json({
+//                       success: false,
+//                       msg: request.__("internal_server_error"),
+//                       error: err.message,
+//                     });
+//                   }
+
+//                   // Existing transformers
+//                   const weeklyData = transformWeeklyWeightData(
+//                     weeklyResult,
+//                     timezone,
+//                     finalLanguage,
+//                   );
+//                   const monthlyData = transformMonthlyWeightData(monthlyResult);
+//                   const yearlyData = transformYearlyWeightData(
+//                     yearlyResult,
+//                     finalLanguage,
+//                   );
+
+//                   let filteredData = {};
+
+//                   if (type == 1) {
+//                     filteredData.weekly = weeklyData;
+//                   } else if (type == 2) {
+//                     filteredData.monthly = monthlyData;
+//                   } else if (type == 3) {
+//                     filteredData.yearly = yearlyData;
+//                   } else {
+//                     filteredData = {
+//                       weekly: weeklyData,
+//                       monthly: monthlyData,
+//                       yearly: yearlyData,
+//                     };
+//                   }
+
+//                   filteredData.today = todayData;
+
+//                   return response.status(200).json({
+//                     success: true,
+//                     data: filteredData,
+//                   });
+//                 },
+//               );
+//             },
+//           );
+//         },
+//       );
+//     });
+//   });
+// };
+const getWeightMeasurementDataStats = async (request, response) => {
+  const { user_id, type, language_code ,page = 1, limit = 10  } = request.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
   // ✅ Read device timezone (fallback to UTC)
   const timezone =
     request.headers["x-timezone"] || request.query.timezone || "UTC";
@@ -5328,12 +7149,33 @@ const getWeightMeasurementDataStats = async (request, response) => {
                       yearly: yearlyData,
                     };
                   }
+                  // APPLY PAGINATION
+                  const paginateArray = (arr) => {
+                    if (!Array.isArray(arr)) return arr;
+                    return arr.slice(offset, offset + limitNum);
+                  };
 
-                  filteredData.today = todayData;
+                  if (filteredData.weekly?.records) {
+                    filteredData.weekly.records = paginateArray(filteredData.weekly.records);
+                  }
+
+                  if (filteredData.monthly?.records) {
+                    filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+                  }
+
+                  if (filteredData.yearly?.records) {
+                    filteredData.yearly.records = paginateArray(filteredData.yearly.records);
+                  }
+
+                  // filteredData.today = todayData;
+                  filteredData.today = paginateArray(todayData);
+
 
                   return response.status(200).json({
                     success: true,
                     data: filteredData,
+                    page: pageNum,
+                    limit: limitNum,
                   });
                 },
               );

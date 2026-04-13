@@ -1524,6 +1524,7 @@ const deleteMedicalReport = async (request, response) => {
   if (!user_id) {
     return response.status(200).json({
       success: false,
+
       msg: languageMessage.msg_empty_param,
     });
   }
@@ -1642,7 +1643,6 @@ const deleteMedicalReport = async (request, response) => {
             success: true,
 
             msg: languageMessage.reportDeleted,
-            msg: request.__("report_deleted_successfully"),
           });
         },
       );
@@ -3608,9 +3608,221 @@ const editMedication = async (request, response) => {
 // end
 
 // get today medication new api
+// const getTodayMedication = async (request, response) => {
+//   try {
+//     const { user_id, date, type } = request.query;
+
+//     if (!user_id) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msg_empty_param,
+//       });
+//     }
+
+//     const userQuery = `
+//             SELECT active_flag, delete_flag, current_timezone 
+//             FROM user_master 
+//             WHERE user_id = ?
+//         `;
+
+//     connection.query(userQuery, [user_id], (err, userRes) => {
+//       if (err)
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: "DB Error", key: err.message });
+//       if (!userRes.length)
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: "User Not Found" });
+//       if (userRes[0].active_flag == 0 || userRes[0].delete_flag == 1)
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: "User Deleted" });
+
+//       const userTimezone = userRes[0].current_timezone || "UTC";
+//       const selectedDate = date
+//         ? moment(date).format("YYYY-MM-DD")
+//         : moment().format("YYYY-MM-DD");
+//       const dayOfWeek = moment(selectedDate).day();
+
+//       const medicationQuery = `
+//                 SELECT 
+//                     mc.medication_id,
+//                     ts.time_slots_id,
+//                     ts.time,
+//                     ts.taken_status,
+//                     ts.updatetime,
+//                     md.medicine_name,
+//                     mc.type,
+//                     mc.dosage,
+//                     mc.schedule,
+//                     mc.pause_status,
+//                     mc.medicine_type_name,
+//                     mc.remaining_quantity,
+//                     mc.timezone AS med_timezone
+//                 FROM medication_master mc
+//                 LEFT JOIN time_slots_master ts ON mc.medication_id = ts.medication_id
+//                 LEFT JOIN medicine_master md ON mc.medicine_id = md.medicine_id
+//                 WHERE mc.user_id = ?
+//                 AND mc.delete_flag = 0
+//                 AND ts.delete_flag = 0
+//                 AND mc.pause_status = 0
+//                 AND (
+//                     mc.schedule = 0 OR
+//                     (mc.schedule = 1 AND FIND_IN_SET(?, mc.weekday)) OR
+//                     (mc.schedule = 2 AND FIND_IN_SET(?, mc.schedule_date))
+//                 )
+//                 AND NOT EXISTS (
+//                     SELECT 1 FROM medicine_average_master mam
+//                     WHERE mam.user_id = mc.user_id
+//                     AND mam.medicine_id = mc.medicine_id
+//                     AND mam.time_slots_id = ts.time_slots_id
+//                     AND mam.status = 2
+//                     AND DATE(mam.createtime) = ?
+//                 )
+//                 ORDER BY ts.time ASC
+//             `;
+
+//       const medicationValues = [
+//         user_id,
+//         dayOfWeek.toString(),
+//         selectedDate,
+//         selectedDate,
+//       ];
+
+//       connection.query(medicationQuery, medicationValues, (err, medRes) => {
+//         if (err)
+//           return response
+//             .status(200)
+//             .json({ success: false, msg: "DB Error", key: err.message });
+//         if (!medRes.length)
+//           return response
+//             .status(200)
+//             .json({ success: true, msg: "Data Not Found", dataArray: "NA" });
+
+//         const timeSlotIds = medRes.map((m) => m.time_slots_id);
+
+//         const avgQuery = `
+//                     SELECT time_slots_id, taken_datetime, status
+//                     FROM medicine_average_master
+//                     WHERE user_id = ?
+//                     AND time_slots_id IN (?)
+//                     AND status IN (0,1)
+//                     AND DATE(taken_datetime) = ?
+//                 `;
+
+//         connection.query(
+//           avgQuery,
+//           [user_id, timeSlotIds, selectedDate],
+//           (err, avgRes) => {
+//             const avgMap = {};
+//             if (!err && avgRes.length) {
+//               avgRes.forEach((r) => {
+//                 avgMap[r.time_slots_id] = r.taken_datetime;
+//               });
+//             }
+
+//             // FINAL TIME MERGING LOGIC
+//             medRes = medRes.map((m) => {
+//               const medTZ = m.med_timezone || "UTC";
+//               const userTZ = userTimezone;
+
+//               let finalMoment;
+
+//               if (
+//                 selectedDate == moment().format("YYYY-MM-DD") &&
+//                 m.taken_status == 1 &&
+//                 avgMap[m.time_slots_id]
+//               ) {
+//                 // today taken → show taken time
+//                 finalMoment = moment.utc(avgMap[m.time_slots_id]).tz(userTZ);
+//               } else {
+//                 // show original scheduled slot
+//                 finalMoment = moment(
+//                   `${selectedDate} ${m.time}`,
+//                   "YYYY-MM-DD HH:mm:ss",
+//                 );
+//               }
+
+//               return {
+//                 ...m,
+//                 time_slot: finalMoment.format("hh:mm A"),
+//                 time_moment: finalMoment,
+//               };
+//             });
+
+//             // Sort by time so listing is in correct order
+//             medRes.sort((a, b) => {
+//               const t1 = moment(a.time_slot, "hh:mm A").valueOf();
+//               const t2 = moment(b.time_slot, "hh:mm A").valueOf();
+//               return t1 - t2;
+//             });
+
+//             const getTimeCategory = (timeString) => {
+//               const [time, meridian] = timeString.split(" ");
+//               let [hour] = time.split(":").map(Number);
+
+//               if (meridian === "PM" && hour !== 12) hour += 12;
+//               if (meridian === "AM" && hour === 12) hour = 0;
+
+//               if (hour >= 5 && hour < 12) return "morning";
+//               if (hour >= 12 && hour < 17) return "afternoon";
+//               return "evening";
+//             };
+
+//             const categorized = {
+//               all: [],
+//               morning: [],
+//               afternoon: [],
+//               evening: [],
+//             };
+
+//             medRes.forEach((m) => {
+//               const category = getTimeCategory(m.time_slot);
+
+//               categorized.all.push({ ...m, time_category: category });
+//               categorized[category].push({ ...m, time_category: category });
+//             });
+
+//             let filteredData = [];
+
+//             switch (parseInt(type, 10)) {
+//               case 1:
+//                 filteredData = categorized.all;
+//                 break;
+//               case 2:
+//                 filteredData = categorized.morning;
+//                 break;
+//               case 3:
+//                 filteredData = categorized.afternoon;
+//                 break;
+//               case 4:
+//                 filteredData = categorized.evening;
+//                 break;
+//               default:
+//                 filteredData = categorized.all;
+//             }
+
+//             return response.status(200).json({
+//               success: true,
+//               msg: "Data Found",
+//               dataArray: filteredData,
+//             });
+//           },
+//         );
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(500).json({
+//       success: false,
+//       msg: "Internal Server Error",
+//       error: error.message,
+//     });
+//   }
+// };
 const getTodayMedication = async (request, response) => {
   try {
-    const { user_id, date, type } = request.query;
+    const { user_id, date, type,page = 1, limit = 10  } = request.query;
 
     if (!user_id) {
       return response.status(200).json({
@@ -3624,7 +3836,7 @@ const getTodayMedication = async (request, response) => {
             FROM user_master 
             WHERE user_id = ?
         `;
-
+     const offset = (parseInt(page) - 1) * parseInt(limit);
     connection.query(userQuery, [user_id], (err, userRes) => {
       if (err)
         return response
@@ -3803,10 +4015,15 @@ const getTodayMedication = async (request, response) => {
                 filteredData = categorized.all;
             }
 
+            const paginatedData = filteredData.slice(offset, offset + parseInt(limit));
             return response.status(200).json({
               success: true,
               msg: "Data Found",
-              dataArray: filteredData,
+               page: parseInt(page),
+              limit: parseInt(limit),
+              // dataArray: filteredData,
+              dataArray: paginatedData,
+
             });
           },
         );
@@ -4487,8 +4704,237 @@ const removePlayerId = async (request, response) => {
 };
 
 //  get homepage 1
+// const homepage = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   try {
+//     if (!user_id) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msg_empty_param,
+//         key: "user_id",
+//       });
+//     }
+
+//     // Check if user exists & active
+//     const checkUser = `
+//             SELECT user_id, active_flag, delete_flag, current_timezone
+//             FROM user_master 
+//             WHERE user_id = ? AND delete_flag = 0
+//         `;
+
+//     connection.query(checkUser, [user_id], async (err, userRes) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.internalServerError,
+//           key: err.message,
+//         });
+//       }
+
+//       if (userRes.length === 0) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.userNotFound,
+//         });
+//       }
+
+//       if (userRes[0].active_flag == 0) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessage.accountdeactivated,
+//           active_flag: 0,
+//         });
+//       }
+
+//       // Get today's date & current time
+//       const userTimezone = userRes[0].current_timezone || "UTC";
+//       const todayDate = moment().tz(userTimezone).format("YYYY-MM-DD");
+//       const now = moment().tz(userTimezone); // current moment in user timezone
+//       const currentTime = now.format("HH:mm:ss");
+//       const todayDayOfWeek = now.day(); // 0=Sunday
+
+//       // Fetch all not-taken reminders only for today
+//       const getMedicationQuery = `
+//                 SELECT 
+//                     mc.medication_id,
+//                     ts.time_slots_id,
+//                     mc.medicine_id,
+//                     md.medicine_name,
+//                     mc.dosage,
+//                     mc.type,
+//                     CASE mc.type
+//                         WHEN 1 THEN 'pill'
+//                         WHEN 2 THEN 'syrup'
+//                         ELSE 'unknown'
+//                     END AS type_label,
+//                     NULLIF(mc.instruction, '') AS instruction,
+//                     ts.taken_status,
+//                     CASE ts.taken_status
+//                         WHEN 0 THEN 'Not_Taken'
+//                         WHEN 1 THEN 'Taken'
+//                         ELSE 'unknown'
+//                     END AS taken_label,
+//                     mc.schedule,
+//                     mc.medicine_type_name,
+//                     CASE mc.schedule
+//                         WHEN 0 THEN 'daily'
+//                         WHEN 1 THEN 'weekly'
+//                         WHEN 2 THEN 'monthly'
+//                         ELSE 'unknown'
+//                     END AS schedule_label,
+//                     mc.remaining_quantity,
+//                     mc.pause_status,
+//                     mc.number_of_times,
+//                     mc.timezone AS med_timezone,
+//                     ts.time AS raw_time
+//                 FROM 
+//                     medication_master AS mc
+//                 LEFT JOIN 
+//                     medicine_master AS md ON mc.medicine_id = md.medicine_id
+//                 LEFT JOIN 
+//                     time_slots_master AS ts ON mc.medication_id = ts.medication_id
+//                 WHERE 
+//                     mc.user_id = ?
+//                     AND mc.delete_flag = 0
+//                     AND mc.pause_status = 0
+//                     AND ts.delete_flag = 0
+//                     AND ts.taken_status = 0
+//                     AND (
+//                         mc.schedule = 0  
+//                         OR (mc.schedule = 1 AND FIND_IN_SET(?, mc.weekday)) 
+//                         OR (mc.schedule = 2 AND FIND_IN_SET(?, mc.schedule_date)) 
+//                     ) 
+//                     AND NOT EXISTS (
+//                         SELECT 1 
+//                         FROM medicine_average_master mam 
+//                         WHERE mam.user_id = mc.user_id 
+//                           AND mam.medicine_id = mc.medicine_id 
+//                           AND mam.time_slots_id = ts.time_slots_id
+//                           AND mam.status = 2 
+//                           AND DATE(mam.createtime) = ?
+//                     )
+//                 ORDER BY ts.time ASC
+//             `;
+
+//       const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate];
+
+//       connection.query(getMedicationQuery, values, async (err, meds) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessage.internalServerError,
+//             key: err.message,
+//           });
+//         }
+
+//         if (!meds || meds.length === 0) {
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessage.dataNotFound,
+//             dataArray: [],
+//           });
+//         }
+
+//         // categorize time
+//         const getTimeCategory = (timeString) => {
+//           if (!timeString) return "evening";
+//           const [time, meridianRaw] = timeString.trim().split(" ");
+//           const [hourStr, minuteStr] = time.split(":");
+//           const meridian = meridianRaw?.toUpperCase();
+
+//           let hour = parseInt(hourStr, 10);
+//           const minute = parseInt(minuteStr, 10);
+
+//           if (isNaN(hour) || isNaN(minute)) return "evening";
+
+//           if (meridian === "PM" && hour !== 12) hour += 12;
+//           if (meridian === "AM" && hour === 12) hour = 0;
+
+//           if (hour >= 5 && hour < 12) return "morning";
+//           if (hour >= 12 && hour < 17) return "afternoon";
+//           return "evening";
+//         };
+
+//         // Convert DB time (HH:mm:ss) → user timezone wall clock (no UTC shift)
+//         const categorizedMeds = meds.map((med) => {
+//           const raw = med.raw_time;
+//           const medTZ = med.med_timezone || "UTC";
+//           const userTZ = userTimezone;
+
+//           // medication "today" in its own timezone
+//           // const medToday = moment().tz(medTZ).format("YYYY-MM-DD");
+
+//           // interpret as wall time in med timezone
+//           // const medMoment = moment.tz(
+//           //     `${medToday} ${raw}`,
+//           //     "YYYY-MM-DD HH:mm:ss",
+//           //     medTZ
+//           // );
+
+//           // convert to user's current timezone
+//           // const userMoment = medMoment.clone().tz(userTZ);
+//           // Interpret raw_time as local wall-clock time (NO timezone conversion)
+//           const userMoment = moment(
+//             `${todayDate} ${raw}`,
+//             "YYYY-MM-DD HH:mm:ss",
+//           );
+
+//           return {
+//             ...med,
+//             time_slot: userMoment.format("hh:mm A"),
+//             time_category: getTimeCategory(userMoment.format("hh:mm A")),
+//             time_moment: userMoment,
+//           };
+//         });
+
+//         const CURRENT_TIME_WINDOW = 5; // minutes
+
+//         categorizedMeds.sort((a, b) => {
+//           const aDiff = a.time_moment.diff(now, "minutes");
+//           const bDiff = b.time_moment.diff(now, "minutes");
+
+//           const aCurrent = Math.abs(aDiff) <= CURRENT_TIME_WINDOW;
+//           const bCurrent = Math.abs(bDiff) <= CURRENT_TIME_WINDOW;
+
+//           if (aCurrent && !bCurrent) return -1;
+//           if (!aCurrent && bCurrent) return 1;
+//           if (aCurrent && bCurrent) return Math.abs(aDiff) - Math.abs(bDiff);
+
+//           if (aDiff > 0 && bDiff < 0) return -1;
+//           if (aDiff < 0 && bDiff > 0) return 1;
+//           return a.time_moment - b.time_moment;
+//         });
+
+//         const upcomingCount = categorizedMeds.filter((med) => {
+//           const diff = med.time_moment.diff(now, "minutes");
+//           return diff >= -CURRENT_TIME_WINDOW;
+//         }).length;
+
+//         const finalResponse = categorizedMeds.map((med) => {
+//           const { time_moment, ...rest } = med;
+//           return rest;
+//         });
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           current_time: currentTime,
+//           upcoming_total: upcomingCount,
+//           dataArray: finalResponse,
+//         });
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(500).json({
+//       success: false,
+//       msg: languageMessage.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
 const homepage = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id ,page = 1, limit = 10 } = request.query;
 
   try {
     if (!user_id) {
@@ -4506,6 +4952,7 @@ const homepage = async (request, response) => {
             WHERE user_id = ? AND delete_flag = 0
         `;
 
+        const offset = (parseInt(page) - 1) * parseInt(limit);
     connection.query(checkUser, [user_id], async (err, userRes) => {
       if (err) {
         return response.status(200).json({
@@ -4597,10 +5044,12 @@ const homepage = async (request, response) => {
                           AND mam.status = 2 
                           AND DATE(mam.createtime) = ?
                     )
-                ORDER BY ts.time ASC
+                ORDER BY ts.time ASC 
+                LIMIT ? OFFSET ?
             `;
 
-      const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate];
+      const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate, parseInt(limit),
+  parseInt(offset),];
 
       connection.query(getMedicationQuery, values, async (err, meds) => {
         if (err) {
@@ -4704,6 +5153,8 @@ const homepage = async (request, response) => {
           msg: languageMessage.dataFound,
           current_time: currentTime,
           upcoming_total: upcomingCount,
+          page: parseInt(page),
+          limit: parseInt(limit),
           dataArray: finalResponse,
         });
       });
