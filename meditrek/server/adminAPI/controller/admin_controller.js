@@ -15,7 +15,7 @@ const {
   ActivateDeactivatemailer,
   mailer,
   mailerApproveDoctor,
-  mailerRejectDoctorByAdmin
+  mailerRejectDoctorByAdmin,
 } = require("../controller/mailer");
 
 const languageMessages = require("./languageMessages");
@@ -28,13 +28,15 @@ dotenv.config();
 const createtime = moment().tz("Europe/Paris").format("YYYY-MM-DD HH:mm:ss");
 const updatetime = moment().tz("Europe/Paris").format("YYYY-MM-DD HH:mm:ss");
 
-
 // const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
 
 // const SECRET_KEY = process.env.ADMIN_SECRET_KEY;
 const SECRET_KEY = "SECRETKEYHERE";
 
-const { getNotificationArrSingle, oneSignalNotificationSendCall, } = require("./notification");
+const {
+  getNotificationArrSingle,
+  oneSignalNotificationSendCall,
+} = require("./notification");
 
 //-------------------------------------
 
@@ -42,58 +44,48 @@ const adminLogin = async (request, response) => {
   const { email, password } = request.body;
   try {
     if (!email) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "email",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "email",
+      });
     }
     if (!password) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "password",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "password",
+      });
     }
 
     const sqlCheckUser =
       "SELECT user_id,email,name, password, user_id, active_flag, mobile, address, user_type FROM user_master WHERE email = ? AND delete_flag = 0 AND user_type=0";
     connection.query(sqlCheckUser, [email], async (err, userResult) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       if (userResult.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.emailNotRegistered,
-            key: "email",
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.emailNotRegistered,
+          key: "email",
+        });
       }
       if (userResult.length > 0) {
         var adminPassword = userResult[0].password;
         const hashedPass = await hashPassword(password);
         if (adminPassword != hashedPass) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.emailNotRegistered,
-              a: adminPassword,
-              p: hashedPass,
-              key: "password",
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.emailNotRegistered,
+            a: adminPassword,
+            p: hashedPass,
+            key: "password",
+          });
         } else {
           // const payload = { subject: userResult[0].email };
           // const key = rs.generate();
@@ -102,26 +94,22 @@ const adminLogin = async (request, response) => {
           const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
           // return response.json("check 2")
 
-          return response
-            .status(200)
-            .json({
-              success: true,
-              msg: languageMessages.loginSuccessfully,
-              key: "login_successfully",
-              token: token,
-              info: userResult,
-            });
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.loginSuccessfully,
+            key: "login_successfully",
+            token: token,
+            info: userResult,
+          });
         }
       }
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -345,7 +333,7 @@ const UpdateAdminProfile = async (request, response) => {
             msg: "Admin profile updated successfully.",
 
             key: "Edit",
-            image
+            image,
           });
       } else {
         return response
@@ -530,22 +518,18 @@ const UpdateAdminPassword = async (request, response) => {
                 [new_pass, info[0].user_id],
                 (err) => {
                   if (err) {
-                    return response
-                      .status(200)
-                      .json({
-                        success: false,
-                        msg: languageMessages.internalServerError,
-                      });
+                    return response.status(200).json({
+                      success: false,
+                      msg: languageMessages.internalServerError,
+                    });
                   } else {
-                    return response
-                      .status(200)
-                      .json({
-                        success: true,
-                        msg: languageMessages.PasswordUpdatedSuccessfully,
-                        key: "success",
-                      });
+                    return response.status(200).json({
+                      success: true,
+                      msg: languageMessages.PasswordUpdatedSuccessfully,
+                      key: "success",
+                    });
                   }
-                }
+                },
               );
             } else {
               return response.status(200).json({
@@ -585,13 +569,11 @@ const getAllusersData = async (request, response) => {
 
     connection.query(query, (err, users) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
 
       if (users.length == 0) {
@@ -608,18 +590,15 @@ const getAllusersData = async (request, response) => {
         .json({ success: true, msg: languageMessages.userFound, users: users });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
 const deleteUser = (req, res) => {
-
   const { user_id } = req.body;
 
   const sql = `
@@ -629,21 +608,18 @@ const deleteUser = (req, res) => {
   `;
 
   connection.query(sql, [user_id], (err, result) => {
-
     if (err) {
       return res.json({
         success: false,
-        msg: "Database error"
+        msg: "Database error",
       });
     }
 
     return res.json({
       success: true,
-      msg: "User deleted successfully"
+      msg: "User deleted successfully",
     });
-
   });
-
 };
 
 // const ViewUserDetails = async (request, response) => {
@@ -817,7 +793,6 @@ const deleteUser = (req, res) => {
 const ViewUserDetails = async (request, response) => {
   const { user_id } = request.params;
   try {
-
     if (!user_id) {
       return response.status(200).json({
         success: false,
@@ -826,15 +801,22 @@ const ViewUserDetails = async (request, response) => {
       });
     }
 
-    const checkUser = "SELECT user_id, active_flag FROM user_master WHERE user_id = ?";
+    const checkUser =
+      "SELECT user_id, active_flag FROM user_master WHERE user_id = ?";
 
     connection.query(checkUser, [user_id], (err, res) => {
       if (err) {
-        return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (res.length <= 0) {
-        return response.status(200).json({ success: false, msg: languageMessages.msgUserNotFound });
+        return response
+          .status(200)
+          .json({ success: false, msg: languageMessages.msgUserNotFound });
       }
 
       // if (res[0].active_flag === 0) {
@@ -853,7 +835,11 @@ const ViewUserDetails = async (request, response) => {
 
       connection.query(FetchDetails, [user_id], (err, userResult) => {
         if (err) {
-          return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         if (userResult.length > 0) {
@@ -861,32 +847,42 @@ const ViewUserDetails = async (request, response) => {
           const diseaseIdsRaw = data.diseases;
 
           const buildUserResponse = (diseaseNames = []) => {
-            const user_arr = [{
-              user_id: data.user_id,
-              username: data.name,
-              f_name: data.f_name,
-              l_name: data.l_name,
-              name: data.name,
-              email: data.email,
-              image: data.image,
-              bio: data.about,
-              dob: moment(data.dob)
-                .tz("Europe/Paris")
-                .format("DD MMM YYYY"), weight: data.weight,
-              height: data.height,
-              age: data.dob ? moment().diff(data.dob, 'years') : "NA",
-              gendor: data.gender,
-              gender_lable: data.gender == 1 ? "Male" : data.gender == 2 ? "Female" : data.gender == 3 ? "Other" : "NA",
-              mobile: data.mobile,
-              phone_code: "33",
-              user_type: data.user_type,
-              user_type_lable: "0=admin,1=user",
-              diseaseName: data.diseases,
-              active_flag: data.active_flag,
-              delete_flag: data.delete_flag,
-              createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
-              disease_names: diseaseNames.join(", ")
-            }];
+            const user_arr = [
+              {
+                user_id: data.user_id,
+                username: data.name,
+                f_name: data.f_name,
+                l_name: data.l_name,
+                name: data.name,
+                email: data.email,
+                image: data.image,
+                bio: data.about,
+                dob: moment(data.dob).tz("Europe/Paris").format("DD MMM YYYY"),
+                weight: data.weight,
+                height: data.height,
+                age: data.dob ? moment().diff(data.dob, "years") : "NA",
+                gendor: data.gender,
+                gender_lable:
+                  data.gender == 1
+                    ? "Male"
+                    : data.gender == 2
+                      ? "Female"
+                      : data.gender == 3
+                        ? "Other"
+                        : "NA",
+                mobile: data.mobile,
+                phone_code: "33",
+                user_type: data.user_type,
+                user_type_lable: "0=admin,1=user",
+                diseaseName: data.diseases,
+                active_flag: data.active_flag,
+                delete_flag: data.delete_flag,
+                createtime: moment(data.createtime).format(
+                  "DD-MM-YYYY hh:mm A",
+                ),
+                disease_names: diseaseNames.join(", "),
+              },
+            ];
 
             return response.status(200).json({
               success: true,
@@ -896,19 +892,30 @@ const ViewUserDetails = async (request, response) => {
           };
 
           if (diseaseIdsRaw) {
-            const diseaseIds = diseaseIdsRaw.split(",").map(id => parseInt(id)).filter(id => !isNaN(id));
+            const diseaseIds = diseaseIdsRaw
+              .split(",")
+              .map((id) => parseInt(id))
+              .filter((id) => !isNaN(id));
 
             if (diseaseIds.length > 0) {
               const getDiseasesQuery = `SELECT disease_name FROM disease_master WHERE disease_id IN (?)`;
 
-              connection.query(getDiseasesQuery, [diseaseIds], (err, diseaseResult) => {
-                if (err) {
-                  return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message });
-                }
+              connection.query(
+                getDiseasesQuery,
+                [diseaseIds],
+                (err, diseaseResult) => {
+                  if (err) {
+                    return response.status(200).json({
+                      success: false,
+                      msg: languageMessages.internalServerError,
+                      error: err.message,
+                    });
+                  }
 
-                const diseaseNames = diseaseResult.map(d => d.disease_name);
-                buildUserResponse(diseaseNames);
-              });
+                  const diseaseNames = diseaseResult.map((d) => d.disease_name);
+                  buildUserResponse(diseaseNames);
+                },
+              );
             } else {
               buildUserResponse([]);
             }
@@ -927,8 +934,6 @@ const ViewUserDetails = async (request, response) => {
   }
 };
 
-
-
 const getAllDeletedUser = async (request, response) => {
   try {
     const sqlCheckUser =
@@ -936,25 +941,21 @@ const getAllDeletedUser = async (request, response) => {
 
     connection.query(sqlCheckUser, async (err, userResult) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
 
       var user_arr = [];
 
       if (userResult.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: languageMessages.msgDataFound,
-            user_arr: [],
-          });
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          user_arr: [],
+        });
       }
 
       var s_no = 0;
@@ -999,13 +1000,11 @@ const getAllDeletedUser = async (request, response) => {
           });
         }
 
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: languageMessages.msgDataFound,
-            user_arr: user_arr.length > 0 ? user_arr : [],
-          });
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          user_arr: user_arr.length > 0 ? user_arr : [],
+        });
       }
     });
   } catch (error) {
@@ -1024,25 +1023,21 @@ const getDoctorSpecialization = async (request, response) => {
       DoctorSpecializationSql,
       async (err, DoctorSpecializationResult) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              err: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
         }
 
         const DoctorSpecialization_arr = [];
 
         if (DoctorSpecializationResult.length <= 0) {
-          return response
-            .status(200)
-            .json({
-              success: true,
-              msg: languageMessages.msgDataFound,
-              DoctorSpecialization_arr: [],
-            });
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataFound,
+            DoctorSpecialization_arr: [],
+          });
         }
 
         var s_no = 0;
@@ -1060,7 +1055,6 @@ const getDoctorSpecialization = async (request, response) => {
 
               delete_flag: data.delete_flag,
 
-
               createtime: moment(data.createtime)
                 .tz("Europe/Paris")
                 .format("DD-MM-YYYY hh:mm A"),
@@ -1071,15 +1065,13 @@ const getDoctorSpecialization = async (request, response) => {
             });
           }
 
-          return response
-            .status(200)
-            .json({
-              success: true,
-              msg: languageMessages.msgDataFound,
-              DoctorSpecialization_arr: DoctorSpecialization_arr,
-            });
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.msgDataFound,
+            DoctorSpecialization_arr: DoctorSpecialization_arr,
+          });
         }
-      }
+      },
     );
   } catch (error) {
     return response
@@ -1093,13 +1085,11 @@ const addDoctorSpecialization = async (request, response) => {
     const { category_name } = request.body;
 
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
     }
 
     // Check if category_name already exists
@@ -1109,13 +1099,11 @@ const addDoctorSpecialization = async (request, response) => {
 
     connection.query(checkSql, [category_name], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
@@ -1131,13 +1119,11 @@ const addDoctorSpecialization = async (request, response) => {
 
       connection.query(insertSql, [category_name, createtime], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -1146,13 +1132,11 @@ const addDoctorSpecialization = async (request, response) => {
       });
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1161,23 +1145,19 @@ const editDoctorSpecialization = async (request, response) => {
     const { doctor_specialization_id, category_name } = request.body;
 
     if (!doctor_specialization_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_specialization_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_specialization_id",
+      });
     }
 
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
     }
 
     // Check if category_name already exists
@@ -1190,22 +1170,18 @@ const editDoctorSpecialization = async (request, response) => {
       [category_name, doctor_specialization_id],
       (err, results) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         if (results.length > 0) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.categoryAlreadyExists,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.categoryAlreadyExists,
+          });
         }
 
         const sql =
@@ -1216,30 +1192,26 @@ const editDoctorSpecialization = async (request, response) => {
           [category_name, updatetime, doctor_specialization_id],
           (err) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: languageMessages.internalServerError,
-                  error: err.message,
-                });
+              return response.status(200).json({
+                success: false,
+                msg: languageMessages.internalServerError,
+                error: err.message,
+              });
             }
 
             response
               .status(200)
               .json({ success: true, msg: languageMessages.DetailsUpdated });
-          }
+          },
         );
-      }
+      },
     );
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1248,13 +1220,11 @@ const deleteDoctorSpecialization = async (request, response) => {
     const { doctor_specialization_id } = request.body;
 
     if (!doctor_specialization_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_specialization_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_specialization_id",
+      });
     }
 
     // Check if doctor_specialization_id exists
@@ -1264,13 +1234,11 @@ const deleteDoctorSpecialization = async (request, response) => {
 
     connection.query(checkSql, [doctor_specialization_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -1284,13 +1252,11 @@ const deleteDoctorSpecialization = async (request, response) => {
 
       connection.query(sql, [updatetime, doctor_specialization_id], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -1299,13 +1265,11 @@ const deleteDoctorSpecialization = async (request, response) => {
       });
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1316,13 +1280,11 @@ const getAllDoctor = async (request, response) => {
 
     connection.query(sql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const Doctor_arr = [];
@@ -1358,22 +1320,18 @@ const getAllDoctor = async (request, response) => {
         });
       });
 
-      response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          data: Doctor_arr,
-        });
+      response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        data: Doctor_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1384,13 +1342,11 @@ const getAllDeletedDoctor = async (request, response) => {
 
     connection.query(sql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const Doctor_arr = [];
@@ -1425,25 +1381,20 @@ const getAllDeletedDoctor = async (request, response) => {
         });
       });
 
-      response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          data: Doctor_arr,
-        });
+      response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        data: Doctor_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
-
 
 // OLD API
 
@@ -1453,10 +1404,30 @@ const addDoctor = async (request, response) => {
     const image = request.file ? request.file.filename : null;
 
     // Validation
-    if (!doctor_name) return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_name" });
-    if (!mobile) return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "mobile" });
-    if (!email) return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "email" });
-    if (!doctor_category_id) return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_category_id" });
+    if (!doctor_name)
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_name",
+      });
+    if (!mobile)
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "mobile",
+      });
+    if (!email)
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "email",
+      });
+    if (!doctor_category_id)
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_category_id",
+      });
 
     // Default password
     const password = "123456";
@@ -1464,32 +1435,68 @@ const addDoctor = async (request, response) => {
 
     // Check if doctor already exists
     const checkSql = `SELECT * FROM doctor_master WHERE (mobile = ? OR email = ?) AND delete_flag = 0`;
-    connection.query(checkSql, [mobile, email], async (checkErr, checkResults) => {
-      if (checkErr) return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: checkErr.message });
-      if (checkResults.length > 0) return response.status(200).json({ success: false, msg: languageMessages.doctorAlreadyExists });
+    connection.query(
+      checkSql,
+      [mobile, email],
+      async (checkErr, checkResults) => {
+        if (checkErr)
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: checkErr.message,
+          });
+        if (checkResults.length > 0)
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.doctorAlreadyExists,
+          });
 
-      // Insert new doctor
-      const sql = `INSERT INTO doctor_master (doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, 0, NOW(), NOW())`;
-      const values = [doctor_name, mobile, email, hashedPass, doctor_category_id, image];
+        // Insert new doctor
+        const sql = `INSERT INTO doctor_master (doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, 0, NOW(), NOW())`;
+        const values = [
+          doctor_name,
+          mobile,
+          email,
+          hashedPass,
+          doctor_category_id,
+          image,
+        ];
 
-      connection.query(sql, values, async (err, result) => {
-        if (err) return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message });
+        connection.query(sql, values, async (err, result) => {
+          if (err)
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
 
-        // Send email with login info
-        try {
-          await sendDoctorEmail(email, doctor_name, password);
-          response.status(200).json({ success: true, msg: languageMessages.doctorAddSuccessfully + " & Email sent." });
-        } catch (emailErr) {
-          response.status(200).json({ success: true, msg: languageMessages.doctorAddSuccessfully + " but failed to send email.", error: emailErr.message });
-        }
-      });
-    });
+          // Send email with login info
+          try {
+            await sendDoctorEmail(email, doctor_name, password);
+            response.status(200).json({
+              success: true,
+              msg: languageMessages.doctorAddSuccessfully + " & Email sent.",
+            });
+          } catch (emailErr) {
+            response.status(200).json({
+              success: true,
+              msg:
+                languageMessages.doctorAddSuccessfully +
+                " but failed to send email.",
+              error: emailErr.message,
+            });
+          }
+        });
+      },
+    );
   } catch (error) {
-    return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: error.message });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
-
-
 
 const addFromWebsiteDoctor = async (request, response) => {
   try {
@@ -1501,9 +1508,13 @@ const addFromWebsiteDoctor = async (request, response) => {
       return response.status(400).json({
         success: false,
         msg: "Missing required fields",
-        key: !doctor_name ? "doctor_name" :
-          !mobile ? "mobile" :
-            !email ? "email" : "doctor_category_id",
+        key: !doctor_name
+          ? "doctor_name"
+          : !mobile
+            ? "mobile"
+            : !email
+              ? "email"
+              : "doctor_category_id",
       });
     }
 
@@ -1541,10 +1552,14 @@ const addFromWebsiteDoctor = async (request, response) => {
         (doctor_name, mobile, email, password, doctor_category_id, image, approve_status, createtime, updatetime) 
         VALUES (?, ?, ?, ?, ?, ?, 0, DATE_ADD(NOW(), INTERVAL 19800 SECOND), DATE_ADD(NOW(), INTERVAL 19800 SECOND))
       `;
-      connection.query(sql, [doctor_name, mobile, email, hashedPass, categoryId, image], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
+      connection.query(
+        sql,
+        [doctor_name, mobile, email, hashedPass, categoryId, image],
+        (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        },
+      );
     });
 
     response.status(201).json({
@@ -1552,7 +1567,6 @@ const addFromWebsiteDoctor = async (request, response) => {
       msg: "Doctor added successfully",
       doctor_id: insertResult.insertId,
     });
-
   } catch (error) {
     console.error("Unexpected Error:", error);
     response.status(500).json({
@@ -1563,56 +1577,45 @@ const addFromWebsiteDoctor = async (request, response) => {
   }
 };
 
-
 const editDoctor = async (request, response) => {
   try {
     const { doctor_id, doctor_name, mobile, email, doctor_category_id } =
       request.body;
 
     if (!doctor_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
     }
     if (!doctor_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_name",
+      });
     }
     if (!mobile) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "mobile",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "mobile",
+      });
     }
     if (!email) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "email",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "email",
+      });
     }
     if (!doctor_category_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_category_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_category_id",
+      });
     }
     const image = request.file ? request.file.filename : null;
 
@@ -1622,21 +1625,17 @@ const editDoctor = async (request, response) => {
       [mobile, email, doctor_id],
       (checkErr, checkResults) => {
         if (checkErr)
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: checkErr.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: checkErr.message,
+          });
 
         if (checkResults.length > 0) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.doctorAlreadyExists,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.doctorAlreadyExists,
+          });
         }
 
         const sql = `UPDATE doctor_master SET doctor_name = ?, mobile = ?, email = ?, doctor_category_id = ?, image= ?,updatetime = NOW() WHERE doctor_id = ?`;
@@ -1651,13 +1650,11 @@ const editDoctor = async (request, response) => {
 
         connection.query(sql, values, (err, result) => {
           if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
           }
 
           if (result.affectedRows === 0) {
@@ -1670,16 +1667,14 @@ const editDoctor = async (request, response) => {
             .status(200)
             .json({ success: true, msg: languageMessages.doctorUpdated });
         });
-      }
+      },
     );
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1688,26 +1683,22 @@ const deleteDoctor = async (request, response) => {
     const { doctor_id } = request.body;
 
     if (!doctor_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "doctor_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
     }
 
     const sql = `UPDATE doctor_master SET delete_flag = 1, updatetime = NOW() WHERE doctor_id = ?`;
 
     connection.query(sql, [doctor_id], (err, result) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (result.affectedRows === 0) {
@@ -1721,13 +1712,11 @@ const deleteDoctor = async (request, response) => {
         .json({ success: true, msg: languageMessages.doctorDeleteSucessfully });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1741,13 +1730,11 @@ const getAllMedicine = async (request, response) => {
 
     connection.query(sql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const medicine_arr = [];
@@ -1761,7 +1748,7 @@ const getAllMedicine = async (request, response) => {
           s_no: s_no,
 
           medicine_id: medicine.medicine_id,
-          patient_name: medicine.patient_name, 
+          patient_name: medicine.patient_name,
           medicine_name: medicine.medicine_name,
 
           medicine_description: medicine.description,
@@ -1776,22 +1763,18 @@ const getAllMedicine = async (request, response) => {
         });
       });
 
-      response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          data: medicine_arr,
-        });
+      response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        data: medicine_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1800,23 +1783,19 @@ const addMedicine = async (request, response) => {
     const { medicine_name, description } = request.body;
 
     if (!medicine_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_name",
+      });
     }
 
     if (!description) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "description",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "description",
+      });
     }
 
     // Check if medicine_name already exists
@@ -1826,19 +1805,19 @@ const addMedicine = async (request, response) => {
 
     connection.query(checkSql, [medicine_name], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.medicineExists, key: 'Exists' });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.medicineExists,
+          key: "Exists",
+        });
       }
 
       // Insert new medicine if not exists
@@ -1848,13 +1827,11 @@ const addMedicine = async (request, response) => {
 
       connection.query(sql, [medicine_name, description, createtime], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -1863,13 +1840,11 @@ const addMedicine = async (request, response) => {
       });
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1878,32 +1853,26 @@ const editMedicine = async (request, response) => {
     const { medicine_id, medicine_name, description } = request.body;
 
     if (!medicine_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_id",
+      });
     }
 
     if (!medicine_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_name",
+      });
     }
     if (!description) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "description",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "description",
+      });
     }
 
     // Check if medicine_name already exists
@@ -1913,13 +1882,11 @@ const editMedicine = async (request, response) => {
 
     connection.query(checkSql, [medicine_name, medicine_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
@@ -1936,29 +1903,25 @@ const editMedicine = async (request, response) => {
         [medicine_name, description, medicine_id],
         (err) => {
           if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
           }
 
           response
             .status(200)
             .json({ success: true, msg: languageMessages.medicineUpdated });
-        }
+        },
       );
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -1967,13 +1930,11 @@ const deleteMedicine = async (request, response) => {
     const { medicine_id } = request.body;
 
     if (!medicine_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_id",
+      });
     }
 
     // Check if medicine_id exists
@@ -1983,13 +1944,11 @@ const deleteMedicine = async (request, response) => {
 
     connection.query(checkSql, [medicine_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -2003,13 +1962,11 @@ const deleteMedicine = async (request, response) => {
 
       connection.query(sql, [medicine_id], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -2018,13 +1975,11 @@ const deleteMedicine = async (request, response) => {
       });
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2035,13 +1990,11 @@ const getdisease = async (request, response) => {
 
     connection.query(getDiseaseSql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const disease_arr = [];
@@ -2070,22 +2023,18 @@ const getdisease = async (request, response) => {
         });
       });
 
-      response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.diseaseList,
-          data: disease_arr,
-        });
+      response.status(200).json({
+        success: true,
+        msg: languageMessages.diseaseList,
+        data: disease_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2094,23 +2043,19 @@ const addDisease = async (request, response) => {
     const { disease_name, description } = request.body;
 
     if (!disease_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "disease_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "disease_name",
+      });
     }
 
     if (!description) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "description",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "description",
+      });
     }
 
     // Check if disease_name already exists
@@ -2120,13 +2065,11 @@ const addDisease = async (request, response) => {
 
     connection.query(checkSql, [disease_name], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
@@ -2145,29 +2088,25 @@ const addDisease = async (request, response) => {
         [disease_name, description, createtime],
         (err) => {
           if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
           }
 
           response
             .status(200)
             .json({ success: true, msg: languageMessages.diseaseAdded });
-        }
+        },
       );
     });
   } catch (error) {
-    response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2176,33 +2115,27 @@ const editDisease = async (request, response) => {
     const { disease_id, disease_name, description } = request.body;
 
     if (!disease_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "disease_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "disease_id",
+      });
     }
 
     if (!disease_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "disease_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "disease_name",
+      });
     }
 
     if (!description) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "description",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "description",
+      });
     }
 
     // Check if disease_name already exists
@@ -2215,13 +2148,11 @@ const editDisease = async (request, response) => {
       [disease_name, disease_id],
       (err, results) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         if (results.length > 0) {
@@ -2240,30 +2171,26 @@ const editDisease = async (request, response) => {
           [disease_name, description, updatetime, disease_id],
           (err) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: languageMessages.internalServerError,
-                  error: err.message,
-                });
+              return response.status(200).json({
+                success: false,
+                msg: languageMessages.internalServerError,
+                error: err.message,
+              });
             }
 
             response
               .status(200)
               .json({ success: true, msg: languageMessages.diseaseUpdated });
-          }
+          },
         );
-      }
+      },
     );
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2284,13 +2211,11 @@ const deleteDisease = async (request, response) => {
 
     connection.query(checkDiseaseSql, [disease_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -2306,13 +2231,11 @@ const deleteDisease = async (request, response) => {
 
       connection.query(deleteDiseaseSql, [updatetime, disease_id], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -2321,13 +2244,11 @@ const deleteDisease = async (request, response) => {
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2337,13 +2258,11 @@ const getAllSymptoms = async (request, response) => {
 
     connection.query(getsymptomsql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const symptom_arr = [];
@@ -2366,22 +2285,18 @@ const getAllSymptoms = async (request, response) => {
         });
       });
 
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.symptomsList,
-          data: symptom_arr,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.symptomsList,
+        data: symptom_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2390,15 +2305,12 @@ const addSymptom = async (request, response) => {
     const { symptom_name } = request.body;
 
     if (!symptom_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "symptom_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "symptom_name",
+      });
     }
-
 
     // Check if symptom_name already exists
 
@@ -2407,13 +2319,11 @@ const addSymptom = async (request, response) => {
 
     connection.query(checkSql, [symptom_name], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
@@ -2427,34 +2337,26 @@ const addSymptom = async (request, response) => {
       const addSymptomSql =
         "INSERT INTO symptoms_master (symptom_name, createtime) VALUES (?, ?)";
 
-      connection.query(
-        addSymptomSql,
-        [symptom_name, createtime],
-        (err) => {
-          if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
-          }
-
-          response
-            .status(200)
-            .json({ success: true, msg: languageMessages.symptomAdded });
+      connection.query(addSymptomSql, [symptom_name, createtime], (err) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
-      );
+
+        response
+          .status(200)
+          .json({ success: true, msg: languageMessages.symptomAdded });
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2463,23 +2365,19 @@ const editSymptom = async (request, response) => {
     const { symptom_id, symptom_name } = request.body;
 
     if (!symptom_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: " symptom_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: " symptom_id",
+      });
     }
 
     if (!symptom_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: " symptom_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: " symptom_name",
+      });
     }
 
     // Check if symptom_name already exists
@@ -2492,22 +2390,18 @@ const editSymptom = async (request, response) => {
       [symptom_name, symptom_id],
       (err, results) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         if (results.length > 0) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.symptomAlreadyExists,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.symptomAlreadyExists,
+          });
         }
 
         const updateSymptomSql =
@@ -2520,30 +2414,26 @@ const editSymptom = async (request, response) => {
           [symptom_name, updatetime, symptom_id],
           (err) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: languageMessages.internalServerError,
-                  error: err.message,
-                });
+              return response.status(200).json({
+                success: false,
+                msg: languageMessages.internalServerError,
+                error: err.message,
+              });
             }
 
             response
               .status(200)
               .json({ success: true, msg: languageMessages.symptomUpdated });
-          }
+          },
         );
-      }
+      },
     );
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2564,13 +2454,11 @@ const deleteSymptom = async (request, response) => {
 
     connection.query(checkSymptomSql, [symptom_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -2584,13 +2472,11 @@ const deleteSymptom = async (request, response) => {
 
       connection.query(deleteSymptomSql, [symptom_id], (err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         response
@@ -2599,67 +2485,122 @@ const deleteSymptom = async (request, response) => {
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
+// const getReportCategory = async (request, response) => {
+//   try {
+//     const getReportCategorySql = `SELECT report_category_id,category_name, category_image,createtime FROM report_category WHERE delete_flag=0;`;
+
+//     connection.query(getReportCategorySql, (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       const category_arr = [];
+
+//       var s_no = 0;
+
+//       results.forEach((category) => {
+//         s_no++;
+
+//         category_arr.push({
+//           s_no: s_no,
+
+//           report_category_id: category.report_category_id,
+
+//           category_name: category.category_name,
+
+//           image: category.category_image,
+
+//           createtime: category.createtime,
+//         });
+//       });
+
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessages.categorylist,
+//         data: category_arr,
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 const getReportCategory = async (request, response) => {
   try {
-    const getReportCategorySql = `SELECT report_category_id,category_name, category_image,createtime FROM report_category WHERE delete_flag=0;`;
+    const sql = `
+      SELECT 
+        rc.report_category_id,
+        rc.category_image,
+        rc.createtime,
+        rct.language_code,
+        rct.category_name
+      FROM report_category rc
+      LEFT JOIN report_category_translation rct 
+        ON rc.report_category_id = rct.report_category_id
+      WHERE rc.delete_flag = 0
+      ORDER BY rc.report_category_id
+    `;
 
-    connection.query(getReportCategorySql, (err, results) => {
+    connection.query(sql, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
-      const category_arr = [];
+      const categories = {};
+      let s_no = 0;
 
-      var s_no = 0;
+      results.forEach((row) => {
+        if (!categories[row.report_category_id]) {
+          s_no++;
 
-      results.forEach((category) => {
-        s_no++;
+          categories[row.report_category_id] = {
+            s_no: s_no,
+            report_category_id: row.report_category_id,
+            image: row.category_image,
+            createtime: row.createtime,
+            translations: [],
+          };
+        }
 
-        category_arr.push({
-          s_no: s_no,
-
-          report_category_id: category.report_category_id,
-
-          category_name: category.category_name,
-
-          image: category.category_image,
-
-          createtime: category.createtime,
+        categories[row.report_category_id].translations.push({
+          language_code: row.language_code,
+          category_name: row.category_name,
         });
       });
 
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.categorylist,
-          data: category_arr,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.categorylist,
+        data: Object.values(categories),
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2667,25 +2608,44 @@ const addReportCategory = async (request, response) => {
   try {
     const { category_name } = request.body;
 
-    const image = request.file ? request.file.filename : null
+    let translations = request.body.translations;
+
+    // Parse translations if it is string (from form-data)
+    if (typeof translations === "string") {
+      try {
+        translations = JSON.parse(translations);
+      } catch (error) {
+        return response.status(200).json({
+          success: false,
+          msg: "Invalid translations JSON format",
+        });
+      }
+    }
+
+    const image = request.file ? request.file.filename : null;
+    const createtime = new Date();
 
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
     }
+
     if (!image) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "image",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "image",
+      });
+    }
+
+    if (!Array.isArray(translations) || translations.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: "Translations are required",
+      });
     }
 
     const checkCategorySql =
@@ -2693,75 +2653,222 @@ const addReportCategory = async (request, response) => {
 
     connection.query(checkCategorySql, [category_name], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.categoryExists });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.categoryExists,
+        });
       }
 
-      const addCategorySql =
-        "INSERT INTO report_category (category_name, category_image, createtime) VALUES (?, ?, ?)";
-
-      connection.query(addCategorySql, [category_name, image, createtime], (err) => {
+      // START TRANSACTION
+      connection.beginTransaction((err) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: err.message,
+          });
         }
 
-        response
-          .status(200)
-          .json({ success: true, msg: languageMessages.categoryAdded });
+        const addCategorySql =
+          "INSERT INTO report_category (category_name, category_image, createtime) VALUES (?, ?, ?)";
+
+        connection.query(
+          addCategorySql,
+          [category_name, image, createtime],
+          (err, result) => {
+            if (err) {
+              return connection.rollback(() => {
+                response.status(200).json({
+                  success: false,
+                  msg: languageMessages.internalServerError,
+                  error: err.message,
+                });
+              });
+            }
+
+            const categoryId = result.insertId;
+
+            const translationValues = translations.map((item) => [
+              categoryId,
+              item.language_code,
+              item.category_name,
+            ]);
+
+            const translationSql = `
+              INSERT INTO report_category_translation 
+              (report_category_id, language_code, category_name) 
+              VALUES ?
+            `;
+
+            connection.query(
+              translationSql,
+              [translationValues],
+              (err) => {
+                if (err) {
+                  return connection.rollback(() => {
+                    response.status(200).json({
+                      success: false,
+                      msg: languageMessages.internalServerError,
+                      error: err.message,
+                    });
+                  });
+                }
+
+                // COMMIT
+                connection.commit((err) => {
+                  if (err) {
+                    return connection.rollback(() => {
+                      response.status(200).json({
+                        success: false,
+                        msg: err.message,
+                      });
+                    });
+                  }
+
+                  return response.status(200).json({
+                    success: true,
+                    msg: languageMessages.categoryAdded,
+                  });
+                });
+              }
+            );
+          }
+        );
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
+
+// const editReportCategory = async (request, response) => {
+//   try {
+//     const { report_category_id, category_name } = request.body;
+
+//     const image = request.file ? request.file.filename : null;
+
+//     if (!report_category_id) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "report_category_id",
+//       });
+//     }
+
+//     if (!category_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "category_name",
+//       });
+//     }
+
+//     const checkCategorySql =
+//       "SELECT report_category_id FROM report_category WHERE category_name = ? AND report_category_id != ? AND delete_flag = 0";
+
+//     connection.query(
+//       checkCategorySql,
+//       [category_name, report_category_id],
+//       (err, results) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//         }
+
+//         if (results.length > 0) {
+//           return response
+//             .status(200)
+//             .json({ success: false, msg: languageMessages.categoryExists });
+//         }
+
+//         const editCategorySql =
+//           "UPDATE report_category SET category_name = ?, category_image = ?, updatetime = ? WHERE report_category_id = ?";
+
+//         connection.query(
+//           editCategorySql,
+//           [category_name, image, updatetime, report_category_id],
+//           (err) => {
+//             if (err) {
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: languageMessages.internalServerError,
+//                 error: err.message,
+//               });
+//             }
+
+//             response
+//               .status(200)
+//               .json({ success: true, msg: languageMessages.categoryUpdated });
+//           },
+//         );
+//       },
+//     );
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
 
 const editReportCategory = async (request, response) => {
   try {
     const { report_category_id, category_name } = request.body;
 
-    const image = request.file ? request.file.filename : null
+    let translations = request.body.translations;
+
+    // Parse translations
+    if (typeof translations === "string") {
+      try {
+        translations = JSON.parse(translations);
+      } catch (error) {
+        return response.status(200).json({
+          success: false,
+          msg: "Invalid translations JSON format",
+        });
+      }
+    }
+
+    const image = request.file ? request.file.filename : null;
+    const updatetime = new Date();
 
     if (!report_category_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "report_category_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "report_category_id",
+      });
     }
 
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
+    }
+
+    if (!Array.isArray(translations) || translations.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: "Translations are required",
+      });
     }
 
     const checkCategorySql =
@@ -2772,53 +2879,121 @@ const editReportCategory = async (request, response) => {
       [category_name, report_category_id],
       (err, results) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
 
         if (results.length > 0) {
-          return response
-            .status(200)
-            .json({ success: false, msg: languageMessages.categoryExists });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.categoryExists,
+          });
         }
 
-        const editCategorySql =
-          "UPDATE report_category SET category_name = ?, category_image = ?, updatetime = ? WHERE report_category_id = ?";
+        connection.beginTransaction((err) => {
+          if (err) {
+            return response.status(200).json({
+              success: false,
+              msg: err.message,
+            });
+          }
 
-        connection.query(
-          editCategorySql,
-          [category_name, image, updatetime, report_category_id],
-          (err) => {
+          // Update category (handle image conditionally)
+          let updateSql = `
+            UPDATE report_category 
+            SET category_name = ?, updatetime = ?
+          `;
+
+          let params = [category_name, updatetime];
+
+          if (image) {
+            updateSql += `, category_image = ?`;
+            params.push(image);
+          }
+
+          updateSql += ` WHERE report_category_id = ?`;
+          params.push(report_category_id);
+
+          connection.query(updateSql, params, (err) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
+              return connection.rollback(() => {
+                response.status(200).json({
                   success: false,
                   msg: languageMessages.internalServerError,
                   error: err.message,
                 });
+              });
             }
 
-            response
-              .status(200)
-              .json({ success: true, msg: languageMessages.categoryUpdated });
-          }
-        );
+            // Delete old translations
+            const deleteSql =
+              "DELETE FROM report_category_translation WHERE report_category_id = ?";
+
+            connection.query(deleteSql, [report_category_id], (err) => {
+              if (err) {
+                return connection.rollback(() => {
+                  response.status(200).json({
+                    success: false,
+                    msg: languageMessages.internalServerError,
+                    error: err.message,
+                  });
+                });
+              }
+
+              // Insert new translations
+              const translationValues = translations.map((item) => [
+                report_category_id,
+                item.language_code,
+                item.category_name,
+              ]);
+
+              const insertSql = `
+                INSERT INTO report_category_translation 
+                (report_category_id, language_code, category_name) 
+                VALUES ?
+              `;
+
+              connection.query(insertSql, [translationValues], (err) => {
+                if (err) {
+                  return connection.rollback(() => {
+                    response.status(200).json({
+                      success: false,
+                      msg: languageMessages.internalServerError,
+                      error: err.message,
+                    });
+                  });
+                }
+
+                connection.commit((err) => {
+                  if (err) {
+                    return connection.rollback(() => {
+                      response.status(200).json({
+                        success: false,
+                        msg: err.message,
+                      });
+                    });
+                  }
+
+                  return response.status(200).json({
+                    success: true,
+                    msg: languageMessages.categoryUpdated,
+                  });
+                });
+              });
+            });
+          });
+        });
       }
     );
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2827,13 +3002,11 @@ const deleteReportCategory = async (request, response) => {
     const { report_category_id } = request.body;
 
     if (!report_category_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "report_category_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "report_category_id",
+      });
     }
 
     const checkCategorySql =
@@ -2841,13 +3014,11 @@ const deleteReportCategory = async (request, response) => {
 
     connection.query(checkCategorySql, [report_category_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -2864,29 +3035,25 @@ const deleteReportCategory = async (request, response) => {
         [updatetime, report_category_id],
         (err) => {
           if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
           }
 
           response
             .status(200)
             .json({ success: true, msg: languageMessages.categoryDeleted });
-        }
+        },
       );
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -2945,21 +3112,16 @@ const deleteReportCategory = async (request, response) => {
 
 const getFaq = async (request, response) => {
   try {
-    const { language_code } = request.query;
 
-    const lang = language_code || "en"; // fallback
-
+    // Main query (KEEP ORDER EXACTLY SAME)
     const getsql = `
       SELECT 
         fm.faq_id,
         fm.user_type,
-        COALESCE(ft.question, ft_en.question) AS question,
-        COALESCE(ft.answer, ft_en.answer) AS answer,
+        COALESCE(ft_en.question, '') AS question,
+        COALESCE(ft_en.answer, '') AS answer,
         DATE_FORMAT(fm.createtime, '%d-%m-%y, %h:%i %p') AS createtime
       FROM faq_master fm
-      LEFT JOIN faq_translation ft 
-        ON fm.faq_id = ft.faq_id 
-        AND ft.language_code = ?
       LEFT JOIN faq_translation ft_en 
         ON fm.faq_id = ft_en.faq_id 
         AND ft_en.language_code = 'en'
@@ -2967,7 +3129,102 @@ const getFaq = async (request, response) => {
       ORDER BY fm.faq_id DESC
     `;
 
-    connection.query(getsql, [lang], (err, results) => {
+    connection.query(getsql, (err, results) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (results.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.dataNotFound,
+          data: [],
+        });
+      }
+
+      // Get all translations separately
+      const translationSql = `
+        SELECT faq_id, language_code, question, answer
+        FROM faq_translation
+      `;
+
+      connection.query(translationSql, (err, translations) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        // Map translations by faq_id
+        const translationMap = {};
+
+        translations.forEach((t) => {
+          if (!translationMap[t.faq_id]) {
+            translationMap[t.faq_id] = {};
+          }
+
+          translationMap[t.faq_id][t.language_code] = {
+            question: t.question,
+            answer: t.answer,
+          };
+        });
+
+        // Build final array (KEEP ORDER)
+        let s_no = 0;
+
+        const faq_arr = results.map((faq) => {
+          s_no++;
+
+          return {
+            s_no: s_no,
+            faq_id: faq.faq_id,
+            user_type: faq.user_type,
+            user_type_label:
+              faq.user_type == 1
+                ? "User"
+                : faq.user_type == 2
+                ? "Doctor"
+                : "NA",
+
+            // EXISTING KEYS (unchanged)
+            question: faq.question || "N/A",
+            answer: faq.answer || "N/A",
+            createtime: faq.createtime,
+
+            // NEW KEY (added only)
+            translations: translationMap[faq.faq_id] || {},
+          };
+        });
+
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.faqlist,
+          data: faq_arr,
+        });
+      });
+    });
+
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
+  }
+};
+
+const getFaqDoctor = async (request, response) => {
+  try {
+    const getsql = `SELECT faq_id,question,	user_type, answer, DATE_FORMAT(createtime, '%d-%m-%y, %h:%i %p') AS createtime
+ FROM faq_master WHERE delete_flag=0 AND user_type = 2 ORDER BY faq_id DESC`;
+
+    connection.query(getsql, (err, results) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -2977,7 +3234,8 @@ const getFaq = async (request, response) => {
       }
 
       const faq_arr = [];
-      let s_no = 0;
+
+      var s_no = 0;
 
       results.forEach((faq) => {
         s_no++;
@@ -2987,13 +3245,9 @@ const getFaq = async (request, response) => {
           faq_id: faq.faq_id,
           user_type: faq.user_type,
           user_type_label:
-            faq.user_type == 1
-              ? "User"
-              : faq.user_type == 2
-              ? "Doctor"
-              : "NA",
-          question: faq.question || "N/A",
-          answer: faq.answer || "N/A",
+            faq.user_type == 1 ? "User" : faq.user_type == 2 ? "Doctor" : "NA",
+          question: faq.question,
+          answer: faq.answer,
           createtime: faq.createtime,
         });
       });
@@ -3010,60 +3264,6 @@ const getFaq = async (request, response) => {
       msg: languageMessages.internalServerError,
       error: error.message,
     });
-  }
-};
-
-
-const getFaqDoctor = async (request, response) => {
-  try {
-    const getsql = `SELECT faq_id,question,	user_type, answer, DATE_FORMAT(createtime, '%d-%m-%y, %h:%i %p') AS createtime
- FROM faq_master WHERE delete_flag=0 AND user_type = 2 ORDER BY faq_id DESC`;
-
-    connection.query(getsql, (err, results) => {
-      if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
-      }
-
-      const faq_arr = [];
-
-      var s_no = 0;
-
-      results.forEach((faq) => {
-        s_no++;
-
-        faq_arr.push({
-          s_no: s_no,
-          faq_id: faq.faq_id,
-          user_type: faq.user_type,
-          user_type_label: (faq.user_type == 1) ? "User" : (faq.user_type == 2) ? "Doctor" : "NA",
-          question: faq.question,
-          answer: faq.answer,
-          createtime: faq.createtime,
-        });
-      });
-
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.faqlist,
-          data: faq_arr,
-        });
-    });
-  } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
   }
 };
 // const addFaq = async (request, response) => {
@@ -3518,13 +3718,11 @@ const deleteFaq = async (request, response) => {
     const { faq_id } = request.body;
 
     if (!faq_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "faq_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "faq_id",
+      });
     }
 
     const checkCategorySql =
@@ -3532,13 +3730,11 @@ const deleteFaq = async (request, response) => {
 
     connection.query(checkCategorySql, [faq_id], (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (results.length === 0) {
@@ -3550,34 +3746,26 @@ const deleteFaq = async (request, response) => {
       const deleteCategorySql =
         "UPDATE faq_master SET delete_flag = 1, updatetime = ? WHERE faq_id = ?";
 
-      connection.query(
-        deleteCategorySql,
-        [updatetime, faq_id],
-        (err) => {
-          if (err) {
-            return response
-              .status(200)
-              .json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
-          }
-
-          response
-            .status(200)
-            .json({ success: true, msg: languageMessages.categoryDeleted });
+      connection.query(deleteCategorySql, [updatetime, faq_id], (err) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
         }
-      );
+
+        response
+          .status(200)
+          .json({ success: true, msg: languageMessages.categoryDeleted });
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -3589,13 +3777,11 @@ const getHelpAndSupport = async (request, response) => {
 
     connection.query(query, (err, results) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       const help_and_support_arr = [];
@@ -3613,7 +3799,7 @@ const getHelpAndSupport = async (request, response) => {
 
           user_type: result.user_type,
 
-          user_type_label: (result.user_type == 2) ? "Doctor" : "User",
+          user_type_label: result.user_type == 2 ? "Doctor" : "User",
 
           name: result.name,
 
@@ -3626,29 +3812,24 @@ const getHelpAndSupport = async (request, response) => {
             .tz("Europe/Paris")
             .format("DD-MM-YYYY hh:mm A"),
 
-
           createtime: moment(result.createtime)
             .tz("Europe/Paris")
-            .format("DD-MM-YYYY hh:mm A")
+            .format("DD-MM-YYYY hh:mm A"),
         });
       });
 
-      response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.helpAndSupport,
-          data: help_and_support_arr,
-        });
+      response.status(200).json({
+        success: true,
+        msg: languageMessages.helpAndSupport,
+        data: help_and_support_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        error: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
@@ -3688,56 +3869,61 @@ const sendReply = async (request, response) => {
 
     //check mail exist
 
-    const checkAdmin = 'SELECT email FROM user_master WHERE user_type = 0 AND delete_flag = 0';
+    const checkAdmin =
+      "SELECT email FROM user_master WHERE user_type = 0 AND delete_flag = 0";
     connection.query(checkAdmin, async (adminError, adminResult) => {
       if (adminError) {
-        return response.status(200).json({success: false, message: languageMessages.internalServerError, error: adminError.message });
-      }
-      
-        let admin_contact = adminResult[0].email;
-      
-    const sql =
-      "SELECT contact_id ,email, user_id, name FROM contact_us_master WHERE contact_id = ? AND delete_flag=0 ORDER BY contact_id  DESC";
-
-    connection.query(sql, [contact_id], async (err, info) => {
-      if (err) {
         return response.status(200).json({
           success: false,
-
           message: languageMessages.internalServerError,
-
-          error: err.message,
+          error: adminError.message,
         });
       }
-      if (info.length <= 0) {
-        return response.status(200).json({
-          success: false,
 
-          message: languageMessages.msgDataNotFound,
+      let admin_contact = adminResult[0].email;
 
-          key: "contact",
-        });
-      }
-      const userName = info[0].name;
-      const email = info[0].email;
+      const sql =
+        "SELECT contact_id ,email, user_id, name FROM contact_us_master WHERE contact_id = ? AND delete_flag=0 ORDER BY contact_id  DESC";
 
-      //send mail start
+      connection.query(sql, [contact_id], async (err, info) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
 
-      const postData = {
-        fromName: "Meditrek",
+            message: languageMessages.internalServerError,
 
-        userEmail: email,
+            error: err.message,
+          });
+        }
+        if (info.length <= 0) {
+          return response.status(200).json({
+            success: false,
 
-        app_name: "Meditrek",
+            message: languageMessages.msgDataNotFound,
 
-        app_logo:
-          "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png",
+            key: "contact",
+          });
+        }
+        const userName = info[0].name;
+        const email = info[0].email;
 
-        message: reply,
+        //send mail start
 
-        title: title,
+        const postData = {
+          fromName: "Meditrek",
 
-        mailContent: `<p>Dear ${userName}, <br>
+          userEmail: email,
+
+          app_name: "Meditrek",
+
+          app_logo:
+            "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png",
+
+          message: reply,
+
+          title: title,
+
+          mailContent: `<p>Dear ${userName}, <br>
               Thank you for reaching out to us. We have received your message, and our team has reviewed your inquiry.<br>
             
               ${reply}  <br>
@@ -3747,62 +3933,62 @@ const sendReply = async (request, response) => {
               We appreciate your patience and look forward to helping you resolve this matter.
             
               </p>`,
-      };
+        };
 
-      console.log("app name", postData.message);
+        console.log("app name", postData.message);
 
-      try {
-        await contactUsMailer(postData).then(async (data) => {
-          if (data.status === "yes") {
-            //update replied date time
+        try {
+          await contactUsMailer(postData).then(async (data) => {
+            if (data.status === "yes") {
+              //update replied date time
 
-            const repliedsql =
-              "UPDATE contact_us_master SET status = 1, reply = ?, reply_datetime = ? WHERE contact_id = ?";
+              const repliedsql =
+                "UPDATE contact_us_master SET status = 1, reply = ?, reply_datetime = ? WHERE contact_id = ?";
 
-            connection.query(
-              repliedsql,
-              [postData.message, createtime, contact_id],
-              (repliedError, repliedResult) => {
-                if (repliedError) {
-                  return response.status(200).json({
-                    success: false,
+              connection.query(
+                repliedsql,
+                [postData.message, createtime, contact_id],
+                (repliedError, repliedResult) => {
+                  if (repliedError) {
+                    return response.status(200).json({
+                      success: false,
 
-                    message: languageMessages.internalServerError,
+                      message: languageMessages.internalServerError,
 
-                    error: repliedError.message,
-                  });
-                }
+                      error: repliedError.message,
+                    });
+                  }
 
-                if (repliedResult.affectedRows > 0) {
-                  return response.status(200).json({
-                    success: true,
+                  if (repliedResult.affectedRows > 0) {
+                    return response.status(200).json({
+                      success: true,
 
-                    message: languageMessages.EmailSent,
+                      message: languageMessages.EmailSent,
 
-                    info: info,
-                  });
-                }
-              }
-            );
-          } else {
-            return response.status(200).json({
-              success: false,
+                      info: info,
+                    });
+                  }
+                },
+              );
+            } else {
+              return response.status(200).json({
+                success: false,
 
-              message: languageMessages.emailNotSent,
-            });
-          }
-        });
-      } catch (mailError) {
-        return response.status(200).json({
-          success: false,
+                message: languageMessages.emailNotSent,
+              });
+            }
+          });
+        } catch (mailError) {
+          return response.status(200).json({
+            success: false,
 
-          message: languageMessages.emailNotSent,
+            message: languageMessages.emailNotSent,
 
-          error: mailError.message,
-        });
-      }
+            error: mailError.message,
+          });
+        }
+      });
     });
-  })
   } catch (err) {
     return response.status(200).json({
       success: false,
@@ -3814,79 +4000,120 @@ const sendReply = async (request, response) => {
   }
 };
 
-
 const sendMessageByDoctorToAdmin = async (request, response) => {
   const { doctor_id, name, email, reply } = request.body;
 
   try {
     if (!doctor_id) {
-      return response.status(200).json({ success: false, message: languageMessages.msg_empty_param, key: "doctor_id" });
+      return response.status(200).json({
+        success: false,
+        message: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
     }
 
     if (!name) {
-      return response.status(200).json({ success: false, message: languageMessages.msg_empty_param, key: "name" });
+      return response.status(200).json({
+        success: false,
+        message: languageMessages.msg_empty_param,
+        key: "name",
+      });
     }
     if (!email) {
-      return response.status(200).json({ success: false, message: languageMessages.msg_empty_param, key: "email" });
+      return response.status(200).json({
+        success: false,
+        message: languageMessages.msg_empty_param,
+        key: "email",
+      });
     }
 
     if (!reply) {
-      return response.status(200).json({ success: false, message: languageMessages.msg_empty_param, key: "reply" });
+      return response.status(200).json({
+        success: false,
+        message: languageMessages.msg_empty_param,
+        key: "reply",
+      });
     }
 
-
     //check mail exist
-    connection.query("SELECT user_id,email,name FROM user_master WHERE user_type = 0 AND delete_flag = 0", async (error, resultAdmin) => {
-      if (error) {
-        return response.status(200).json({ success: false, message: languageMessages.internalServerError, error: error.message });
-      }
-      if (resultAdmin.length > 0) {
-        const userName = resultAdmin[0].name;
-        const AdminEmail = resultAdmin[0].email;
+    connection.query(
+      "SELECT user_id,email,name FROM user_master WHERE user_type = 0 AND delete_flag = 0",
+      async (error, resultAdmin) => {
+        if (error) {
+          return response.status(200).json({
+            success: false,
+            message: languageMessages.internalServerError,
+            error: error.message,
+          });
+        }
+        if (resultAdmin.length > 0) {
+          const userName = resultAdmin[0].name;
+          const AdminEmail = resultAdmin[0].email;
 
-        const postData = {
-          fromName: userName,
-          userEmail: AdminEmail,
-          app_name: "Meditrek",
-          app_logo: "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png",
-          message: reply,
-          // title: title,
-          mailContent: `<pre>Dear ${userName},
+          const postData = {
+            fromName: userName,
+            userEmail: AdminEmail,
+            app_name: "Meditrek",
+            app_logo:
+              "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png",
+            message: reply,
+            // title: title,
+            mailContent: `<pre>Dear ${userName},
 You have received a new message from Dr. ${name}.
 Email : ${email}
 Message:
 ${reply}
 Please review this query and respond at your earliest convenience.</pre>`,
-        };
-        try {
-          await contactUsMailerDoctor(postData).then(async (data) => {
-            if (data.status === "yes") {
-              const repliedsql = "INSERT INTO contact_us_master(user_id,user_type,email,name,message,updatetime,createtime) VALUES (?,?,?,?,?,NOW(),NOW())";
-              connection.query(repliedsql, [doctor_id, 2, email, name, reply], (repliedError, repliedResult) => {
-                if (repliedError) {
-                  return response.status(200).json({ success: false, message: languageMessages.internalServerError, error: repliedError.message });
-                }
+          };
+          try {
+            await contactUsMailerDoctor(postData).then(async (data) => {
+              if (data.status === "yes") {
+                const repliedsql =
+                  "INSERT INTO contact_us_master(user_id,user_type,email,name,message,updatetime,createtime) VALUES (?,?,?,?,?,NOW(),NOW())";
+                connection.query(
+                  repliedsql,
+                  [doctor_id, 2, email, name, reply],
+                  (repliedError, repliedResult) => {
+                    if (repliedError) {
+                      return response.status(200).json({
+                        success: false,
+                        message: languageMessages.internalServerError,
+                        error: repliedError.message,
+                      });
+                    }
 
-                if (repliedResult.affectedRows > 0) {
-                  return response.status(200).json({ success: true, message: languageMessages.EmailSent });
-                }
+                    if (repliedResult.affectedRows > 0) {
+                      return response.status(200).json({
+                        success: true,
+                        message: languageMessages.EmailSent,
+                      });
+                    }
+                  },
+                );
+              } else {
+                return response.status(200).json({
+                  success: false,
+                  message: languageMessages.emailNotSent,
+                });
               }
-              );
-            } else {
-              return response.status(200).json({ success: false, message: languageMessages.emailNotSent });
-            }
-          });
-        } catch (mailError) {
-          return response.status(200).json({ success: false, message: languageMessages.emailNotSent, error: mailError.message });
+            });
+          } catch (mailError) {
+            return response.status(200).json({
+              success: false,
+              message: languageMessages.emailNotSent,
+              error: mailError.message,
+            });
+          }
+        } else {
         }
-      } else {
-
-      }
-    })
-
-
+      },
+    );
   } catch (err) {
-    return response.status(200).json({ success: false, message: languageMessages.internalServerError, error: err.message });
+    return response.status(200).json({
+      success: false,
+      message: languageMessages.internalServerError,
+      error: err.message,
+    });
   }
 };
 
@@ -3895,44 +4122,36 @@ const sendBroadcastMessageAllUser = async (request, response) => {
 
   try {
     if (!title_user) {
-      return response
-        .status(200)
-        .json({
-          status: false,
-          msg: languageMessages.msg_empty_param,
-          key: "title_user",
-        });
+      return response.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "title_user",
+      });
     }
 
     if (!message_user) {
-      return response
-        .status(200)
-        .json({
-          status: false,
-          msg: languageMessages.msg_empty_param,
-          key: "message_user",
-        });
+      return response.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "message_user",
+      });
     }
 
     if (!userType) {
-      return response
-        .status(200)
-        .json({
-          status: false,
-          msg: languageMessages.msg_empty_param,
-          key: "userType",
-        });
+      return response.status(200).json({
+        status: false,
+        msg: languageMessages.msg_empty_param,
+        key: "userType",
+      });
     }
 
     if (userType == "user") {
       if (!select_arr) {
-        return response
-          .status(200)
-          .json({
-            status: false,
-            msg: languageMessages.msg_empty_param,
-            key: "select_arr",
-          });
+        return response.status(200).json({
+          status: false,
+          msg: languageMessages.msg_empty_param,
+          key: "select_arr",
+        });
       }
     }
 
@@ -3997,32 +4216,28 @@ const sendBroadcastMessageAllUser = async (request, response) => {
                 notification_arr_check_new.length !== 0
               ) {
                 const notiSendStatus = await oneSignalNotificationSendCall(
-                  notification_arr_check_new
+                  notification_arr_check_new,
                 );
 
-                return response
-                  .status(200)
-                  .json({
-                    success: true,
-                    msg: "Broadcast Message Sent Successfully",
-                    notiSendStatus: notiSendStatus,
-                    notification_arr_check_new: notification_arr_check_new,
-                  });
+                return response.status(200).json({
+                  success: true,
+                  msg: "Broadcast Message Sent Successfully",
+                  notiSendStatus: notiSendStatus,
+                  notification_arr_check_new: notification_arr_check_new,
+                });
               }
-            }
+            },
           );
 
           // send notification end
         }
       } else {
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: "Broadcast Message Sent Successfully",
-            key: select_arr,
-            key: "user",
-          });
+        return response.status(200).json({
+          success: true,
+          msg: "Broadcast Message Sent Successfully",
+          key: select_arr,
+          key: "user",
+        });
       }
     } else {
       var sqlSeletUser =
@@ -4030,13 +4245,11 @@ const sendBroadcastMessageAllUser = async (request, response) => {
 
       connection.query(sqlSeletUser, async (error, resultUser) => {
         if (error) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: error.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: error.message,
+          });
         }
 
         if (resultUser.length > 0) {
@@ -4100,37 +4313,31 @@ const sendBroadcastMessageAllUser = async (request, response) => {
                   notification_arr_check_new.length !== 0
                 ) {
                   const notiSendStatus = await oneSignalNotificationSendCall(
-                    notification_arr_check_new
+                    notification_arr_check_new,
                   );
 
-                  return response
-                    .status(200)
-                    .json({
-                      success: true,
-                      msg: "Broadcast Message Sent Successfully",
-                      notification_arr_check_new: notification_arr_check_new,
-                    });
+                  return response.status(200).json({
+                    success: true,
+                    msg: "Broadcast Message Sent Successfully",
+                    notification_arr_check_new: notification_arr_check_new,
+                  });
                 }
 
-                return response
-                  .status(200)
-                  .json({
-                    success: true,
-                    msg: "Broadcast Message Sent Successfully...!!",
-                  });
-              }
+                return response.status(200).json({
+                  success: true,
+                  msg: "Broadcast Message Sent Successfully...!!",
+                });
+              },
             );
 
             // send notification end
           }
         } else {
-          return response
-            .status(200)
-            .json({
-              success: true,
-              msg: "Broadcast Message Sent Successfully",
-              key: "all",
-            });
+          return response.status(200).json({
+            success: true,
+            msg: "Broadcast Message Sent Successfully",
+            key: "all",
+          });
         }
       });
     }
@@ -4151,23 +4358,19 @@ const getTabularUser = async (request, response) => {
 
   try {
     if (!from_date) {
-      return response
-        .status(200)
-        .json({
-          status: true,
-          msg: languageMessages.msg_empty_param,
-          key: "from_date",
-        });
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
     }
 
     if (!to_date) {
-      return response
-        .status(200)
-        .json({
-          status: true,
-          msg: languageMessages.msg_empty_param,
-          key: "to_date",
-        });
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
     }
 
     var sqlSelect = `SELECT * FROM user_master  WHERE delete_flag = 0 AND profile_complete = 1 AND otp_verify = 1 AND user_type = 1  AND Date(createtime) BETWEEN ? AND ?  ORDER BY user_id DESC`;
@@ -4237,13 +4440,11 @@ const getTabularUser = async (request, response) => {
       }
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4252,23 +4453,19 @@ const get_medicine_types = async (request, response) => {
     const type = `SELECT medicine_category_id,category_name,createtime FROM medicine_category_master WHERE delete_flag=0`;
     connection.query(type, (err, rows) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       var medicine_type_arr = [];
       if (rows.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.msgDataFound,
-            medicine_type_arr: medicine_type_arr,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataFound,
+          medicine_type_arr: medicine_type_arr,
+        });
       }
       var s_no = 0;
       if (rows.length > 0) {
@@ -4283,23 +4480,19 @@ const get_medicine_types = async (request, response) => {
               .format("DD-MM-YYYY hh:mm A"),
           });
         }
-        return response
-          .status(200)
-          .json({
-            success: true,
-            msg: languageMessages.msgDataFound,
-            medicine_type_arr: medicine_type_arr,
-          });
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          medicine_type_arr: medicine_type_arr,
+        });
       }
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4307,25 +4500,21 @@ const add_medicine_type = async (request, response) => {
   try {
     const { category_name } = request.body;
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
     }
 
     const checkQuery = `SELECT * FROM medicine_category_master WHERE category_name = ? AND delete_flag = 0`;
     connection.query(checkQuery, [category_name], (err, rows) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       if (rows.length > 0) {
         return response
@@ -4336,13 +4525,11 @@ const add_medicine_type = async (request, response) => {
       const query = `INSERT INTO medicine_category_master (category_name,createtime ) VALUES (?,NOW())`;
       connection.query(query, [category_name], (err, result) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              err: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
         }
         return response
           .status(200)
@@ -4350,13 +4537,11 @@ const add_medicine_type = async (request, response) => {
       });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4364,22 +4549,18 @@ const update_medicine_type = async (request, response) => {
   try {
     const { medicine_category_id, category_name } = request.body;
     if (!medicine_category_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_category_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_category_id",
+      });
     }
     if (!category_name) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "category_name",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "category_name",
+      });
     }
     const checkQuery = `SELECT * FROM medicine_category_master WHERE category_name = ? AND medicine_category_id != ? AND delete_flag = 0`;
     connection.query(
@@ -4387,13 +4568,11 @@ const update_medicine_type = async (request, response) => {
       [category_name, medicine_category_id],
       (err, rows) => {
         if (err) {
-          return response
-            .status(200)
-            .json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              err: err.message,
-            });
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            err: err.message,
+          });
         }
         if (rows.length > 0) {
           return response
@@ -4407,54 +4586,46 @@ const update_medicine_type = async (request, response) => {
           [category_name, medicine_category_id],
           (err, result) => {
             if (err) {
-              return response
-                .status(200)
-                .json({
-                  success: false,
-                  msg: languageMessages.internalServerError,
-                  err: err.message,
-                });
+              return response.status(200).json({
+                success: false,
+                msg: languageMessages.internalServerError,
+                err: err.message,
+              });
             }
             return response
               .status(200)
               .json({ success: true, msg: languageMessages.categoryUpdated });
-          }
+          },
         );
-      }
+      },
     );
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 const delete_medicine_type = async (request, response) => {
   try {
     const { medicine_category_id } = request.body;
     if (!medicine_category_id) {
-      return response
-        .status(200)
-        .json({
-          success: false,
-          msg: languageMessages.msg_empty_param,
-          key: "medicine_category_id",
-        });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "medicine_category_id",
+      });
     }
 
     const query = `UPDATE medicine_category_master SET delete_flag = 1 WHERE medicine_category_id = ? AND delete_flag = 0`;
     connection.query(query, [medicine_category_id], (err, result) => {
       if (err) {
-        return response
-          .status(500)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(500).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       if (result.affectedRows === 0) {
         return response
@@ -4466,13 +4637,11 @@ const delete_medicine_type = async (request, response) => {
         .json({ success: true, msg: languageMessages.categoryDeleted });
     });
   } catch (error) {
-    return response
-      .status(500)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(500).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4535,7 +4704,7 @@ const getUserAnalyticalReports = async (req, res) => {
           "monthly",
           current_year,
           current_month,
-          "All"
+          "All",
         );
 
         month_report_arr.push({
@@ -4549,7 +4718,7 @@ const getUserAnalyticalReports = async (req, res) => {
           "yearly",
           i,
           "",
-          "All"
+          "All",
         );
 
         year_report_arr.push({ year: i, year_user_arr: year_user_arr });
@@ -4578,7 +4747,7 @@ async function getUserAnalyticalReportsFunction(
   type,
   current_year,
   current_month,
-  get_by_type
+  get_by_type,
 ) {
   return new Promise((resolve, reject) => {
     let where = "";
@@ -4644,13 +4813,11 @@ const getContent = async (request, response) => {
       if (content_arr.length === 0) {
         const content_arr = "NA";
 
-        return response
-          .status(200)
-          .json({
-            success: true,
-            message: languageMessages.msgDataFound,
-            content_arr,
-          });
+        return response.status(200).json({
+          success: true,
+          message: languageMessages.msgDataFound,
+          content_arr,
+        });
       }
 
       return response.status(200).json({
@@ -4825,7 +4992,7 @@ const updateContent = async (request, response) => {
 
               .json({ success: false, msg: "No rows affected" });
           }
-        }
+        },
       );
     });
   } catch (error) {
@@ -4862,31 +5029,25 @@ const get_all_count = async (request, response) => {
 
     connection.query(count, (err, rows) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: error.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: error.message,
+        });
       }
 
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          data: rows[0],
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        data: rows[0],
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4923,23 +5084,19 @@ const fetchdoctorbyuser = async (request, response) => {
     const getDoctor = `SELECT d.doctor_id, d.user_id,d.image, d.doctor_name, d.mobile, d.email,d.createtime, dc.category_name FROM patient_master AS pm LEFT JOIN doctor_master AS d ON pm.doctor_id = d.doctor_id LEFT JOIN doctor_category AS dc ON d.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ?;`;
     connection.query(getDoctor, [user_id], async (err, rows) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       const doctor_arr = [];
       if (rows.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.msgDataNotFound,
-            doctor_arr: doctor_arr,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataNotFound,
+          doctor_arr: doctor_arr,
+        });
       }
       var s_no = 0;
       rows.forEach((element) => {
@@ -4958,22 +5115,18 @@ const fetchdoctorbyuser = async (request, response) => {
             .format("DD-MM-YYYY hh:mm A"),
         });
       });
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          doctor_arr: doctor_arr,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        doctor_arr: doctor_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -4984,23 +5137,19 @@ const getAdverseofUser = async (request, response) => {
 `;
     connection.query(getadverse, [user_id], async (err, rows) => {
       if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            err: err.message,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
       }
       const adverse_arr = [];
       if (rows.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessages.msgDataNotFound,
-            adverse_arr: adverse_arr,
-          });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataNotFound,
+          adverse_arr: adverse_arr,
+        });
       }
       var s_no = 0;
       rows.forEach((element) => {
@@ -5011,7 +5160,44 @@ const getAdverseofUser = async (request, response) => {
           user_id: element.user_id,
           medicine_name: element.medicine_name,
           dosage: element.dosage,
-          category_name: element.type == 1 ? "Tablet" : element.type == 2 ? "Capsule" : element.type == 3 ? "Lozenge" : element.type == 4 ? "Cream" : element.type == 5 ? "Drops" : element.type == 6 ? "Foam" : element.type == 7 ? "Gel" : element.type == 8 ? "Inhaler" : element.type == 9 ? "Injection" : element.type == 10 ? "Ointment" : element.type == 11 ? "Patch" : element.type == 12 ? "Powder" : element.type == 13 ? "Spray" : element.type == 14 ? "Suppository" : element.type == 15 ? "Syrup" : element.type == 16 ? "Granule" : element.type == 17 ? "Lotion" : element.type == 18 ? "Other" : "Unknown",
+          category_name:
+            element.type == 1
+              ? "Tablet"
+              : element.type == 2
+                ? "Capsule"
+                : element.type == 3
+                  ? "Lozenge"
+                  : element.type == 4
+                    ? "Cream"
+                    : element.type == 5
+                      ? "Drops"
+                      : element.type == 6
+                        ? "Foam"
+                        : element.type == 7
+                          ? "Gel"
+                          : element.type == 8
+                            ? "Inhaler"
+                            : element.type == 9
+                              ? "Injection"
+                              : element.type == 10
+                                ? "Ointment"
+                                : element.type == 11
+                                  ? "Patch"
+                                  : element.type == 12
+                                    ? "Powder"
+                                    : element.type == 13
+                                      ? "Spray"
+                                      : element.type == 14
+                                        ? "Suppository"
+                                        : element.type == 15
+                                          ? "Syrup"
+                                          : element.type == 16
+                                            ? "Granule"
+                                            : element.type == 17
+                                              ? "Lotion"
+                                              : element.type == 18
+                                                ? "Other"
+                                                : "Unknown",
           symptom_name: element.symptom_name,
           medication_start_date: moment(element.medication_start_date)
             .tz("Europe/Paris")
@@ -5027,22 +5213,18 @@ const getAdverseofUser = async (request, response) => {
             .format("DD-MM-YYYY hh:mm A"),
         });
       });
-      return response
-        .status(200)
-        .json({
-          success: true,
-          msg: languageMessages.msgDataFound,
-          adverse_arr: adverse_arr,
-        });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        adverse_arr: adverse_arr,
+      });
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -5098,24 +5280,20 @@ const ActivateDeactivateUser = async (request, response) => {
                 subject,
                 userName,
                 app_logo,
-                newStatusMsg
+                newStatusMsg,
               );
               if (mailResponse.status == "yes") {
-                return response
-                  .status(200)
-                  .json({
-                    success: true,
-                    msg: languageMessages.EmailSent,
-                    newStatusMsg,
-                  });
+                return response.status(200).json({
+                  success: true,
+                  msg: languageMessages.EmailSent,
+                  newStatusMsg,
+                });
               } else {
-                return response
-                  .status(200)
-                  .json({
-                    success: false,
-                    msg: "Error sending email ",
-                    mailResponse,
-                  });
+                return response.status(200).json({
+                  success: false,
+                  msg: "Error sending email ",
+                  mailResponse,
+                });
               }
             } catch (error) {
               return response.status(200).json({
@@ -5128,7 +5306,7 @@ const ActivateDeactivateUser = async (request, response) => {
               .status(200)
               .json({ success: false, msg: "Failed to update user status" });
           }
-        }
+        },
       );
     });
   } catch (error) {
@@ -5212,7 +5390,7 @@ const AdminForgetPassword = async (request, response) => {
           subject,
           adminName,
           app_logo,
-          results[0].user_id
+          results[0].user_id,
         );
 
         if (mailRes.status == "yes") {
@@ -5371,22 +5549,33 @@ const getMedicationList = async (request, response) => {
       item.sr_no = index + 1;
 
       // Schedule
-      item.schedule = item.schedule == 0 ? "Daily" : item.schedule == 1 ? "Weekly" : "Monthly";
+      item.schedule =
+        item.schedule == 0
+          ? "Daily"
+          : item.schedule == 1
+            ? "Weekly"
+            : "Monthly";
 
       // Type
-      item.type = item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection";
+      item.type =
+        item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection";
 
       // Update time
       item.updatetime = moment(item.updatetime).format("DD-MM-YYYY h:mm A");
 
       // Schedule date
-      item.schedule_date = item.schedule_date ? moment(item.schedule_date).format("DD-MM-YYYY") : "NA";
+      item.schedule_date = item.schedule_date
+        ? moment(item.schedule_date).format("DD-MM-YYYY")
+        : "NA";
 
       // Added by
-      item.added_by = item.added_by == 0 ? "Admin" : item.added_by == 1 ? "User" : "NA";
+      item.added_by =
+        item.added_by == 0 ? "Admin" : item.added_by == 1 ? "User" : "NA";
 
       // Proper time formatting (convert DB time → local → string)
-      item.time = item.time ? moment(item.time, "HH:mm:ss").format("h:mm A") : "NA";
+      item.time = item.time
+        ? moment(item.time, "HH:mm:ss").format("h:mm A")
+        : "NA";
 
       // Reminder time (same as time, unless you want different logic)
       item.reminder_time = item.time !== "NA" ? item.time : "NA";
@@ -5399,7 +5588,6 @@ const getMedicationList = async (request, response) => {
       message: languageMessages.msgDataFound,
       list: formattedList,
     });
-
   } catch (err) {
     return response.status(200).json({
       success: false,
@@ -5409,7 +5597,7 @@ const getMedicationList = async (request, response) => {
   }
 };
 
-//view compliance 
+//view compliance
 const viewCompliance = async (request, response) => {
   const { user_id } = request.query;
 
@@ -5438,43 +5626,39 @@ const viewCompliance = async (request, response) => {
         });
       }
       if (check.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: true,
-            message: languageMessages.msgDataNotFound,
-            list: [],
-          });
+        return response.status(200).json({
+          success: true,
+          message: languageMessages.msgDataNotFound,
+          list: [],
+        });
       }
-
-
-
 
       check.map((item, index) => {
         item.sr_no = index + 1;
-        item.schedule = item.schedule == 0 ? "Daily" : item.schedule == 1 ? "Weekly" : "Monthly"
-        item.pause_status_label = item.pause_status == 0 ? "Resume" : "Pause"
+        item.schedule =
+          item.schedule == 0
+            ? "Daily"
+            : item.schedule == 1
+              ? "Weekly"
+              : "Monthly";
+        item.pause_status_label = item.pause_status == 0 ? "Resume" : "Pause";
         // item.pause_status = item.pause_status == 0 ? "Resume" : "Pause"
-        item.type = item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection"
+        item.type =
+          item.type == 1 ? "Pill" : item.type == 2 ? "Syrup" : "Injection";
         item.updatetime = moment(item.updatetime)
           .tz("Europe/Paris")
           .format("DD-MM-YYYY hh:mm A");
 
         item.schedule_date = item.schedule_date
-          ? moment(item.schedule_date)
-            .tz("Europe/Paris")
-            .format("DD-MM-YYYY")
+          ? moment(item.schedule_date).tz("Europe/Paris").format("DD-MM-YYYY")
           : "NA";
-        item.time = item.time
-
+        item.time = item.time;
       });
-      return response
-        .status(200)
-        .json({
-          success: true,
-          message: languageMessages.msgDataNotFound,
-          list: check,
-        });
+      return response.status(200).json({
+        success: true,
+        message: languageMessages.msgDataNotFound,
+        list: check,
+      });
     });
   } catch (err) {
     return response.status(200).json({
@@ -5516,13 +5700,11 @@ const getReport = async (request, response) => {
         });
       }
       if (check.length <= 0) {
-        return response
-          .status(200)
-          .json({
-            success: true,
-            message: languageMessages.msgDataNotFound,
-            list: "NA",
-          });
+        return response.status(200).json({
+          success: true,
+          message: languageMessages.msgDataNotFound,
+          list: "NA",
+        });
       }
       check.map((item) => {
         item.updatetime = moment(item.updatetime)
@@ -5533,13 +5715,11 @@ const getReport = async (request, response) => {
           .tz("Europe/Paris")
           .format("DD-MM-YYYY hh:mm A");
       });
-      return response
-        .status(200)
-        .json({
-          success: true,
-          message: languageMessages.msgDataNotFound,
-          list: check,
-        });
+      return response.status(200).json({
+        success: true,
+        message: languageMessages.msgDataNotFound,
+        list: check,
+      });
     });
   } catch (err) {
     return response.status(200).json({
@@ -5638,14 +5818,14 @@ const approveDoctor = async (request, response) => {
               const app_logo =
                 "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png";
               const mailRes = await mailerApproveDoctor(
-                email,            // recipient email
+                email, // recipient email
                 app_name,
                 title,
                 doctor_name,
-                email,            // for content
+                email, // for content
                 password,
                 doctor_category_id,
-                app_logo
+                app_logo,
               );
 
               if (mailRes.status === "yes") {
@@ -5668,9 +5848,9 @@ const approveDoctor = async (request, response) => {
                 error: emailError.message,
               });
             }
-          }
+          },
         );
-      }
+      },
     );
   });
 };
@@ -5730,55 +5910,59 @@ const rejectDoctor = (req, res) => {
 
       // Update doctor as rejected
       const updateDoctorSql = `UPDATE doctor_master SET approve_status = 2, updatetime = NOW() WHERE doctor_id = ?`;
-      connection.query(updateDoctorSql, [doctor_id], async (updateErr, updateResult) => {
-        if (updateErr) {
-          return res.status(200).json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: updateErr.message,
-          });
-        }
-
-        if (updateResult.affectedRows === 0) {
-          return res.status(200).json({
-            success: false,
-            msg: languageMessages.adoctorRejectUnSuccess,
-          });
-        }
-
-        // Send rejection email
-        try {
-          const mailRes = await mailerRejectDoctorByAdmin(
-            adminEmail,
-            app_name,
-            "Doctor Rejected",
-            doctor_name,
-            email,
-            doctor_category_id,
-            app_logo
-          );
-
-          if (mailRes.status === "yes") {
-            return res.status(200).json({
-              success: true,
-              msg: languageMessages.adoctorRejectSuccess,
-            });
-          } else {
+      connection.query(
+        updateDoctorSql,
+        [doctor_id],
+        async (updateErr, updateResult) => {
+          if (updateErr) {
             return res.status(200).json({
               success: false,
-              msg: "Failed to send rejection email.",
-              error: mailRes.error,
+              msg: languageMessages.internalServerError,
+              error: updateErr.message,
             });
           }
-        } catch (emailError) {
-          console.error("Error sending email:", emailError);
-          return res.status(200).json({
-            success: false,
-            msg: "Error sending rejection email.",
-            error: emailError.message,
-          });
-        }
-      });
+
+          if (updateResult.affectedRows === 0) {
+            return res.status(200).json({
+              success: false,
+              msg: languageMessages.adoctorRejectUnSuccess,
+            });
+          }
+
+          // Send rejection email
+          try {
+            const mailRes = await mailerRejectDoctorByAdmin(
+              adminEmail,
+              app_name,
+              "Doctor Rejected",
+              doctor_name,
+              email,
+              doctor_category_id,
+              app_logo,
+            );
+
+            if (mailRes.status === "yes") {
+              return res.status(200).json({
+                success: true,
+                msg: languageMessages.adoctorRejectSuccess,
+              });
+            } else {
+              return res.status(200).json({
+                success: false,
+                msg: "Failed to send rejection email.",
+                error: mailRes.error,
+              });
+            }
+          } catch (emailError) {
+            console.error("Error sending email:", emailError);
+            return res.status(200).json({
+              success: false,
+              msg: "Error sending rejection email.",
+              error: emailError.message,
+            });
+          }
+        },
+      );
     });
   });
 };
@@ -5825,9 +6009,10 @@ const getDoctorDetail = async (request, response) => {
         email: doctor.email,
         category_name: doctor.category_name,
         approve_status: doctor.approve_status,
-        approve_status_lable: doctor.approve_status == 1 ? "Approved" : "Pending",
-        active_flag : doctor.active_flag,
-        activestatus_label : doctor.active_flag == 1 ? "Active" : "Deactive",
+        approve_status_lable:
+          doctor.approve_status == 1 ? "Approved" : "Pending",
+        active_flag: doctor.active_flag,
+        activestatus_label: doctor.active_flag == 1 ? "Active" : "Deactive",
         createtime: moment(doctor.createtime)
           .tz("Europe/Paris")
           .format("DD-MM-YYYY hh:mm A"),
@@ -5847,7 +6032,6 @@ const getDoctorDetail = async (request, response) => {
     });
   }
 };
-
 
 async function generateUniquePassword() {
   const chars =
@@ -5870,7 +6054,11 @@ const getDoctorUserSharedReport = async (request, response) => {
   let { doctor_id } = request.query;
   try {
     if (!doctor_id) {
-      return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
     }
     var sqlSelect = `SELECT um.name,um.mobile,um.email,rm.category_name,rsm.report_share_id, rsm.user_id, rsm.medical_report_id,mrp.file, rsm.doctor_id, DATE_FORMAT(rsm.createtime, '%Y-%m-%d %H:%i:%s') AS formatted_date FROM report_share_master as rsm 
     JOIN medical_report_master as mrp ON rsm.medical_report_id = mrp.medical_report_id 
@@ -5879,15 +6067,26 @@ const getDoctorUserSharedReport = async (request, response) => {
     WHERE rsm.delete_flag = 0 AND rsm.doctor_id = ? AND mrp.delete_flag = 0 AND rm.delete_flag = 0;`;
     connection.query(sqlSelect, [doctor_id], async (error, result) => {
       if (error) {
-        return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: error.message });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: error.message,
+        });
       }
-      return response.status(200).json({ success: true, msg: languageMessages.msgDataFound, report_data: result });
-    })
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        report_data: result,
+      });
+    });
   } catch (error) {
-    return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: error.message });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
-}
-
+};
 
 //--------------------get doctor tabular  reports--------------
 const getTabuldoctor = async (request, response) => {
@@ -5895,23 +6094,19 @@ const getTabuldoctor = async (request, response) => {
 
   try {
     if (!from_date) {
-      return response
-        .status(200)
-        .json({
-          status: true,
-          msg: languageMessages.msg_empty_param,
-          key: "from_date",
-        });
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "from_date",
+      });
     }
 
     if (!to_date) {
-      return response
-        .status(200)
-        .json({
-          status: true,
-          msg: languageMessages.msg_empty_param,
-          key: "to_date",
-        });
+      return response.status(200).json({
+        status: true,
+        msg: languageMessages.msg_empty_param,
+        key: "to_date",
+      });
     }
 
     var sqlSelect = ` SELECT d.approve_status, d.doctor_id, d.doctor_name, d.image, d.mobile, d.email, c.category_name, d.createtime, d.updatetime
@@ -5967,7 +6162,6 @@ const getTabuldoctor = async (request, response) => {
             approve_status_lable:
               data.approve_status == 1 ? "Approved" : "Pending",
 
-
             createtime: moment(data.createtime)
               .tz("Europe/Paris")
               .format("DD-MM-YYYY hh:mm A"),
@@ -5982,13 +6176,11 @@ const getTabuldoctor = async (request, response) => {
       }
     });
   } catch (error) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessages.internalServerError,
-        err: error.message,
-      });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
   }
 };
 
@@ -6053,7 +6245,7 @@ const getDoctorAnalyticalReports = async (req, res) => {
           "monthly",
           current_year,
           current_month,
-          "All"
+          "All",
         );
 
         month_report_arr.push({
@@ -6067,7 +6259,7 @@ const getDoctorAnalyticalReports = async (req, res) => {
           "yearly",
           i,
           "",
-          "All"
+          "All",
         );
 
         year_report_arr.push({ year: i, year_user_arr: year_user_arr });
@@ -6096,7 +6288,7 @@ async function getDoctorAnalyticalReportsFunction(
   type,
   current_year,
   current_month,
-  get_by_type
+  get_by_type,
 ) {
   return new Promise((resolve, reject) => {
     let where = "";
@@ -6125,10 +6317,6 @@ async function getDoctorAnalyticalReportsFunction(
   });
 }
 
-
-
-
-
 const bulkUploadMedicine = async (request, response) => {
   try {
     const file = request.file;
@@ -6137,7 +6325,7 @@ const bulkUploadMedicine = async (request, response) => {
       return response.status(200).json({
         success: false,
         msg: "File is required",
-        key: "file"
+        key: "file",
       });
     }
 
@@ -6163,7 +6351,8 @@ const bulkUploadMedicine = async (request, response) => {
       if (!category_name) continue;
 
       try {
-        const checkSql = "SELECT medicine_id FROM medicine_master WHERE medicine_name = ? AND delete_flag = 0";
+        const checkSql =
+          "SELECT medicine_id FROM medicine_master WHERE medicine_name = ? AND delete_flag = 0";
         const checkResult = await new Promise((resolve, reject) => {
           connection.query(checkSql, [category_name], (err, results) => {
             if (err) return reject(err);
@@ -6176,7 +6365,8 @@ const bulkUploadMedicine = async (request, response) => {
           continue;
         }
 
-        const insertSql = "INSERT INTO medicine_master (medicine_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
+        const insertSql =
+          "INSERT INTO medicine_master (medicine_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
         await new Promise((resolve, reject) => {
           connection.query(insertSql, [category_name, description], (err) => {
             if (err) return reject(err);
@@ -6198,7 +6388,6 @@ const bulkUploadMedicine = async (request, response) => {
       inserted: insertedCount,
       skipped: skippedCount,
     });
-
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -6217,7 +6406,7 @@ const bulkUploadDisease = async (request, response) => {
       return response.status(200).json({
         success: false,
         msg: "File is required",
-        key: "file"
+        key: "file",
       });
     }
 
@@ -6243,7 +6432,8 @@ const bulkUploadDisease = async (request, response) => {
       if (!category_name) continue;
 
       try {
-        const checkSql = "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
+        const checkSql =
+          "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
         const checkResult = await new Promise((resolve, reject) => {
           connection.query(checkSql, [category_name], (err, results) => {
             if (err) return reject(err);
@@ -6256,7 +6446,8 @@ const bulkUploadDisease = async (request, response) => {
           continue;
         }
 
-        const insertSql = "INSERT INTO disease_master (disease_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
+        const insertSql =
+          "INSERT INTO disease_master (disease_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
         await new Promise((resolve, reject) => {
           connection.query(insertSql, [category_name, description], (err) => {
             if (err) return reject(err);
@@ -6278,7 +6469,6 @@ const bulkUploadDisease = async (request, response) => {
       inserted: insertedCount,
       skipped: skippedCount,
     });
-
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -6297,7 +6487,7 @@ const bulkUploadSymptoms = async (request, response) => {
       return response.status(200).json({
         success: false,
         msg: "File is required",
-        key: "file"
+        key: "file",
       });
     }
 
@@ -6323,7 +6513,8 @@ const bulkUploadSymptoms = async (request, response) => {
       if (!category_name) continue;
 
       try {
-        const checkSql = "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+        const checkSql =
+          "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
         const checkResult = await new Promise((resolve, reject) => {
           connection.query(checkSql, [category_name], (err, results) => {
             if (err) return reject(err);
@@ -6336,7 +6527,8 @@ const bulkUploadSymptoms = async (request, response) => {
           continue;
         }
 
-        const insertSql = "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
+        const insertSql =
+          "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
         await new Promise((resolve, reject) => {
           connection.query(insertSql, [category_name], (err) => {
             if (err) return reject(err);
@@ -6358,7 +6550,6 @@ const bulkUploadSymptoms = async (request, response) => {
       inserted: insertedCount,
       skipped: skippedCount,
     });
-
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -6369,20 +6560,28 @@ const bulkUploadSymptoms = async (request, response) => {
   }
 };
 
-//get compliance of user 
+//get compliance of user
 const getAllCompliance = async (request, response) => {
   try {
-    const delete_flag = 0
-    const sql = "SELECT um.user_id, um.f_name, um.l_name, um.name, m.medicine_name, mm.medication_id, mm.type, mm.schedule, mm.weekday, mm.schedule, mm.schedule_date, mm.number_of_times, mm.reminder_time, tm.taken_status, mm.instruction, mm.createtime FROM user_master um JOIN medication_master mm ON um.user_id = mm.user_id JOIN medicine_master m ON mm.medicine_id = m.medicine_id JOIN time_slots_master tm ON tm.medication_id = mm.medication_id WHERE um.delete_flag = ? AND mm.delete_flag = 0 AND tm.delete_flag = 0 ORDER BY mm.medication_id DESC"
+    const delete_flag = 0;
+    const sql =
+      "SELECT um.user_id, um.f_name, um.l_name, um.name, m.medicine_name, mm.medication_id, mm.type, mm.schedule, mm.weekday, mm.schedule, mm.schedule_date, mm.number_of_times, mm.reminder_time, tm.taken_status, mm.instruction, mm.createtime FROM user_master um JOIN medication_master mm ON um.user_id = mm.user_id JOIN medicine_master m ON mm.medicine_id = m.medicine_id JOIN time_slots_master tm ON tm.medication_id = mm.medication_id WHERE um.delete_flag = ? AND mm.delete_flag = 0 AND tm.delete_flag = 0 ORDER BY mm.medication_id DESC";
     connection.query(sql, [delete_flag], (err, result) => {
       if (err) {
-        return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message })
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
 
       if (result.length <= 0) {
-        return response.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, result: [] })
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          result: [],
+        });
       }
-
 
       result.map((item, index) => {
         item.sr_no = index + 1;
@@ -6404,22 +6603,23 @@ const getAllCompliance = async (request, response) => {
 
         // France date only format for schedule_date
         item.schedule_date = item.schedule_date
-          ? moment(item.schedule_date)
-            .tz("Europe/Paris")
-            .format("DD-MM-YYYY")
-          : "NA";  // <-- added missing closing
+          ? moment(item.schedule_date).tz("Europe/Paris").format("DD-MM-YYYY")
+          : "NA"; // <-- added missing closing
 
         // 12-hour format for reminder_time
         item.reminder_time = item.reminder_time
           ? moment(item.reminder_time, "HH:mm:ss")
-            .tz("Europe/Paris")
-            .format("hh:mm A")
+              .tz("Europe/Paris")
+              .format("hh:mm A")
           : "NA";
       });
 
-      return response.status(200).json({ success: true, msg: languageMessages.msgDataFound, result: result })
-    })
-
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        result: result,
+      });
+    });
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -6428,34 +6628,49 @@ const getAllCompliance = async (request, response) => {
       error: error.message,
     });
   }
-}
+};
 
-//get user medicine 
+//get user medicine
 const getUserMedicine = async (request, response) => {
-  const { user_id } = request.query
+  const { user_id } = request.query;
   try {
     if (!user_id) {
-      return response.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "user_id" });
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "user_id",
+      });
     }
 
-    const sql = "SELECT medicine_id, medicine_name, createtime FROM medicine_master WHERE delete_flag = 0 AND user_id = ? AND added_by = 1 ORDER BY createtime DESC"
+    const sql =
+      "SELECT medicine_id, medicine_name, createtime FROM medicine_master WHERE delete_flag = 0 AND user_id = ? AND added_by = 1 ORDER BY createtime DESC";
     connection.query(sql, [user_id], (err, res) => {
       if (err) {
-        return response.status(200).json({ success: false, msg: languageMessages.internalServerError, error: err.message })
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
       }
       if (res.length == 0) {
-        return response.status(200).json({ success: true, msg: languageMessages.msgDataNotFound, result: [] })
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataNotFound,
+          result: [],
+        });
       }
       res.map((item, index) => {
-        item.sr_no = index + 1
+        item.sr_no = index + 1;
         item.createtime = moment(item.createtime)
           .tz("Europe/Paris")
           .format("DD-MM-YYYY hh:mm A");
-      })
-      return response.status(200).json({ success: true, msg: languageMessages.msgDataFound, result: res })
-    })
-
-
+      });
+      return response.status(200).json({
+        success: true,
+        msg: languageMessages.msgDataFound,
+        result: res,
+      });
+    });
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -6464,13 +6679,9 @@ const getUserMedicine = async (request, response) => {
       error: error.message,
     });
   }
-}
-
-
-
+};
 
 const DoctorActivateDeactivateUser = async (request, response) => {
-
   const data = request.body;
 
   const { doctor_id } = data;
@@ -6481,7 +6692,6 @@ const DoctorActivateDeactivateUser = async (request, response) => {
       .json({ success: false, msg: "Missing doctor_id" });
   }
   try {
-
     const checkUserQuery =
       "SELECT * FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
     connection.query(checkUserQuery, [doctor_id], async (err, res) => {
@@ -6525,24 +6735,20 @@ const DoctorActivateDeactivateUser = async (request, response) => {
                 subject,
                 userName,
                 app_logo,
-                newStatusMsg
+                newStatusMsg,
               );
               if (mailResponse.status == "yes") {
-                return response
-                  .status(200)
-                  .json({
-                    success: true,
-                    msg: languageMessages.EmailSent,
-                    newStatusMsg,
-                  });
+                return response.status(200).json({
+                  success: true,
+                  msg: languageMessages.EmailSent,
+                  newStatusMsg,
+                });
               } else {
-                return response
-                  .status(200)
-                  .json({
-                    success: false,
-                    msg: "Error sending email ",
-                    mailResponse,
-                  });
+                return response.status(200).json({
+                  success: false,
+                  msg: "Error sending email ",
+                  mailResponse,
+                });
               }
             } catch (error) {
               return response.status(200).json({
@@ -6555,7 +6761,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
               .status(200)
               .json({ success: false, msg: "Failed to update user status" });
           }
-        }
+        },
       );
     });
   } catch (error) {
@@ -6564,7 +6770,7 @@ const DoctorActivateDeactivateUser = async (request, response) => {
       .json({ success: false, msg: languageMessages.internalServerError });
   }
 };
-// languages api 
+// languages api
 // const getLanguages = (req, res) => {
 //   try {
 //     connection.query(
@@ -6581,130 +6787,132 @@ const DoctorActivateDeactivateUser = async (request, response) => {
 //     res.json({ success: false, error: err.message });
 //   }
 // };
-  const getLanguages = (req, res) => {
-      const languageMap = {
-        en: "English",
-        es: "Español",
-        fr: "Français",
-        ar: "العربية",
-        it: "Italiano",        
-        de: "Deutsch",        
-        pt: "Português" 
-      }
-    const { admin_id } = req.query;
-
-    try {
-      // 1. 
-      connection.query(
-        "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
-        (err, languages) => {
-          if (err) {
-            return res.json({ success: false, error: err.message });
-          }
-
-          // 
-          if (!admin_id) {
-            // return res.json({ success: true, data: languages });
-            const formattedLanguages = languages.map(l => ({
-                ...l,
-                language_name: languageMap[l.language_code?.toLowerCase()] || l.language_name
-              }));
-
-              return res.json({ success: true, data: formattedLanguages });
-                        }
-
-          // 2. 
-          connection.query(
-            "SELECT language_id FROM admin_selected_languages WHERE admin_id = ?",
-            [admin_id],
-            (err2, selectedRows) => {
-              if (err2) {
-                return res.json({ success: false, error: err2.message });
-              }
-
-              const selectedLanguages = selectedRows.map(r => r.language_id);
-
-              // res.json({
-              //   success: true,
-              //   data: languages,
-              //   selectedLanguages: selectedLanguages
-              // });
-              const formattedLanguages = languages.map(l => ({
-                  ...l,
-                  language_name: languageMap[l.language_code?.toLowerCase()] || l.language_name
-                }));
-
-                res.json({
-                  success: true,
-                  data: formattedLanguages,
-                  selectedLanguages: selectedLanguages
-                });
-            }
-          );
-        }
-      );
-    } catch (err) {
-      res.json({ success: false, error: err.message });
-    }
+const getLanguages = (req, res) => {
+  const languageMap = {
+    en: "English",
+    es: "Español",
+    fr: "Français",
+    ar: "العربية",
+    it: "Italiano",
+    de: "Deutsch",
+    pt: "Português",
   };
+  const { admin_id } = req.query;
 
-  const saveLanguages = (req, res) => {
-    const { admin_id, languages } = req.body;
-
-    if (!admin_id) {
-      return res.json({ success: false, msg: "admin_id required" });
-    }
-
-    // 1. Get default language
+  try {
+    // 1.
     connection.query(
-      "SELECT id FROM languages_master WHERE is_default = 1",
-      (err, defaultLang) => {
+      "SELECT id, language_name, language_code, is_default FROM languages_master WHERE status = 1",
+      (err, languages) => {
         if (err) {
           return res.json({ success: false, error: err.message });
         }
 
-        const defaultLangId = defaultLang[0].id;
+        //
+        if (!admin_id) {
+          // return res.json({ success: true, data: languages });
+          const formattedLanguages = languages.map((l) => ({
+            ...l,
+            language_name:
+              languageMap[l.language_code?.toLowerCase()] || l.language_name,
+          }));
 
-        // 2. Ensure English included
-        let finalLanguages = languages || [];
-
-        if (!finalLanguages.includes(defaultLangId)) {
-          finalLanguages.push(defaultLangId);
+          return res.json({ success: true, data: formattedLanguages });
         }
 
-        finalLanguages = [...new Set(finalLanguages)];
-
-        // 3. Delete old
+        // 2.
         connection.query(
-          "DELETE FROM admin_selected_languages WHERE admin_id = ?",
+          "SELECT language_id FROM admin_selected_languages WHERE admin_id = ?",
           [admin_id],
-          (err) => {
-            if (err) {
-              return res.json({ success: false, error: err.message });
+          (err2, selectedRows) => {
+            if (err2) {
+              return res.json({ success: false, error: err2.message });
             }
 
-            // 4. Insert new
-            const values = finalLanguages.map(lang_id => [admin_id, lang_id]);
+            const selectedLanguages = selectedRows.map((r) => r.language_id);
 
-            connection.query(
-              "INSERT INTO admin_selected_languages (admin_id, language_id) VALUES ?",
-              [values],
-              (err) => {
-                if (err) {
-                  return res.json({ success: false, error: err.message });
-                }
+            // res.json({
+            //   success: true,
+            //   data: languages,
+            //   selectedLanguages: selectedLanguages
+            // });
+            const formattedLanguages = languages.map((l) => ({
+              ...l,
+              language_name:
+                languageMap[l.language_code?.toLowerCase()] || l.language_name,
+            }));
 
-                res.json({
-                  success: true,
-                  msg: "Languages saved (English always included)"
-                });
-              }
-            );
-          }
+            res.json({
+              success: true,
+              data: formattedLanguages,
+              selectedLanguages: selectedLanguages,
+            });
+          },
         );
-      }
+      },
     );
-  };
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+};
+
+const saveLanguages = (req, res) => {
+  const { admin_id, languages } = req.body;
+
+  if (!admin_id) {
+    return res.json({ success: false, msg: "admin_id required" });
+  }
+
+  // 1. Get default language
+  connection.query(
+    "SELECT id FROM languages_master WHERE is_default = 1",
+    (err, defaultLang) => {
+      if (err) {
+        return res.json({ success: false, error: err.message });
+      }
+
+      const defaultLangId = defaultLang[0].id;
+
+      // 2. Ensure English included
+      let finalLanguages = languages || [];
+
+      if (!finalLanguages.includes(defaultLangId)) {
+        finalLanguages.push(defaultLangId);
+      }
+
+      finalLanguages = [...new Set(finalLanguages)];
+
+      // 3. Delete old
+      connection.query(
+        "DELETE FROM admin_selected_languages WHERE admin_id = ?",
+        [admin_id],
+        (err) => {
+          if (err) {
+            return res.json({ success: false, error: err.message });
+          }
+
+          // 4. Insert new
+          const values = finalLanguages.map((lang_id) => [admin_id, lang_id]);
+
+          connection.query(
+            "INSERT INTO admin_selected_languages (admin_id, language_id) VALUES ?",
+            [values],
+            (err) => {
+              if (err) {
+                return res.json({ success: false, error: err.message });
+              }
+
+              res.json({
+                success: true,
+                msg: "Languages saved (English always included)",
+              });
+            },
+          );
+        },
+      );
+    },
+  );
+};
 
 // const getUserLanguages = (req, res) => {
 //   const { admin_id } = req.query;
@@ -6766,362 +6974,358 @@ const DoctorActivateDeactivateUser = async (request, response) => {
 //     }
 //   );
 // };
-  const getUserLanguages = (req, res) => {
-    const languageMap = {
-        en: "English",
-        es: "Español",
-        fr: "Français",
-        ar: "العربية",
-         it: "Italiano",        
-        de: "Deutsch",        
-        pt: "Português" 
-      };
-    const { admin_id, user_id } = req.query;
+const getUserLanguages = (req, res) => {
+  const languageMap = {
+    en: "English",
+    es: "Español",
+    fr: "Français",
+    ar: "العربية",
+    it: "Italiano",
+    de: "Deutsch",
+    pt: "Português",
+  };
+  const { admin_id, user_id } = req.query;
 
-    if (!admin_id || !user_id) {
-      return res.json({ success: false, msg: "admin_id & user_id required" });
-    }
+  if (!admin_id || !user_id) {
+    return res.json({ success: false, msg: "admin_id & user_id required" });
+  }
 
-    // Step 1: Get admin languages
-    connection.query(
-      `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
+  // Step 1: Get admin languages
+  connection.query(
+    `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
       FROM admin_selected_languages asl
       JOIN languages_master lm ON lm.id = asl.language_id
       WHERE asl.admin_id = ?
       ORDER BY lm.is_default DESC`,
-      [admin_id],
-      (err, rows) => {
-
-        if (err) {
-          return res.json({ success: false, error: err.message });
-        }
-
-        // Step 2: Get user's current language
-        connection.query(
-          "SELECT current_language FROM user_master WHERE user_id = ?",
-          [user_id],
-          (err2, userData) => {
-
-            if (err2) {
-              return res.json({ success: false, error: err2.message });
-            }
-
-            const userLang = userData[0]?.current_language;
-
-            const defaultLang = rows.find(r => r.is_default == 1);
-
-            res.json({
-              success: true,
-              data: {
-                current_language: userLang || defaultLang?.language_code,
-                // language: rows.map(r => ({
-                //   id: r.id,
-                //   language_name: r.language_name,
-                //   language_code: r.language_code
-                // }))
-                language: rows.map(r => ({
-                  id: r.id,
-                  language_name: languageMap[r.language_code] || r.language_name,
-                  language_code: r.language_code
-                }))
-              }
-            });
-          }
-        );
+    [admin_id],
+    (err, rows) => {
+      if (err) {
+        return res.json({ success: false, error: err.message });
       }
-    );
-  };
 
-  // const updateUserLanguage = (req, res) => {
-  //   const { user_id, language_code } = req.body;
+      // Step 2: Get user's current language
+      connection.query(
+        "SELECT current_language FROM user_master WHERE user_id = ?",
+        [user_id],
+        (err2, userData) => {
+          if (err2) {
+            return res.json({ success: false, error: err2.message });
+          }
 
-  //   if (!user_id || !language_code) {
-  //     return res.json({ 
-  //       success: false, 
-  //       msg: "user_id & language_code required" 
-  //     });
-  //   }
+          const userLang = userData[0]?.current_language;
 
-  //   connection.query(
-  //     "UPDATE user_master SET current_language = ? WHERE user_id = ?",
-  //     [language_code, user_id],
-  //     (err) => {
+          const defaultLang = rows.find((r) => r.is_default == 1);
 
-  //       if (err) {
-  //         return res.json({ 
-  //           success: false, 
-  //           error: err.message 
-  //         });
-  //       }
-
-  //       //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
-  //       connection.query(
-  //         "SELECT current_language FROM user_master WHERE user_id = ?",
-  //         [user_id],
-  //         (err2, result) => {
-
-  //           if (err2) {
-  //             return res.json({ 
-  //               success: false, 
-  //               error: err2.message 
-  //             });
-  //           }
-
-  //           res.json({
-  //             success: true,
-  //             msg: "Language updated successfully",
-  //             current_language: result[0]?.current_language
-  //           });
-  //         }
-  //       );
-
-  //     }
-  //   );
-  // };
-
-  const updateUserLanguage = (req, res) => {
-    const { user_id, language_code } = req.body;
-
-    const languageMessage = res.__('language_updated');
-
-    if (!user_id || !language_code) {
-      return res.json({
-        success: false,
-        msg: "user_id & language_code required"
-      });
-    }
-
-    req.setLocale(language_code);
-
-    connection.query(
-      "UPDATE user_master SET current_language = ? WHERE user_id = ?",
-      [language_code, user_id],
-      (err) => {
-
-        if (err) {
-          return res.json({
-            success: false,
-            error: err.message
+          res.json({
+            success: true,
+            data: {
+              current_language: userLang || defaultLang?.language_code,
+              // language: rows.map(r => ({
+              //   id: r.id,
+              //   language_name: r.language_name,
+              //   language_code: r.language_code
+              // }))
+              language: rows.map((r) => ({
+                id: r.id,
+                language_name: languageMap[r.language_code] || r.language_name,
+                language_code: r.language_code,
+              })),
+            },
           });
-        }
+        },
+      );
+    },
+  );
+};
 
-        connection.query(
-          "SELECT current_language FROM user_master WHERE user_id = ?",
-          [user_id],
-          (err2, result) => {
+// const updateUserLanguage = (req, res) => {
+//   const { user_id, language_code } = req.body;
 
-            if (err2) {
-              return res.json({
-                success: false,
-                error: err2.message
-              });
-            }
+//   if (!user_id || !language_code) {
+//     return res.json({
+//       success: false,
+//       msg: "user_id & language_code required"
+//     });
+//   }
 
-            res.json({
-              success: true,
-              msg: languageMessage,
-              current_language: result[0]?.current_language
+//   connection.query(
+//     "UPDATE user_master SET current_language = ? WHERE user_id = ?",
+//     [language_code, user_id],
+//     (err) => {
+
+//       if (err) {
+//         return res.json({
+//           success: false,
+//           error: err.message
+//         });
+//       }
+
+//       //  UPDATED LANGUAGE CONFIRM KARNE KE LIYE
+//       connection.query(
+//         "SELECT current_language FROM user_master WHERE user_id = ?",
+//         [user_id],
+//         (err2, result) => {
+
+//           if (err2) {
+//             return res.json({
+//               success: false,
+//               error: err2.message
+//             });
+//           }
+
+//           res.json({
+//             success: true,
+//             msg: "Language updated successfully",
+//             current_language: result[0]?.current_language
+//           });
+//         }
+//       );
+
+//     }
+//   );
+// };
+
+const updateUserLanguage = (req, res) => {
+  const { user_id, language_code } = req.body;
+
+  const languageMessage = res.__("language_updated");
+
+  if (!user_id || !language_code) {
+    return res.json({
+      success: false,
+      msg: "user_id & language_code required",
+    });
+  }
+
+  req.setLocale(language_code);
+
+  connection.query(
+    "UPDATE user_master SET current_language = ? WHERE user_id = ?",
+    [language_code, user_id],
+    (err) => {
+      if (err) {
+        return res.json({
+          success: false,
+          error: err.message,
+        });
+      }
+
+      connection.query(
+        "SELECT current_language FROM user_master WHERE user_id = ?",
+        [user_id],
+        (err2, result) => {
+          if (err2) {
+            return res.json({
+              success: false,
+              error: err2.message,
             });
           }
-        );
 
-      }
-    );
-  };
-      // post api 
-  const getAllInsightsPosts = (req, res) => {
-      try {
-        const sql = `
+          res.json({
+            success: true,
+            msg: languageMessage,
+            current_language: result[0]?.current_language,
+          });
+        },
+      );
+    },
+  );
+};
+// post api
+const getAllInsightsPosts = (req, res) => {
+  try {
+    const sql = `
           SELECT * FROM newInsights_posts
           ORDER BY id DESC
         `;
 
-        connection.query(sql, (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.json({
-              success: false,
-              msg: 'DB Error'
-            });
-          }
-
-          return res.json({
-            success: true,
-            data: result
-          });
-        });
-
-      } catch (error) {
-        console.error(error);
+    connection.query(sql, (err, result) => {
+      if (err) {
+        console.error(err);
         return res.json({
           success: false,
-          msg: 'Server error'
-        });
-      }
-    };
-
-    const createPost = (req, res) => {
-    try {
-      const { admin_id, title, description, url, is_visible } = req.body;
-
-      const image = req.file ? req.file.filename : null;
-
-      if (!title || !description || !url) {
-        return res.json({
-          success: false,
-          msg: 'All fields are required'
+          msg: "DB Error",
         });
       }
 
-      const sql = `
+      return res.json({
+        success: true,
+        data: result,
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json({
+      success: false,
+      msg: "Server error",
+    });
+  }
+};
+
+const createPost = (req, res) => {
+  try {
+    const { admin_id, title, description, url, is_visible } = req.body;
+
+    const image = req.file ? req.file.filename : null;
+
+    if (!title || !description || !url) {
+      return res.json({
+        success: false,
+        msg: "All fields are required",
+      });
+    }
+
+    const sql = `
         INSERT INTO newInsights_posts 
         (admin_id, title, description, image, url, is_visible)
         VALUES (?, ?, ?, ?, ?, ?)
       `;
 
-      connection.query(
-        sql,
-        [admin_id, title, description, image, url, is_visible],
-        (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.json({
-              success: false,
-              msg: 'DB Error'
-            });
-          }
-
+    connection.query(
+      sql,
+      [admin_id, title, description, image, url, is_visible],
+      (err, result) => {
+        if (err) {
+          console.error(err);
           return res.json({
-            success: true,
-            msg: 'Post created successfully'
+            success: false,
+            msg: "DB Error",
           });
         }
-      );
-    } catch (error) {
-      console.error(error);
-      return res.json({
-        success: false,
-        msg: 'Server error'
-      });
-    }
-    };
 
-    // get post api 
-  const getInsightsPosts = (req, res) => {
-    const sql = `
+        return res.json({
+          success: true,
+          msg: "Post created successfully",
+        });
+      },
+    );
+  } catch (error) {
+    console.error(error);
+    return res.json({
+      success: false,
+      msg: "Server error",
+    });
+  }
+};
+
+// get post api
+const getInsightsPosts = (req, res) => {
+  const sql = `
       SELECT * FROM newInsights_posts 
       WHERE is_visible = 1 
       ORDER BY id DESC
     `;
 
-    connection.query(sql, (err, result) => {
-      if (err) {
-        return res.json({ success: false, msg: 'DB Error' });
-      }
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.json({ success: false, msg: "DB Error" });
+    }
 
-      return res.json({
-        success: true,
-        data: result
-      });
+    return res.json({
+      success: true,
+      data: result,
     });
-  };
+  });
+};
 
-  const updateInsightsPost = (req, res) => {
-    try {
-      const { id, admin_id, title, description, url, is_visible } = req.body;
+const updateInsightsPost = (req, res) => {
+  try {
+    const { id, admin_id, title, description, url, is_visible } = req.body;
 
-      const image = req.file ? req.file.filename : null;
+    const image = req.file ? req.file.filename : null;
 
-      if (!id) {
-        return res.json({
-          success: false,
-          msg: "Post id is required"
-        });
-      }
+    if (!id) {
+      return res.json({
+        success: false,
+        msg: "Post id is required",
+      });
+    }
 
-      let sql = `
+    let sql = `
         UPDATE newInsights_posts 
         SET admin_id=?, title=?, description=?, url=?, is_visible=?
       `;
 
-      let values = [admin_id, title, description, url, is_visible];
+    let values = [admin_id, title, description, url, is_visible];
 
-      //  
-      if (image) {
-        sql += `, image=?`;
-        values.push(image);
-      }
-
-      sql += ` WHERE id=?`;
-      values.push(id);
-
-      connection.query(sql, values, (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.json({
-            success: false,
-            msg: "DB Error"
-          });
-        }
-
-        return res.json({
-          success: true,
-          msg: "Post updated successfully"
-        });
-      });
-
-    } catch (error) {
-      console.error(error);
-      return res.json({
-        success: false,
-        msg: "Server error"
-      });
+    //
+    if (image) {
+      sql += `, image=?`;
+      values.push(image);
     }
-  };
 
-const deleteInsightsPost = (req, res) => {
-    try {
-      const { id } = req.body;
+    sql += ` WHERE id=?`;
+    values.push(id);
 
-      if (!id) {
+    connection.query(sql, values, (err, result) => {
+      if (err) {
+        console.error(err);
         return res.json({
           success: false,
-          msg: "Post id is required"
+          msg: "DB Error",
         });
       }
 
-      const sql = `DELETE FROM newInsights_posts WHERE id=?`;
-
-      connection.query(sql, [id], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.json({
-            success: false,
-            msg: "DB Error"
-          });
-        }
-
-        return res.json({
-          success: true,
-          msg: "Post deleted successfully"
-        });
+      return res.json({
+        success: true,
+        msg: "Post updated successfully",
       });
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json({
+      success: false,
+      msg: "Server error",
+    });
+  }
+};
 
-    } catch (error) {
-      console.error(error);
+const deleteInsightsPost = (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
       return res.json({
         success: false,
-        msg: "Server error"
+        msg: "Post id is required",
       });
     }
-  };
+
+    const sql = `DELETE FROM newInsights_posts WHERE id=?`;
+
+    connection.query(sql, [id], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.json({
+          success: false,
+          msg: "DB Error",
+        });
+      }
+
+      return res.json({
+        success: true,
+        msg: "Post deleted successfully",
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    return res.json({
+      success: false,
+      msg: "Server error",
+    });
+  }
+};
 const deleteMedicineBulk = (req, res) => {
   const { medicine_ids } = req.body;
 
-  if (!medicine_ids || !Array.isArray(medicine_ids) || medicine_ids.length === 0) {
+  if (
+    !medicine_ids ||
+    !Array.isArray(medicine_ids) ||
+    medicine_ids.length === 0
+  ) {
     return res.json({
       success: false,
-      msg: "medicine_ids required"
+      msg: "medicine_ids required",
     });
   }
 
@@ -7135,13 +7339,13 @@ const deleteMedicineBulk = (req, res) => {
       console.log(err);
       return res.json({
         success: false,
-        msg: "Database error"
+        msg: "Database error",
       });
     }
 
     return res.json({
       success: true,
-      msg: `${result.affectedRows} medicines deleted successfully`
+      msg: `${result.affectedRows} medicines deleted successfully`,
     });
   });
 };
@@ -7207,7 +7411,6 @@ const deleteMedicineBulk = (req, res) => {
 //   JOIN user_master um ON pm.user_id = um.user_id
 //   ${where}
 // `;
-  
 
 //   connection.query(totalSql, params, (err, totalResult) => {
 //     if (err) return res.json({ success: false, error: err.message });
@@ -7215,8 +7418,8 @@ const deleteMedicineBulk = (req, res) => {
 
 //     // Age & Gender distribution
 //    const dataSql = `
-//   SELECT 
-//     CASE 
+//   SELECT
+//     CASE
 //       WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
 //       WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
 //       WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 44 THEN '31-44'
@@ -7225,7 +7428,7 @@ const deleteMedicineBulk = (req, res) => {
 //       WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 75 AND 84 THEN '75-84'
 //       ELSE '85+'
 //     END as age_group,
-//     CASE 
+//     CASE
 //       WHEN um.gender = 1 THEN 'Male'
 //       WHEN um.gender = 2 THEN 'Female'
 //       WHEN um.gender = 3 THEN 'Other'
@@ -7387,48 +7590,69 @@ const getAdminPatientDemographics = (req, res) => {
       // -------------------------
       const matched_patients = rows.reduce((sum, r) => sum + r.count, 0);
 
-      const ageGroups = ["0-18", "19-30", "31-44", "45-64", "65-74", "75-84", "85+"];
+      const ageGroups = [
+        "0-18",
+        "19-30",
+        "31-44",
+        "45-64",
+        "65-74",
+        "75-84",
+        "85+",
+      ];
       const genders = ["Male", "Female", "Other", "Not Specified"];
 
       const ageSexCross = {};
       const ageDist = {};
       const sexDist = {};
 
-      ageGroups.forEach(a => {
-        ageSexCross[a] = { Male: 0, Female: 0, Other: 0, "Not Specified": 0, total: 0 };
+      ageGroups.forEach((a) => {
+        ageSexCross[a] = {
+          Male: 0,
+          Female: 0,
+          Other: 0,
+          "Not Specified": 0,
+          total: 0,
+        };
         ageDist[a] = 0;
       });
 
-      genders.forEach(g => {
+      genders.forEach((g) => {
         sexDist[g] = 0;
       });
 
-      rows.forEach(r => {
+      rows.forEach((r) => {
         ageSexCross[r.age_group][r.gender] = r.count;
         ageSexCross[r.age_group].total += r.count;
         ageDist[r.age_group] += r.count;
         sexDist[r.gender] += r.count;
       });
 
-      const ageDistribution = ageGroups.map(a => ({
+      const ageDistribution = ageGroups.map((a) => ({
         age_group: a,
         count: ageDist[a],
-        percentage: total_patients > 0 ? ((ageDist[a] / total_patients) * 100).toFixed(1) : "0.0"
+        percentage:
+          total_patients > 0
+            ? ((ageDist[a] / total_patients) * 100).toFixed(1)
+            : "0.0",
       }));
 
-      const sexDistribution = genders.map(g => ({
+      const sexDistribution = genders.map((g) => ({
         gender: g,
         count: sexDist[g],
-        percentage: total_patients > 0 ? ((sexDist[g] / total_patients) * 100).toFixed(1) : "0.0"
+        percentage:
+          total_patients > 0
+            ? ((sexDist[g] / total_patients) * 100).toFixed(1)
+            : "0.0",
       }));
 
-      const crossTable = ageGroups.map(a => ({
+      const crossTable = ageGroups.map((a) => ({
         age_group: a,
         ...genders.reduce((acc, g) => {
-          acc[g] = `${ageSexCross[a][g]} (${total_patients > 0 ? ((ageSexCross[a][g] / total_patients) * 100).toFixed(1) : "0.0"}%)`;
+          acc[g] =
+            `${ageSexCross[a][g]} (${total_patients > 0 ? ((ageSexCross[a][g] / total_patients) * 100).toFixed(1) : "0.0"}%)`;
           return acc;
         }, {}),
-        total: `${ageSexCross[a].total} (${total_patients > 0 ? ((ageSexCross[a].total / total_patients) * 100).toFixed(1) : "0.0"}%)`
+        total: `${ageSexCross[a].total} (${total_patients > 0 ? ((ageSexCross[a].total / total_patients) * 100).toFixed(1) : "0.0"}%)`,
       }));
 
       return res.json({
@@ -7437,7 +7661,7 @@ const getAdminPatientDemographics = (req, res) => {
         matched_patients,
         ageDistribution,
         sexDistribution,
-        crossTable
+        crossTable,
       });
     });
   });
@@ -7502,12 +7726,12 @@ const getAdminPatientDemographics = (req, res) => {
 
 //     // Fetch patient details
 //     const sql = `
-//   SELECT 
+//   SELECT
 //     pm.user_id,
 //     pm.doctor_id,
 //     um.name,
 //     TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) AS age,
-//     CASE 
+//     CASE
 //       WHEN um.gender = 1 THEN 'Male'
 //       WHEN um.gender = 2 THEN 'Female'
 //       WHEN um.gender = 3 THEN 'Other'
@@ -7533,9 +7757,9 @@ const getAdminPatientDemographics = (req, res) => {
 //         const checkShare = `
 //           SELECT report_share_id, information_type, createtime
 //           FROM report_share_master
-//           WHERE user_id = ? 
+//           WHERE user_id = ?
 //             ${doctor_id ? "AND doctor_id = ?" : ""}
-//             AND share_type = 0 
+//             AND share_type = 0
 //             AND delete_flag = 0
 //           ORDER BY createtime DESC
 //         `;
@@ -7557,9 +7781,9 @@ const getAdminPatientDemographics = (req, res) => {
 //             FROM medication_master m
 //             JOIN medicine_master a ON a.medicine_id = m.medicine_id
 //             JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-//             WHERE m.user_id = ? 
-//               AND m.delete_flag = 0 
-//               AND tm.delete_flag = 0 
+//             WHERE m.user_id = ?
+//               AND m.delete_flag = 0
+//               AND tm.delete_flag = 0
 //               AND m.createtime <= ?
 //             ORDER BY a.medicine_name ASC
 //           `;
@@ -7586,7 +7810,14 @@ const getAdminPatientDemographics = (req, res) => {
 // };
 
 const getPatientDemographicsDetailsAdmin = (req, res) => {
-  const { doctor_id, gender, age_group, search, page = 1, limit = 10 } = req.body;
+  const {
+    doctor_id,
+    gender,
+    age_group,
+    search,
+    page = 1,
+    limit = 10,
+  } = req.body;
   const offset = (page - 1) * limit;
 
   // Base WHERE clause
@@ -7710,14 +7941,19 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
         LIMIT ? OFFSET ?
       `;
 
-      connection.query(sql, [...params, Number(limit), Number(offset)], (err3, rows) => {
-        if (err3) {
-          console.log(err3);
-          return res.json({ success: false, msg: "Data error" });
-        }
+      connection.query(
+        sql,
+        [...params, Number(limit), Number(offset)],
+        (err3, rows) => {
+          if (err3) {
+            console.log(err3);
+            return res.json({ success: false, msg: "Data error" });
+          }
 
-        const promises = rows.map(patient => new Promise((resolve, reject) => {
-          const checkShare = `
+          const promises = rows.map(
+            (patient) =>
+              new Promise((resolve, reject) => {
+                const checkShare = `
             SELECT report_share_id, information_type, createtime
             FROM report_share_master
             WHERE user_id = ? 
@@ -7727,21 +7963,25 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
             ORDER BY createtime DESC
           `;
 
-          const shareParams = doctor_id ? [patient.user_id, doctor_id] : [patient.user_id];
+                const shareParams = doctor_id
+                  ? [patient.user_id, doctor_id]
+                  : [patient.user_id];
 
-          connection.query(checkShare, shareParams, (err4, shareList) => {
-            if (err4) return reject(err4);
+                connection.query(checkShare, shareParams, (err4, shareList) => {
+                  if (err4) return reject(err4);
 
-            const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
+                  const latestShare = shareList.find((r) =>
+                    r.information_type.split(",").includes("1"),
+                  );
 
-            if (!latestShare) {
-              patient.medications = [];
-              return resolve(patient);
-            }
+                  if (!latestShare) {
+                    patient.medications = [];
+                    return resolve(patient);
+                  }
 
-            const shareTime = latestShare.createtime;
+                  const shareTime = latestShare.createtime;
 
-            const medSql = `
+                  const medSql = `
               SELECT DISTINCT a.medicine_id, a.medicine_name
               FROM medication_master m
               JOIN medicine_master a ON a.medicine_id = m.medicine_id
@@ -7753,43 +7993,60 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
               ORDER BY a.medicine_name ASC
             `;
 
-            connection.query(medSql, [patient.user_id, shareTime], (err5, meds) => {
-              if (err5) return reject(err5);
+                  connection.query(
+                    medSql,
+                    [patient.user_id, shareTime],
+                    (err5, meds) => {
+                      if (err5) return reject(err5);
 
-              patient.medications = meds.map(m => ({
-                id: m.medicine_id,
-                name: m.medicine_name
-              }));
+                      patient.medications = meds.map((m) => ({
+                        id: m.medicine_id,
+                        name: m.medicine_name,
+                      }));
 
-              resolve(patient);
-            });
-          });
-        }));
+                      resolve(patient);
+                    },
+                  );
+                });
+              }),
+          );
 
-        Promise.all(promises)
-          .then(finalPatients => res.json({
-            success: true,
-            total,
-            matched_patients,   
-            page,
-            limit,
-            patients: finalPatients
-          }))
-          .catch(err => res.json({ success: false, msg: err.message }));
-      });
+          Promise.all(promises)
+            .then((finalPatients) =>
+              res.json({
+                success: true,
+                total,
+                matched_patients,
+                page,
+                limit,
+                patients: finalPatients,
+              }),
+            )
+            .catch((err) => res.json({ success: false, msg: err.message }));
+        },
+      );
     });
   });
 };
 
 const getDiseaseDashboardAdmin = (req, res) => {
-  const { doctor_id, disease = [], age_group, gender,  singleOnly = false, combinedOnly = false, page = 1, limit = 10 } = req.body;
+  const {
+    doctor_id,
+    disease = [],
+    age_group,
+    gender,
+    singleOnly = false,
+    combinedOnly = false,
+    page = 1,
+    limit = 10,
+  } = req.body;
 
   const offset = (page - 1) * limit;
 
   let params = [];
   let where = `WHERE p.delete_flag = 0 `;
 
-  // 
+  //
   if (doctor_id) {
     where += ` AND p.doctor_id = ?`;
     params.push(doctor_id);
@@ -7817,61 +8074,68 @@ const getDiseaseDashboardAdmin = (req, res) => {
   //   disease.forEach(d => params.push(`%${d}%`));
   // }
   if (Array.isArray(disease) && disease.length > 0) {
-  // normalize disease count
-  const countCondition = `
+    // normalize disease count
+    const countCondition = `
     (
       LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
       - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
     ) / LENGTH('name:')
   `;
 
-  //  SINGLE ONLY (exactly 1 disease and matches)
-  // if (disease.length === 1 && singleOnly) {
-  //   where += ` AND u.diseases LIKE ?`;
-  //   params.push(`%${disease[0]}%`);
-  //   where += ` AND ${countCondition} = 1`;
-  // }
+    //  SINGLE ONLY (exactly 1 disease and matches)
+    // if (disease.length === 1 && singleOnly) {
+    //   where += ` AND u.diseases LIKE ?`;
+    //   params.push(`%${disease[0]}%`);
+    //   where += ` AND ${countCondition} = 1`;
+    // }
     if (singleOnly) {
-      const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" OR ");
       where += ` AND (${diseaseConditions})`;
-      disease.forEach(d => params.push(`%${d}%`));
+      disease.forEach((d) => params.push(`%${d}%`));
 
       // exactly 1 disease
       where += ` AND ${countCondition} = 1`;
     }
-  // COMBINED ONLY (all diseases must match, exact count)
-  else if (combinedOnly && disease.length >= 2) {
-    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
-    where += ` AND (${diseaseConditions})`;
-    disease.forEach(d => params.push(`%${d}%`));
-    where += ` AND ${countCondition} = ?`;
-    params.push(disease.length);
+    // COMBINED ONLY (all diseases must match, exact count)
+    else if (combinedOnly && disease.length >= 2) {
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" AND ");
+      where += ` AND (${diseaseConditions})`;
+      disease.forEach((d) => params.push(`%${d}%`));
+      where += ` AND ${countCondition} = ?`;
+      params.push(disease.length);
+    }
+    //  DEFAULT (loose match, OR)
+    else {
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" OR ");
+      where += ` AND (${diseaseConditions})`;
+      disease.forEach((d) => params.push(`%${d}%`));
+    }
   }
-  //  DEFAULT (loose match, OR)
-  else {
-    const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
-    where += ` AND (${diseaseConditions})`;
-    disease.forEach(d => params.push(`%${d}%`));
-  }
-}
 
-  // 
+  //
   const cleanDiseaseString = (diseaseStr) => {
     if (!diseaseStr) return "";
     return diseaseStr
       .split(/,|\n/)
-      .map(d => {
-        d = d.replace(/status:\s*true/g, "")
-             .replace(/length:\s*\d+/g, "")
-             .replace(/\s*,\s*,/g, ",")
-             .trim();
+      .map((d) => {
+        d = d
+          .replace(/status:\s*true/g, "")
+          .replace(/length:\s*\d+/g, "")
+          .replace(/\s*,\s*,/g, ",")
+          .trim();
         return d;
       })
-      .filter(d => d !== "")
+      .filter((d) => d !== "")
       .join(",");
   };
 
-  // 
+  //
   // const totalSql = `
   //   SELECT COUNT(DISTINCT p.user_id) as total
   //   FROM patient_master p
@@ -7919,11 +8183,15 @@ const getDiseaseDashboardAdmin = (req, res) => {
       connection.query(diseaseSql, params, (err, diseaseRows) => {
         if (err) return res.json({ success: false, msg: err.message });
 
-        const disease_distribution = diseaseRows.map(r => ({
-          name: cleanDiseaseString(r.name),
-          count: r.count,
-          percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
-        })).sort((a, b) => b.count - a.count);
+        const disease_distribution = diseaseRows
+          .map((r) => ({
+            name: cleanDiseaseString(r.name),
+            count: r.count,
+            percentage: matched
+              ? ((r.count / matched) * 100).toFixed(2)
+              : "0.00",
+          }))
+          .sort((a, b) => b.count - a.count);
 
         //  Age breakdown
         const ageSql = `
@@ -7947,10 +8215,12 @@ const getDiseaseDashboardAdmin = (req, res) => {
         connection.query(ageSql, params, (err, ageRows) => {
           if (err) return res.json({ success: false, msg: err.message });
 
-          const age_breakdown = ageRows.map(r => ({
+          const age_breakdown = ageRows.map((r) => ({
             age_group: r.age_group,
             count: r.count,
-            percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
+            percentage: matched
+              ? ((r.count / matched) * 100).toFixed(2)
+              : "0.00",
           }));
 
           //  Gender breakdown
@@ -7972,10 +8242,12 @@ const getDiseaseDashboardAdmin = (req, res) => {
           connection.query(sexSql, params, (err, sexRows) => {
             if (err) return res.json({ success: false, msg: err.message });
 
-            const sex_breakdown = sexRows.map(r => ({
+            const sex_breakdown = sexRows.map((r) => ({
               gender: r.gender,
               count: r.count,
-              percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00"
+              percentage: matched
+                ? ((r.count / matched) * 100).toFixed(2)
+                : "0.00",
             }));
 
             //  Patient list (ADD doctor_id here)
@@ -8000,16 +8272,21 @@ const getDiseaseDashboardAdmin = (req, res) => {
               LIMIT ? OFFSET ?
             `;
 
-            connection.query(patientSql, [...params, Number(limit), Number(offset)], (err, patientRows) => {
-              if (err) return res.json({ success: false, msg: err.message });
+            connection.query(
+              patientSql,
+              [...params, Number(limit), Number(offset)],
+              (err, patientRows) => {
+                if (err) return res.json({ success: false, msg: err.message });
 
-              patientRows.forEach(p => {
-                p.diseases = cleanDiseaseString(p.diseases);
-              });
+                patientRows.forEach((p) => {
+                  p.diseases = cleanDiseaseString(p.diseases);
+                });
 
-              //  medications (doctor wise)
-              const promises = patientRows.map(patient => new Promise((resolve, reject) => {
-                const checkShare = `
+                //  medications (doctor wise)
+                const promises = patientRows.map(
+                  (patient) =>
+                    new Promise((resolve, reject) => {
+                      const checkShare = `
                   SELECT report_share_id, information_type, createtime 
                   FROM report_share_master 
                   WHERE user_id = ? 
@@ -8018,20 +8295,27 @@ const getDiseaseDashboardAdmin = (req, res) => {
                   ORDER BY createtime DESC
                 `;
 
-                const shareParams = doctor_id ? [patient.user_id, doctor_id] : [patient.user_id];
+                      const shareParams = doctor_id
+                        ? [patient.user_id, doctor_id]
+                        : [patient.user_id];
 
-                connection.query(checkShare, shareParams, (err1, shareList) => {
-                  if (err1) return reject(err1);
+                      connection.query(
+                        checkShare,
+                        shareParams,
+                        (err1, shareList) => {
+                          if (err1) return reject(err1);
 
-                  const latestShare = shareList.find(r => r.information_type.split(",").includes("1"));
-                  if (!latestShare) {
-                    patient.medications = [];
-                    return resolve(patient);
-                  }
+                          const latestShare = shareList.find((r) =>
+                            r.information_type.split(",").includes("1"),
+                          );
+                          if (!latestShare) {
+                            patient.medications = [];
+                            return resolve(patient);
+                          }
 
-                  const shareTime = latestShare.createtime;
+                          const shareTime = latestShare.createtime;
 
-                  const medSql = `
+                          const medSql = `
                     SELECT DISTINCT a.medicine_id, a.medicine_name
                     FROM medication_master m
                     JOIN medicine_master a ON a.medicine_id = m.medicine_id
@@ -8043,28 +8327,40 @@ const getDiseaseDashboardAdmin = (req, res) => {
                     ORDER BY a.medicine_name ASC
                   `;
 
-                  connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
-                    if (err2) return reject(err2);
-                    patient.medications = meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }));
-                    resolve(patient);
-                  });
-                });
-              }));
+                          connection.query(
+                            medSql,
+                            [patient.user_id, shareTime],
+                            (err2, meds) => {
+                              if (err2) return reject(err2);
+                              patient.medications = meds.map((m) => ({
+                                id: m.medicine_id,
+                                name: m.medicine_name,
+                              }));
+                              resolve(patient);
+                            },
+                          );
+                        },
+                      );
+                    }),
+                );
 
-              Promise.all(promises)
-                .then(finalPatients => {
-                  return res.json({
-                    success: true,
-                    total_patients: totalPatients,
-                    matched_patients: matched,
-                    disease_distribution,
-                    age_breakdown,
-                    sex_breakdown,
-                    patients: finalPatients
-                  });
-                })
-                .catch(err => res.json({ success: false, msg: err.message }));
-            });
+                Promise.all(promises)
+                  .then((finalPatients) => {
+                    return res.json({
+                      success: true,
+                      total_patients: totalPatients,
+                      matched_patients: matched,
+                      disease_distribution,
+                      age_breakdown,
+                      sex_breakdown,
+                      patients: finalPatients,
+                    });
+                  })
+                  .catch((err) =>
+                    res.json({ success: false, msg: err.message }),
+                  );
+              },
+            );
           });
         });
       });
@@ -8123,22 +8419,34 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
       params.push(`%${disease[0]}%`);
       where += ` AND ${countCondition} = 1`;
     } else if (combinedOnly && disease.length >= 2) {
-      const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" AND ");
       where += ` AND (${diseaseConditions})`;
-      disease.forEach(d => params.push(`%${d}%`));
+      disease.forEach((d) => params.push(`%${d}%`));
       where += ` AND ${countCondition} = ?`;
       params.push(disease.length);
     } else {
-      const diseaseConditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" OR ");
       where += ` AND (${diseaseConditions})`;
-      disease.forEach(d => params.push(`%${d}%`));
+      disease.forEach((d) => params.push(`%${d}%`));
     }
   }
 
   // Medication filter
   if (medication.length) {
-    where += ` AND (` + medication.map(() => `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`).join(" OR ") + `)`;
-    medication.forEach(m => params.push(`%${m}%`));
+    where +=
+      ` AND (` +
+      medication
+        .map(
+          () =>
+            `REPLACE(LOWER(med.medicine_name), ' ', '') LIKE REPLACE(LOWER(?), ' ', '')`,
+        )
+        .join(" OR ") +
+      `)`;
+    medication.forEach((m) => params.push(`%${m}%`));
   }
 
   // Total patients (all linked to any doctor)
@@ -8149,10 +8457,13 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
     ${doctor_id ? "WHERE p.delete_flag = 0 AND p.doctor_id = ?" : "WHERE p.delete_flag = 0"}
   `;
 
-  connection.query(totalSql, doctor_id ? [doctor_id] : [], (err, totalResult) => {
-    if (err) return res.json({ success: false, msg: "Error fetching total" });
+  connection.query(
+    totalSql,
+    doctor_id ? [doctor_id] : [],
+    (err, totalResult) => {
+      if (err) return res.json({ success: false, msg: "Error fetching total" });
 
-    const sql = `
+      const sql = `
       SELECT COUNT(DISTINCT p.user_id) as count
       FROM patient_master p
       JOIN user_master u ON u.user_id = p.user_id
@@ -8161,7 +8472,7 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
       ${where}
     `;
 
-    const topDrugSql = `
+      const topDrugSql = `
       SELECT 
         m.medicine_id,
         med.medicine_name,
@@ -8176,31 +8487,37 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
       LIMIT 1
     `;
 
-    connection.query(sql, params, (err, result) => {
-      if (err) return res.json({ success: false, msg: "Error fetching matched patients" });
+      connection.query(sql, params, (err, result) => {
+        if (err)
+          return res.json({
+            success: false,
+            msg: "Error fetching matched patients",
+          });
 
-      const total = totalResult[0].total;
-      const count = result[0].count;
-      const percentage = total ? ((count / total) * 100).toFixed(2) : 0;
+        const total = totalResult[0].total;
+        const count = result[0].count;
+        const percentage = total ? ((count / total) * 100).toFixed(2) : 0;
 
-      connection.query(topDrugSql, params, (err2, topDrugRes) => {
-        if (err2) return res.json({ success: false, msg: "Error fetching top drug" });
+        connection.query(topDrugSql, params, (err2, topDrugRes) => {
+          if (err2)
+            return res.json({ success: false, msg: "Error fetching top drug" });
 
-        let top_drug = "";
-        if (topDrugRes.length > 0) {
-          top_drug = topDrugRes[0].medicine_name;
-        }
+          let top_drug = "";
+          if (topDrugRes.length > 0) {
+            top_drug = topDrugRes[0].medicine_name;
+          }
 
-        return res.json({
-          success: true,
-          total_patients: total,
-          matched_patients: count,
-          percentage: percentage + "%",
-          top_drug
+          return res.json({
+            success: true,
+            total_patients: total,
+            matched_patients: count,
+            percentage: percentage + "%",
+            top_drug,
+          });
         });
       });
-    });
-  });
+    },
+  );
 };
 
 // const getPatientDiseasesMedicineListAdmin = (req, res) => {
@@ -8247,7 +8564,7 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
 
 //     const countCondition = `
 //       (
-//         LENGTHREPLACE(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'status:true', ''), 'length:1', '')) 
+//         LENGTHREPLACE(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'status:true', ''), 'length:1', ''))
 //         - LENGTH(REPLACEREPLACE(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'status:true', ''), 'length:1', ''), 'name:', ''))
 //       ) / LENGTH('name:')
 //     `;
@@ -8299,12 +8616,12 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
 
 //       // MAIN DATA QUERY
 //       const sql = `
-//         SELECT 
+//         SELECT
 //           u.user_id,
 //           p.doctor_id,
 //           u.name,
 //           TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
-//           CASE 
+//           CASE
 //             WHEN u.gender = 1 THEN 'Male'
 //             WHEN u.gender = 2 THEN 'Female'
 //             WHEN u.gender = 3 THEN 'Other'
@@ -8325,22 +8642,22 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
 //         const promises = patients.map(patient => new Promise((resolve, reject) => {
 
 //           const checkShare = `
-//             SELECT report_share_id, information_type, createtime 
-//             FROM report_share_master 
-//             WHERE user_id = ? 
+//             SELECT report_share_id, information_type, createtime
+//             FROM report_share_master
+//             WHERE user_id = ?
 //             ${doctor_id ? "AND doctor_id = ?" : ""}
 //             AND share_type = 0 AND delete_flag = 0
 //             ORDER BY createtime DESC
 //           `;
 
-//           const shareParams = doctor_id 
-//             ? [patient.user_id, doctor_id] 
+//           const shareParams = doctor_id
+//             ? [patient.user_id, doctor_id]
 //             : [patient.user_id];
 
 //           connection.query(checkShare, shareParams, (err4, shareList) => {
 //             if (err4) return reject(err4);
 
-//             const latestShare = shareList.find(r => 
+//             const latestShare = shareList.find(r =>
 //               r.information_type.split(",").includes("1")
 //             );
 
@@ -8354,9 +8671,9 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
 //               FROM medication_master m
 //               JOIN medicine_master a ON a.medicine_id = m.medicine_id
 //               JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-//               WHERE m.user_id = ? 
-//                 AND m.delete_flag = 0 
-//                 AND tm.delete_flag = 0 
+//               WHERE m.user_id = ?
+//                 AND m.delete_flag = 0
+//                 AND tm.delete_flag = 0
 //                 AND m.createtime <= ?
 //               ORDER BY a.medicine_name ASC
 //             `;
@@ -8402,7 +8719,7 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
     page = 1,
     limit = 10,
     singleOnly = false,
-    combinedOnly = false
+    combinedOnly = false,
   } = req.body;
 
   let where = `WHERE p.delete_flag = 0`;
@@ -8485,15 +8802,15 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
       }
 
       //  FORMAT + PARSE
-      let finalPatients = users.map(user => {
+      let finalPatients = users.map((user) => {
         let diseases = [];
 
         try {
           const parsed = JSON.parse(user.diseases);
-          diseases = parsed.map(d => d.name);
+          diseases = parsed.map((d) => d.name);
         } catch {
           const matches = user.diseases?.match(/name:\s*([^,}]+)/g) || [];
-          diseases = matches.map(m => m.split(":")[1].trim());
+          diseases = matches.map((m) => m.split(":")[1].trim());
         }
 
         return {
@@ -8502,14 +8819,15 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
           name: user.name,
           age: user.age,
           gender:
-            user.gender == 1 ? "Male" :
-            user.gender == 2 ? "Female" :
-            user.gender == 3 ? "Other" :
-            "Not Specified",
+            user.gender == 1
+              ? "Male"
+              : user.gender == 2
+                ? "Female"
+                : user.gender == 3
+                  ? "Other"
+                  : "Not Specified",
           diseases,
-          medications: user.medications
-            ? JSON.parse(user.medications)
-            : []
+          medications: user.medications ? JSON.parse(user.medications) : [],
         };
       });
 
@@ -8519,32 +8837,28 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
       // DISEASE FILTER (🔥 SAME PERFECT LOGIC)
       // ====================================================
       if (Array.isArray(disease) && disease.length > 0) {
-        const selectedDiseases = disease.map(d => d.toLowerCase().trim());
+        const selectedDiseases = disease.map((d) => d.toLowerCase().trim());
 
         if (singleOnly && disease.length === 1) {
-          matchedPatients = matchedPatients.filter(p => {
-            const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+          matchedPatients = matchedPatients.filter((p) => {
+            const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
 
             return dis.length === 1 && selectedDiseases.includes(dis[0]);
           });
-        }
-
-        else if (combinedOnly && disease.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
-            const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+        } else if (combinedOnly && disease.length >= 2) {
+          matchedPatients = matchedPatients.filter((p) => {
+            const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
 
             return (
               dis.length === selectedDiseases.length &&
-              selectedDiseases.every(d => dis.includes(d))
+              selectedDiseases.every((d) => dis.includes(d))
             );
           });
-        }
-
-        else {
-          matchedPatients = matchedPatients.filter(p =>
-            (p.diseases || []).some(d =>
-              selectedDiseases.includes(d.toLowerCase().trim())
-            )
+        } else {
+          matchedPatients = matchedPatients.filter((p) =>
+            (p.diseases || []).some((d) =>
+              selectedDiseases.includes(d.toLowerCase().trim()),
+            ),
           );
         }
       }
@@ -8553,53 +8867,51 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
       //  MEDICATION FILTER (same logic)
       // ====================================================
       if (Array.isArray(medication) && medication.length > 0) {
-        const selectedMeds = medication.map(m => m.toLowerCase().trim());
+        const selectedMeds = medication.map((m) => m.toLowerCase().trim());
 
         if (singleOnly && medication.length === 1) {
-          matchedPatients = matchedPatients.filter(p => {
+          matchedPatients = matchedPatients.filter((p) => {
             const meds = (p.medications || [])
-              .map(m => m?.name?.toLowerCase().trim())
+              .map((m) => m?.name?.toLowerCase().trim())
               .filter(Boolean);
 
             return meds.length === 1 && selectedMeds.includes(meds[0]);
           });
-        }
-
-        else if (combinedOnly && medication.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
+        } else if (combinedOnly && medication.length >= 2) {
+          matchedPatients = matchedPatients.filter((p) => {
             const meds = (p.medications || [])
-              .map(m => m?.name?.toLowerCase().trim())
+              .map((m) => m?.name?.toLowerCase().trim())
               .filter(Boolean);
 
             return (
               meds.length === selectedMeds.length &&
-              selectedMeds.every(m => meds.includes(m))
+              selectedMeds.every((m) => meds.includes(m))
             );
           });
-        }
-
-        else {
-          matchedPatients = matchedPatients.filter(p =>
-            (p.medications || []).some(m =>
-              selectedMeds.includes(m?.name?.toLowerCase().trim())
-            )
+        } else {
+          matchedPatients = matchedPatients.filter((p) =>
+            (p.medications || []).some((m) =>
+              selectedMeds.includes(m?.name?.toLowerCase().trim()),
+            ),
           );
         }
       }
 
       // PAGINATION
       // const matched = matchedPatients.length;
-      const uniqueMatchedPatients = [...new Map(matchedPatients.map(p => [p.user_id, p])).values()];
+      const uniqueMatchedPatients = [
+        ...new Map(matchedPatients.map((p) => [p.user_id, p])).values(),
+      ];
       const matched = uniqueMatchedPatients.length;
       const offset = (page - 1) * limit;
 
       return res.json({
         success: true,
-        total,                // all unique patients
+        total, // all unique patients
         matched_patients: matched, // after filter
         page: Number(page),
         limit: Number(limit),
-        patients: uniqueMatchedPatients.slice(offset, offset + Number(limit))
+        patients: uniqueMatchedPatients.slice(offset, offset + Number(limit)),
       });
     });
   });
@@ -8621,13 +8933,11 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
 //   let params = [];
 //   const offset = (page - 1) * limit;
 
-  
 //   if (gender !== undefined && gender !== null && gender !== "") {
 //     where += ` AND u.gender = ?`;
 //     params.push(gender);
 //   }
 
-  
 //   if (age_group) {
 //     if (age_group.includes("+")) {
 //       const min = parseInt(age_group.replace("+", ""));
@@ -8640,12 +8950,11 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
 //     }
 //   }
 
-
 //   if (Array.isArray(disease) && disease.length > 0) {
 
 //     const countCondition = `
 //       (
-//         LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', '')) 
+//         LENGTH(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''))
 //         - LENGTH(REPLACE(REPLACE(REPLACE(u.diseases, '\n', ','), ' ', ''), 'name:', ''))
 //       ) / LENGTH('name:')
 //     `;
@@ -8678,7 +8987,7 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
 //   `;
 
 //   const sql = `
-//     SELECT 
+//     SELECT
 //       u.user_id,
 //       u.name
 //     FROM patient_master p
@@ -8698,10 +9007,9 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
 
 //       const promises = patients.map(patient => new Promise((resolve, reject) => {
 
-        
 //         const checkShare = `
-//           SELECT report_share_id, information_type, createtime 
-//           FROM report_share_master 
+//           SELECT report_share_id, information_type, createtime
+//           FROM report_share_master
 //           WHERE user_id = ? AND share_type = 0 AND delete_flag = 0
 //           ORDER BY createtime DESC
 //         `;
@@ -8722,9 +9030,9 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
 //             FROM medication_master m
 //             JOIN medicine_master a ON a.medicine_id = m.medicine_id
 //             JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-//             WHERE m.user_id = ? 
-//               AND m.delete_flag = 0 
-//               AND tm.delete_flag = 0 
+//             WHERE m.user_id = ?
+//               AND m.delete_flag = 0
+//               AND tm.delete_flag = 0
 //               AND m.createtime <= ?
 //           `;
 
@@ -8812,7 +9120,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
     singleOnly = false,
     combinedOnly = false,
     page = 1,
-    limit = 10
+    limit = 10,
   } = req.body;
 
   let params = [];
@@ -8881,17 +9189,16 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
     connection.query(sql, params, (err, patients) => {
       if (err) return res.json({ success: false, msg: err.message });
 
-      const promises = patients.map(p => {
+      const promises = patients.map((p) => {
         return new Promise((resolve) => {
-
           //  diseases parse
           let diseases = [];
           try {
             const parsed = JSON.parse(p.diseases);
-            diseases = parsed.map(d => d.name);
+            diseases = parsed.map((d) => d.name);
           } catch {
             const matches = p.diseases?.match(/name:\s*([^,}]+)/g) || [];
-            diseases = matches.map(m => m.split(":")[1].trim());
+            diseases = matches.map((m) => m.split(":")[1].trim());
           }
 
           //  meds
@@ -8909,90 +9216,82 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
               doctor_id: p.doctor_id,
               name: p.name,
               diseases,
-              medications: meds || []
+              medications: meds || [],
             });
           });
         });
       });
 
-      Promise.all(promises).then(allPatients => {
-
+      Promise.all(promises).then((allPatients) => {
         let filteredPatients = allPatients;
 
-       
-       if (Array.isArray(disease) && disease.length > 0) {
-            const selectedDiseases = disease.map(d => d.toLowerCase().trim());
+        if (Array.isArray(disease) && disease.length > 0) {
+          const selectedDiseases = disease.map((d) => d.toLowerCase().trim());
 
-            // SINGLE ONLY
-           if (singleOnly) {
-              filteredPatients = filteredPatients.filter(p => {
-                const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-                return dis.length === 1 && selectedDiseases.includes(dis[0]);
-              });
-            }
-
-            // COMBINED ONLY
-            else if (combinedOnly && disease.length >= 2) {
-            filteredPatients = filteredPatients.filter(p => {
-            const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-            return (
-              dis.length === selectedDiseases.length &&
-              selectedDiseases.every(d => dis.includes(d))
-            );
-          });
-            }
-
-            //  DEFAULT (loose match)
-            else {
-              filteredPatients = filteredPatients.filter(p =>
-                (p.diseases || []).some(d =>
-                  selectedDiseases.includes(d.toLowerCase().trim())
-                )
-              );
-            }
-          }
-
-       
-        if (Array.isArray(medication) && medication.length > 0) {
-          const selectedMeds = medication.map(m => m.toLowerCase().trim());
-
-          if (singleOnly && medication.length === 1) {
-            filteredPatients = filteredPatients.filter(p => {
-              const meds = (p.medications || [])
-                .map(m => m?.medicine_name?.toLowerCase().trim())
-                .filter(Boolean);
-
-              return meds.length === 1 && selectedMeds.includes(meds[0]);
+          // SINGLE ONLY
+          if (singleOnly) {
+            filteredPatients = filteredPatients.filter((p) => {
+              const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
+              return dis.length === 1 && selectedDiseases.includes(dis[0]);
             });
           }
 
-          else if (combinedOnly && medication.length >= 2) {
-            filteredPatients = filteredPatients.filter(p => {
-              const meds = (p.medications || [])
-                .map(m => m?.medicine_name?.toLowerCase().trim())
-                .filter(Boolean);
-
+          // COMBINED ONLY
+          else if (combinedOnly && disease.length >= 2) {
+            filteredPatients = filteredPatients.filter((p) => {
+              const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
               return (
-                meds.length === selectedMeds.length &&
-                selectedMeds.every(m => meds.includes(m))
+                dis.length === selectedDiseases.length &&
+                selectedDiseases.every((d) => dis.includes(d))
               );
             });
           }
 
+          //  DEFAULT (loose match)
           else {
-            filteredPatients = filteredPatients.filter(p =>
-              (p.medications || []).some(m =>
-                selectedMeds.includes(m?.medicine_name?.toLowerCase().trim())
-              )
+            filteredPatients = filteredPatients.filter((p) =>
+              (p.diseases || []).some((d) =>
+                selectedDiseases.includes(d.toLowerCase().trim()),
+              ),
             );
           }
         }
 
-      
+        if (Array.isArray(medication) && medication.length > 0) {
+          const selectedMeds = medication.map((m) => m.toLowerCase().trim());
+
+          if (singleOnly && medication.length === 1) {
+            filteredPatients = filteredPatients.filter((p) => {
+              const meds = (p.medications || [])
+                .map((m) => m?.medicine_name?.toLowerCase().trim())
+                .filter(Boolean);
+
+              return meds.length === 1 && selectedMeds.includes(meds[0]);
+            });
+          } else if (combinedOnly && medication.length >= 2) {
+            filteredPatients = filteredPatients.filter((p) => {
+              const meds = (p.medications || [])
+                .map((m) => m?.medicine_name?.toLowerCase().trim())
+                .filter(Boolean);
+
+              return (
+                meds.length === selectedMeds.length &&
+                selectedMeds.every((m) => meds.includes(m))
+              );
+            });
+          } else {
+            filteredPatients = filteredPatients.filter((p) =>
+              (p.medications || []).some((m) =>
+                selectedMeds.includes(m?.medicine_name?.toLowerCase().trim()),
+              ),
+            );
+          }
+        }
+
         const medMap = {};
 
-        filteredPatients.forEach(p => {
-          p.medications.forEach(m => {
+        filteredPatients.forEach((p) => {
+          p.medications.forEach((m) => {
             const name = m.medicine_name;
             if (!medMap[name]) medMap[name] = 0;
             medMap[name]++;
@@ -9000,12 +9299,14 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
         });
 
         // const matchedPatients = filteredPatients.length;
-        const uniqueFilteredPatients = [...new Map(filteredPatients.map(p => [p.user_id, p])).values()];
+        const uniqueFilteredPatients = [
+          ...new Map(filteredPatients.map((p) => [p.user_id, p])).values(),
+        ];
 
         // Count matched patients correctly
         const matchedPatients = uniqueFilteredPatients.length;
 
-        const summary = Object.keys(medMap).map(name => ({
+        const summary = Object.keys(medMap).map((name) => ({
           medicine_name: name,
           patient_count: medMap[name],
           percent_matched: matchedPatients
@@ -9013,21 +9314,26 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
             : "0.00",
           percent_total: totalPatients
             ? ((medMap[name] / totalPatients) * 100).toFixed(2)
-            : "0.00"
+            : "0.00",
         }));
 
-        const sorted = summary.sort((a, b) => b.patient_count - a.patient_count);
+        const sorted = summary.sort(
+          (a, b) => b.patient_count - a.patient_count,
+        );
 
         return res.json({
           success: true,
           total_patients: totalPatients,
           matched_patients: matchedPatients,
           summary: sorted.slice(offset, offset + Number(limit)),
-          graph: sorted.slice(0, 10).map(i => ({
+          graph: sorted.slice(0, 10).map((i) => ({
             name: i.medicine_name,
-            count: i.patient_count
+            count: i.patient_count,
           })),
-          drilldown: uniqueFilteredPatients.slice(offset, offset + Number(limit))
+          drilldown: uniqueFilteredPatients.slice(
+            offset,
+            offset + Number(limit),
+          ),
         });
       });
     });
@@ -9047,7 +9353,7 @@ const getAdminMedicationFull = (req, res) => {
     summary_page = 1,
     summary_limit = 10,
     patient_page = 1,
-    patient_limit = 10
+    patient_limit = 10,
   } = req.body;
 
   if ((!medication || medication.length === 0) && medicine_name) {
@@ -9144,20 +9450,19 @@ const getAdminMedicationFull = (req, res) => {
           details: [],
           summary: [],
           graph: [],
-          drilldown: []
+          drilldown: [],
         });
       }
 
-      const promises = patients.map(p => {
+      const promises = patients.map((p) => {
         return new Promise((resolve) => {
-
           let diseases = [];
           try {
             const parsed = JSON.parse(p.diseases);
-            diseases = parsed.map(d => d.name);
+            diseases = parsed.map((d) => d.name);
           } catch {
             const matches = p.diseases?.match(/name:\s*([^,}]+)/g) || [];
-            diseases = matches.map(m => m.split(":")[1].trim());
+            diseases = matches.map((m) => m.split(":")[1].trim());
           }
 
           const medSql = `
@@ -9174,53 +9479,48 @@ const getAdminMedicationFull = (req, res) => {
               doctor_id: p.doctor_id,
               name: p.name,
               diseases,
-              medications: meds || []
+              medications: meds || [],
             });
           });
         });
       });
 
-      Promise.all(promises).then(allPatients => {
-
+      Promise.all(promises).then((allPatients) => {
         let filteredPatients = allPatients;
 
         if (Array.isArray(medication) && medication.length > 0) {
-          const selectedMeds = medication.map(m => m.toLowerCase().trim());
+          const selectedMeds = medication.map((m) => m.toLowerCase().trim());
 
           if (singleOnly && medication.length === 1) {
-            filteredPatients = filteredPatients.filter(p => {
+            filteredPatients = filteredPatients.filter((p) => {
               const meds = (p.medications || [])
-                .map(m => m?.medicine_name?.toLowerCase().trim())
+                .map((m) => m?.medicine_name?.toLowerCase().trim())
                 .filter(Boolean);
 
               return meds.length === 1 && selectedMeds.includes(meds[0]);
             });
-          }
-
-          else if (combinedOnly && medication.length >= 2) {
-            filteredPatients = filteredPatients.filter(p => {
+          } else if (combinedOnly && medication.length >= 2) {
+            filteredPatients = filteredPatients.filter((p) => {
               const meds = (p.medications || [])
-                .map(m => m?.medicine_name?.toLowerCase().trim())
+                .map((m) => m?.medicine_name?.toLowerCase().trim())
                 .filter(Boolean);
 
               return (
                 meds.length === selectedMeds.length &&
-                selectedMeds.every(m => meds.includes(m))
+                selectedMeds.every((m) => meds.includes(m))
               );
             });
-          }
-
-          else {
-            filteredPatients = filteredPatients.filter(p =>
-              (p.medications || []).some(m =>
-                selectedMeds.includes(m?.medicine_name?.toLowerCase().trim())
-              )
+          } else {
+            filteredPatients = filteredPatients.filter((p) =>
+              (p.medications || []).some((m) =>
+                selectedMeds.includes(m?.medicine_name?.toLowerCase().trim()),
+              ),
             );
           }
         }
 
         const uniqueMap = {};
-        filteredPatients.forEach(p => {
+        filteredPatients.forEach((p) => {
           if (!uniqueMap[p.user_id]) {
             uniqueMap[p.user_id] = p;
           }
@@ -9235,35 +9535,37 @@ const getAdminMedicationFull = (req, res) => {
 
         const medMap = {};
 
-        uniquePatients.forEach(p => {
-          p.medications.forEach(m => {
+        uniquePatients.forEach((p) => {
+          p.medications.forEach((m) => {
             const name = m.medicine_name;
             if (!medMap[name]) medMap[name] = 0;
             medMap[name]++;
           });
         });
 
-        const summaryArray = Object.keys(medMap).map(name => ({
-          medicine_name: name,
-          patient_count: medMap[name],
-          percentage: totalPatients
-            ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
-            : "0.00%"
-        })).sort((a, b) => b.patient_count - a.patient_count);
+        const summaryArray = Object.keys(medMap)
+          .map((name) => ({
+            medicine_name: name,
+            patient_count: medMap[name],
+            percentage: totalPatients
+              ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
+              : "0.00%",
+          }))
+          .sort((a, b) => b.patient_count - a.patient_count);
 
-        const graph = Object.keys(medMap).map(name => ({
+        const graph = Object.keys(medMap).map((name) => ({
           name,
-          count: medMap[name]
+          count: medMap[name],
         }));
 
         const drilldown = [];
-        uniquePatients.forEach(p => {
-          p.medications.forEach(m => {
+        uniquePatients.forEach((p) => {
+          p.medications.forEach((m) => {
             drilldown.push({
               user_id: p.user_id,
               doctor_id: p.doctor_id,
               name: p.name,
-              medicine_name: m.medicine_name
+              medicine_name: m.medicine_name,
             });
           });
         });
@@ -9273,20 +9575,29 @@ const getAdminMedicationFull = (req, res) => {
           total_patients: totalPatients,
           matched_patients: matchedCount,
           percentage,
-          selected_medication_count: Array.isArray(medication) ? medication.length : 0,
+          selected_medication_count: Array.isArray(medication)
+            ? medication.length
+            : 0,
           summary_total: summaryArray.length,
           patient_total: uniquePatients.length,
-          details: uniquePatients.slice(patientOffset, patientOffset + Number(patient_limit)),
-          summary: summaryArray.slice(summaryOffset, summaryOffset + Number(summary_limit)),
+          details: uniquePatients.slice(
+            patientOffset,
+            patientOffset + Number(patient_limit),
+          ),
+          summary: summaryArray.slice(
+            summaryOffset,
+            summaryOffset + Number(summary_limit),
+          ),
           graph,
-          drilldown: drilldown.slice(patientOffset, patientOffset + Number(patient_limit))
+          drilldown: drilldown.slice(
+            patientOffset,
+            patientOffset + Number(patient_limit),
+          ),
         });
       });
     });
   });
 };
-
-
 
 const getMedicationDiseaseDashboardAdmin = (req, res) => {
   const {
@@ -9299,7 +9610,7 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
     singleOnly = false,
     combinedOnly = false,
     page = 1,
-    limit = 10
+    limit = 10,
   } = req.body;
 
   let params = [];
@@ -9308,12 +9619,12 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
   let where = `WHERE pm.delete_flag = 0
                AND u.user_id IS NOT NULL
                AND u.dob IS NOT NULL
-               AND u.dob <= CURDATE()`; 
-      let totalWhere = `WHERE pm.delete_flag = 0`;
+               AND u.dob <= CURDATE()`;
+  let totalWhere = `WHERE pm.delete_flag = 0`;
   if (doctor_id) {
-  totalWhere += ` AND pm.doctor_id = ?`;
-  totalParams.push(doctor_id);   
-}
+    totalWhere += ` AND pm.doctor_id = ?`;
+    totalParams.push(doctor_id);
+  }
 
   if (gender !== undefined && gender !== null && gender !== "") {
     where += ` AND u.gender = ?`;
@@ -9331,19 +9642,17 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
   //     params.push(min, max);
   //   }
   // }
-    if (age_group) {
-      if (age_group.includes("+")) {
-        const min = parseInt(age_group.replace("+", ""));
-        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
-        params.push(min);
-       
-      } else {
-        const [min, max] = age_group.split("-").map(Number);
-        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
-        params.push(min, max);
-      
-      }
+  if (age_group) {
+    if (age_group.includes("+")) {
+      const min = parseInt(age_group.replace("+", ""));
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+      params.push(min);
+    } else {
+      const [min, max] = age_group.split("-").map(Number);
+      where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      params.push(min, max);
     }
+  }
 
   const offset = (page - 1) * limit;
 
@@ -9376,81 +9685,122 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
     connection.query(patientSql, params, async (err, patients) => {
       if (err) return res.json({ success: false, msg: err.message });
 
-      const promises = patients.map(p => new Promise((resolve) => {
-
-        const medSql = `
+      const promises = patients.map(
+        (p) =>
+          new Promise((resolve) => {
+            const medSql = `
           SELECT DISTINCT a.medicine_id, a.medicine_name
           FROM medication_master m
           JOIN medicine_master a ON a.medicine_id = m.medicine_id
           WHERE m.user_id = ? AND m.delete_flag = 0
         `;
 
-        connection.query(medSql, [p.user_id], (e, meds) => {
-          const patientDiseases = [];
-          try {
-            const parsed = JSON.parse(p.diseases);
-            parsed.forEach(d => patientDiseases.push(d.name));
-          } catch {
-            const matches = p.diseases?.match(/name:\s*([^,}]+)/g) || [];
-            matches.forEach(m => patientDiseases.push(m.split(":")[1].trim()));
-          }
+            connection.query(medSql, [p.user_id], (e, meds) => {
+              const patientDiseases = [];
+              try {
+                const parsed = JSON.parse(p.diseases);
+                parsed.forEach((d) => patientDiseases.push(d.name));
+              } catch {
+                const matches = p.diseases?.match(/name:\s*([^,}]+)/g) || [];
+                matches.forEach((m) =>
+                  patientDiseases.push(m.split(":")[1].trim()),
+                );
+              }
 
-          resolve({
-            user_id: p.user_id,
-            doctor_id: p.doctor_id,
-            name: p.name,
-            age: p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25*24*60*60*1000)) : 0,
-            gender: p.gender === 1 ? 'Male' : p.gender === 2 ? 'Female' : p.gender === 3 ? 'Other' : 'Not Specified',
-            diseases: patientDiseases.length ? patientDiseases.join(", ") : null,
-            medications: meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }))
-          });
-        });
-      }));
+              resolve({
+                user_id: p.user_id,
+                doctor_id: p.doctor_id,
+                name: p.name,
+                age: p.dob
+                  ? Math.floor(
+                      (new Date() - new Date(p.dob)) /
+                        (365.25 * 24 * 60 * 60 * 1000),
+                    )
+                  : 0,
+                gender:
+                  p.gender === 1
+                    ? "Male"
+                    : p.gender === 2
+                      ? "Female"
+                      : p.gender === 3
+                        ? "Other"
+                        : "Not Specified",
+                diseases: patientDiseases.length
+                  ? patientDiseases.join(", ")
+                  : null,
+                medications: meds.map((m) => ({
+                  id: m.medicine_id,
+                  name: m.medicine_name,
+                })),
+              });
+            });
+          }),
+      );
 
       let finalPatients = await Promise.all(promises);
 
       // =====================
       // Disease filtering
       // =====================
-      const selectedDiseases = (diseases || []).map(d => d.toLowerCase());
+      const selectedDiseases = (diseases || []).map((d) => d.toLowerCase());
 
       if (singleOnly && selectedDiseases.length === 1) {
-        finalPatients = finalPatients.filter(p => {
-          const pDiseases = (p.diseases || "").toLowerCase().split(",").map(d => d.trim()).filter(Boolean);
-          return pDiseases.length === 1 && pDiseases.includes(selectedDiseases[0]);
+        finalPatients = finalPatients.filter((p) => {
+          const pDiseases = (p.diseases || "")
+            .toLowerCase()
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean);
+          return (
+            pDiseases.length === 1 && pDiseases.includes(selectedDiseases[0])
+          );
         });
       } else if (combinedOnly && selectedDiseases.length >= 2) {
-        finalPatients = finalPatients.filter(p => {
-          const pDiseases = (p.diseases || "").toLowerCase().split(",").map(d => d.trim()).filter(Boolean);
-          return selectedDiseases.every(d => pDiseases.includes(d)) && pDiseases.length === selectedDiseases.length;
+        finalPatients = finalPatients.filter((p) => {
+          const pDiseases = (p.diseases || "")
+            .toLowerCase()
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean);
+          return (
+            selectedDiseases.every((d) => pDiseases.includes(d)) &&
+            pDiseases.length === selectedDiseases.length
+          );
         });
       } else if (selectedDiseases.length > 0) {
-        finalPatients = finalPatients.filter(p => {
-          const pDiseases = (p.diseases || "").toLowerCase().split(",").map(d => d.trim()).filter(Boolean);
-          return selectedDiseases.some(d => pDiseases.includes(d));
+        finalPatients = finalPatients.filter((p) => {
+          const pDiseases = (p.diseases || "")
+            .toLowerCase()
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean);
+          return selectedDiseases.some((d) => pDiseases.includes(d));
         });
       }
 
       // =====================
       // Medication filtering
       // =====================
-      const selectedMeds = (medication || []).map(m => m.toLowerCase());
+      const selectedMeds = (medication || []).map((m) => m.toLowerCase());
 
       if (selectedMeds.length > 0) {
         if (singleOnly && selectedMeds.length === 1) {
-          finalPatients = finalPatients.filter(p => {
-            const meds = p.medications.map(m => m.name.toLowerCase());
+          finalPatients = finalPatients.filter((p) => {
+            const meds = p.medications.map((m) => m.name.toLowerCase());
             return meds.length === 1 && meds.includes(selectedMeds[0]);
           });
         } else if (combinedOnly && selectedMeds.length >= 2) {
-          finalPatients = finalPatients.filter(p => {
-            const meds = p.medications.map(m => m.name.toLowerCase());
-            return meds.length === selectedMeds.length && selectedMeds.every(m => meds.includes(m));
+          finalPatients = finalPatients.filter((p) => {
+            const meds = p.medications.map((m) => m.name.toLowerCase());
+            return (
+              meds.length === selectedMeds.length &&
+              selectedMeds.every((m) => meds.includes(m))
+            );
           });
         } else {
-          finalPatients = finalPatients.filter(p => {
-            const meds = p.medications.map(m => m.name.toLowerCase());
-            return selectedMeds.some(m => meds.includes(m));
+          finalPatients = finalPatients.filter((p) => {
+            const meds = p.medications.map((m) => m.name.toLowerCase());
+            return selectedMeds.some((m) => meds.includes(m));
           });
         }
       }
@@ -9459,27 +9809,31 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
       // Remove duplicate patients (Admin API style) - null-safe
       // =====================
       const uniqueMap = {};
-      finalPatients.forEach(p => {
+      finalPatients.forEach((p) => {
         if (!uniqueMap[p.user_id]) {
           uniqueMap[p.user_id] = p;
         } else {
           // Merge medications
           uniqueMap[p.user_id].medications.push(...p.medications);
           uniqueMap[p.user_id].medications = [
-            ...new Map(uniqueMap[p.user_id].medications.map(m => [m.id, m])).values()
+            ...new Map(
+              uniqueMap[p.user_id].medications.map((m) => [m.id, m]),
+            ).values(),
           ];
 
           // Merge diseases safely
           const existingDiseases = (uniqueMap[p.user_id].diseases || "")
             .split(",")
-            .map(d => d.trim())
+            .map((d) => d.trim())
             .filter(Boolean);
           const newDiseases = (p.diseases || "")
             .split(",")
-            .map(d => d.trim())
+            .map((d) => d.trim())
             .filter(Boolean);
 
-          uniqueMap[p.user_id].diseases = [...new Set([...existingDiseases, ...newDiseases])].join(", ");
+          uniqueMap[p.user_id].diseases = [
+            ...new Set([...existingDiseases, ...newDiseases]),
+          ].join(", ");
         }
       });
 
@@ -9491,22 +9845,34 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
       // =====================
       const diseaseMap = {};
 
-      finalPatients.forEach(p => {
-        (p.diseases || "").split(",").map(d => d.trim()).filter(Boolean).forEach(d => {
-          if (!exclude_disease.includes(d)) {
-            diseaseMap[d] = (diseaseMap[d] || 0) + 1;
-          }
-        });
+      finalPatients.forEach((p) => {
+        (p.diseases || "")
+          .split(",")
+          .map((d) => d.trim())
+          .filter(Boolean)
+          .forEach((d) => {
+            if (!exclude_disease.includes(d)) {
+              diseaseMap[d] = (diseaseMap[d] || 0) + 1;
+            }
+          });
       });
 
-      const disease_distribution = Object.keys(diseaseMap).map(d => ({
+      const disease_distribution = Object.keys(diseaseMap).map((d) => ({
         disease: d,
         patient_count: diseaseMap[d],
-        percent_matched: matchedPatients ? ((diseaseMap[d] / matchedPatients) * 100).toFixed(2) : "0.00",
-        percent_total: totalPatients ? ((diseaseMap[d] / totalPatients) * 100).toFixed(2) : "0.00"
+        percent_matched: matchedPatients
+          ? ((diseaseMap[d] / matchedPatients) * 100).toFixed(2)
+          : "0.00",
+        percent_total: totalPatients
+          ? ((diseaseMap[d] / totalPatients) * 100).toFixed(2)
+          : "0.00",
       }));
 
-      const top_disease = disease_distribution.reduce((a, b) => (b.patient_count > (a?.patient_count||0) ? b : a), null)?.disease || "";
+      const top_disease =
+        disease_distribution.reduce(
+          (a, b) => (b.patient_count > (a?.patient_count || 0) ? b : a),
+          null,
+        )?.disease || "";
 
       return res.json({
         success: true,
@@ -9515,12 +9881,11 @@ const getMedicationDiseaseDashboardAdmin = (req, res) => {
         unique_diseases: Object.keys(diseaseMap).length,
         top_disease,
         disease_distribution,
-        patients: finalPatients.slice(offset, offset + Number(limit))
+        patients: finalPatients.slice(offset, offset + Number(limit)),
       });
     });
   });
 };
-
 
 const getMedicationReportedHealthAdmin = (req, res) => {
   const {
@@ -9530,7 +9895,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
     page = 1,
     limit = 10,
     patient_page = 1,
-    patient_limit = 5
+    patient_limit = 5,
   } = req.body;
 
   // ================= TOTAL PATIENTS =================
@@ -9599,9 +9964,11 @@ const getMedicationReportedHealthAdmin = (req, res) => {
     }
 
     if (Array.isArray(medication) && medication.length > 0) {
-      const medCond = medication.map(() => `med.medicine_name LIKE ?`).join(" OR ");
+      const medCond = medication
+        .map(() => `med.medicine_name LIKE ?`)
+        .join(" OR ");
       where += ` AND (${medCond})`;
-      medication.forEach(m => whereParams.push(`%${m}%`));
+      medication.forEach((m) => whereParams.push(`%${m}%`));
     }
 
     const allParams = [...joinParams, ...whereParams];
@@ -9627,7 +9994,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
     connection.query(sql, allParams, (err2, rows) => {
       if (err2) return res.json({ success: false, error: err2.message });
 
-      const userIds = [...new Set(rows.map(r => r.user_id))];
+      const userIds = [...new Set(rows.map((r) => r.user_id))];
 
       if (userIds.length === 0) {
         return res.json({
@@ -9638,7 +10005,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
           limit: Number(limit),
           patient_page: Number(patient_page),
           patient_limit: Number(patient_limit),
-          data: []
+          data: [],
         });
       }
 
@@ -9649,7 +10016,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
           med2.medicine_name
         FROM medication_master mm
         JOIN medicine_master med2 ON med2.medicine_id = mm.medicine_id
-        WHERE mm.user_id IN (${userIds.map(() => '?').join(',')})
+        WHERE mm.user_id IN (${userIds.map(() => "?").join(",")})
           AND mm.delete_flag = 0
       `;
 
@@ -9657,17 +10024,17 @@ const getMedicationReportedHealthAdmin = (req, res) => {
         if (err3) return res.json({ success: false, error: err3.message });
 
         const userMedsMap = {};
-        medRows.forEach(m => {
+        medRows.forEach((m) => {
           if (!userMedsMap[m.user_id]) userMedsMap[m.user_id] = [];
           userMedsMap[m.user_id].push({
             id: m.medicine_id,
-            name: m.medicine_name
+            name: m.medicine_name,
           });
         });
 
         let result = {};
 
-        rows.forEach(r => {
+        rows.forEach((r) => {
           const med = r.medicine_name;
 
           if (!result[med]) {
@@ -9675,7 +10042,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
               medicine_id: r.medicine_id,
               patients: new Set(),
               symptoms: {},
-              patient_details: {}
+              patient_details: {},
             };
           }
 
@@ -9691,17 +10058,17 @@ const getMedicationReportedHealthAdmin = (req, res) => {
           if (!result[med].patient_details[r.user_id]) {
             result[med].patient_details[r.user_id] = {
               user_id: r.user_id,
-                doctor_id: r.doctor_id,
+              doctor_id: r.doctor_id,
               name: r.name,
               age: r.age,
               diseases: r.diseases,
               reacted_medication: {
                 id: r.medicine_id,
-                name: r.medicine_name
+                name: r.medicine_name,
               },
               medication_start_date: r.medication_start_date,
               reaction_date: r.reaction_date,
-              symptoms: new Set()
+              symptoms: new Set(),
             };
           }
 
@@ -9710,13 +10077,13 @@ const getMedicationReportedHealthAdmin = (req, res) => {
           }
         });
 
-        let finalData = Object.keys(result).map(med => {
+        let finalData = Object.keys(result).map((med) => {
           const patientCount = result[med].patients.size;
           const percentage = totalPatients
             ? ((patientCount / totalPatients) * 100).toFixed(1)
             : "0.0";
 
-          let symptomData = Object.keys(result[med].symptoms).map(sym => {
+          let symptomData = Object.keys(result[med].symptoms).map((sym) => {
             const count = result[med].symptoms[sym].size;
             const perc = patientCount
               ? ((count / patientCount) * 100).toFixed(1)
@@ -9729,7 +10096,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
 
           let patients = allPatients
             .slice(patientOffset, patientOffset + Number(patient_limit))
-            .map(p => ({
+            .map((p) => ({
               user_id: p.user_id,
               doctor_id: p.doctor_id,
               patient_name: p.name,
@@ -9739,7 +10106,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
               all_medications: userMedsMap[p.user_id] || [],
               medication_start_date: p.medication_start_date,
               reaction_date: p.reaction_date,
-              symptoms: Array.from(p.symptoms).join(", ")
+              symptoms: Array.from(p.symptoms).join(", "),
             }));
 
           return {
@@ -9749,12 +10116,15 @@ const getMedicationReportedHealthAdmin = (req, res) => {
             symptoms: symptomData,
             total_patients_in_medication: allPatients.length,
             patient_page: Number(patient_page),
-            patients
+            patients,
           };
         });
 
         const medOffset = (page - 1) * limit;
-        let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+        let paginatedMedications = finalData.slice(
+          medOffset,
+          medOffset + Number(limit),
+        );
 
         return res.json({
           success: true,
@@ -9764,7 +10134,7 @@ const getMedicationReportedHealthAdmin = (req, res) => {
           limit: Number(limit),
           patient_page: Number(patient_page),
           patient_limit: Number(patient_limit),
-          data: paginatedMedications
+          data: paginatedMedications,
         });
       });
     });
@@ -9782,10 +10152,8 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
     page = 1,
     limit = 10,
     singleOnly = false,
-    combinedOnly = false
+    combinedOnly = false,
   } = req.body;
-
-  
 
   let baseWhere = `WHERE p.delete_flag = 0`;
   let baseParams = [];
@@ -9914,14 +10282,14 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
         return res.json({ success: false, error: err2.message });
       }
 
-      const finalPatients = users.map(user => {
+      const finalPatients = users.map((user) => {
         let diseases = [];
         try {
           const parsed = JSON.parse(user.diseases);
-          diseases = parsed.map(d => d.name);
+          diseases = parsed.map((d) => d.name);
         } catch {
           const matches = user.diseases?.match(/name:\s*([^,}]+)/g) || [];
-          diseases = matches.map(m => m.split(":")[1].trim());
+          diseases = matches.map((m) => m.split(":")[1].trim());
         }
 
         return {
@@ -9930,92 +10298,101 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
           name: user.name,
           age: user.age,
           gender:
-            user.gender == 1 ? "Male" :
-            user.gender == 2 ? "Female" :
-            user.gender == 3 ? "Other" :
-            "Not Specified",
+            user.gender == 1
+              ? "Male"
+              : user.gender == 2
+                ? "Female"
+                : user.gender == 3
+                  ? "Other"
+                  : "Not Specified",
           diseases,
           reported_symptoms: user.reported_symptoms
             ? user.reported_symptoms.split(",")
             : [],
-          medications: user.medications
-            ? JSON.parse(user.medications)
-            : []
+          medications: user.medications ? JSON.parse(user.medications) : [],
         };
       });
 
       let matchedPatients = finalPatients;
-      matchedPatients = matchedPatients.filter(p => p.user_id !== null);
+      matchedPatients = matchedPatients.filter((p) => p.user_id !== null);
       //  (BAKI FILTERS SAME — no change)
       if (Array.isArray(symptoms) && symptoms.length > 0) {
-        const selectedSymptoms = symptoms.map(s => s.toLowerCase().trim());
+        const selectedSymptoms = symptoms.map((s) => s.toLowerCase().trim());
 
         if (singleOnly && symptoms.length === 1) {
-          matchedPatients = matchedPatients.filter(p => {
-            const syms = (p.reported_symptoms || []).map(s => s.toLowerCase().trim());
+          matchedPatients = matchedPatients.filter((p) => {
+            const syms = (p.reported_symptoms || []).map((s) =>
+              s.toLowerCase().trim(),
+            );
             return syms.length === 1 && selectedSymptoms.includes(syms[0]);
           });
         } else if (combinedOnly && symptoms.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
-            const syms = (p.reported_symptoms || []).map(s => s.toLowerCase().trim());
+          matchedPatients = matchedPatients.filter((p) => {
+            const syms = (p.reported_symptoms || []).map((s) =>
+              s.toLowerCase().trim(),
+            );
             return (
               syms.length === selectedSymptoms.length &&
-              selectedSymptoms.every(s => syms.includes(s))
+              selectedSymptoms.every((s) => syms.includes(s))
             );
           });
         } else {
-          matchedPatients = matchedPatients.filter(p =>
-            (p.reported_symptoms || []).some(s =>
-              selectedSymptoms.includes(s.toLowerCase().trim())
-            )
+          matchedPatients = matchedPatients.filter((p) =>
+            (p.reported_symptoms || []).some((s) =>
+              selectedSymptoms.includes(s.toLowerCase().trim()),
+            ),
           );
         }
       }
 
       if (Array.isArray(disease) && disease.length > 0) {
-        const selectedDiseases = disease.map(d => d.toLowerCase().trim());
+        const selectedDiseases = disease.map((d) => d.toLowerCase().trim());
         if (singleOnly && disease.length === 1) {
-          matchedPatients = matchedPatients.filter(p => {
-            const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+          matchedPatients = matchedPatients.filter((p) => {
+            const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
             return dis.length === 1 && selectedDiseases.includes(dis[0]);
           });
         } else if (combinedOnly && disease.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
-            const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+          matchedPatients = matchedPatients.filter((p) => {
+            const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
             return (
               dis.length === selectedDiseases.length &&
-              selectedDiseases.every(d => dis.includes(d))
+              selectedDiseases.every((d) => dis.includes(d))
             );
           });
         } else {
-          matchedPatients = matchedPatients.filter(p =>
-            (p.diseases || []).some(d =>
-              selectedDiseases.includes(d.toLowerCase().trim())
-            )
+          matchedPatients = matchedPatients.filter((p) =>
+            (p.diseases || []).some((d) =>
+              selectedDiseases.includes(d.toLowerCase().trim()),
+            ),
           );
         }
       }
 
       if (Array.isArray(medication) && medication.length > 0) {
-        const selectedMeds = medication.map(m => m.toLowerCase().trim());
+        const selectedMeds = medication.map((m) => m.toLowerCase().trim());
         if (singleOnly && medication.length === 1) {
-          matchedPatients = matchedPatients.filter(p => {
-            const meds = (p.medications || []).map(m => m?.name?.toLowerCase().trim()).filter(Boolean);
+          matchedPatients = matchedPatients.filter((p) => {
+            const meds = (p.medications || [])
+              .map((m) => m?.name?.toLowerCase().trim())
+              .filter(Boolean);
             return meds.length === 1 && selectedMeds.includes(meds[0]);
           });
         } else if (combinedOnly && medication.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
-            const meds = (p.medications || []).map(m => m?.name?.toLowerCase().trim()).filter(Boolean);
+          matchedPatients = matchedPatients.filter((p) => {
+            const meds = (p.medications || [])
+              .map((m) => m?.name?.toLowerCase().trim())
+              .filter(Boolean);
             return (
               meds.length === selectedMeds.length &&
-              selectedMeds.every(m => meds.includes(m))
+              selectedMeds.every((m) => meds.includes(m))
             );
           });
         } else {
-          matchedPatients = matchedPatients.filter(p =>
-            (p.medications || []).some(m =>
-              selectedMeds.includes(m?.name?.toLowerCase().trim())
-            )
+          matchedPatients = matchedPatients.filter((p) =>
+            (p.medications || []).some((m) =>
+              selectedMeds.includes(m?.name?.toLowerCase().trim()),
+            ),
           );
         }
       }
@@ -10029,7 +10406,7 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
         matched_patients: matched,
         page: Number(page),
         limit: Number(limit),
-        patients: matchedPatients.slice(offset, offset + Number(limit))
+        patients: matchedPatients.slice(offset, offset + Number(limit)),
       });
     });
   });
@@ -10061,7 +10438,7 @@ const getDoctorList = (req, res) => {
     return res.json({
       success: true,
       total: rows.length,
-      data: rows.map(r => ({
+      data: rows.map((r) => ({
         value: r.doctor_id,
         label: r.doctor_name || `Doctor #${r.doctor_id}`,
       })),
@@ -10191,7 +10568,8 @@ module.exports = {
   addFaq,
   editFaq,
   getUserMedicine,
-  sendMessageByDoctorToAdmin, getAllDeletedDoctor,
+  sendMessageByDoctorToAdmin,
+  getAllDeletedDoctor,
   rejectDoctor,
   deleteUser,
   getLanguages,
@@ -10214,5 +10592,5 @@ module.exports = {
   getMedicationDiseaseDashboardAdmin,
   getMedicationReportedHealthAdmin,
   getPatientAnalyticsCustomTableAdmin,
-  getDoctorList
+  getDoctorList,
 };
