@@ -1218,7 +1218,7 @@ const getMedicine = async (request, response) => {
 //Get Ducument type
 
 const getDocumentType = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   if (!user_id) {
     return response
@@ -1233,11 +1233,20 @@ const getDocumentType = async (request, response) => {
 
   const values1 = [user_id];
 
+
+    const finalLanguage = language_code && language_code.trim() !== ""
+    ? language_code
+    : await getUserLanguage({ user_id });
+
+    //const lang = language_code || "en"; // fallback
+    request.setLocale(finalLanguage);
+
+
   connection.query(query1, values1, async (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -1245,13 +1254,13 @@ const getDocumentType = async (request, response) => {
     if (result.length === 0) {
       return response
         .status(200)
-        .json({ success: false, msg: languageMessage.userNotFound });
+        .json({ success: false, msg: request.__("user_not_found") });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.userDeleted,
+        msg: request.__("user_deleted"),
         active_flag: 0,
       });
     }
@@ -1259,7 +1268,7 @@ const getDocumentType = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("user_deleted"),
         active_flag: 0,
       });
     }
@@ -1273,7 +1282,7 @@ const getDocumentType = async (request, response) => {
       if (err) {
         return response.status(200).json({
           success: false,
-          msg: languageMessage.internalServerError,
+          msg: request.__("internal_server_error"),
           key: err.message,
         });
       }
@@ -1299,7 +1308,7 @@ const getDocumentType = async (request, response) => {
       }
       return response.status(200).json({
         success: true,
-        msg: languageMessage.dataFound,
+        msg: request.__("data_found"),
         dataArray: category_arr,
       });
     });

@@ -47,5 +47,6 @@
   "temperature_added_successfully": "Temperature added successfully",
   "msgUserDeleted": "Your account is not registered with us",
   "report_not_found": "Report not found",
-  "report_deleted_successfully": "Report deleted successfully"
+  "report_deleted_successfully": "Report deleted successfully",
+  "user_deleted": "User deleted successfully"  
 }
