@@ -2906,6 +2906,21 @@ const signIn = async (request, response) => {
                             if (err) console.error("Login type update error:", err.message);
                         }
                     );
+                    
+                    // Update player ID in user_master (no response here)
+                    const updatePlayerIdQuery = `
+                        UPDATE user_master 
+                        SET player_id = ?, updatetime = ? 
+                        WHERE user_id = ?
+                    `;
+
+                    connection.query(
+                        updatePlayerIdQuery,
+                        [player_id, formattedDate, user.user_id],
+                        (err) => {
+                            if (err) console.error("Player ID update error:", err.message);
+                        }
+                    );
                 }
             );
 

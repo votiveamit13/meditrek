@@ -126,42 +126,43 @@ const getAllContent = async (request, response) => {
 
 const getAllContentUrl = async (request, response) => {
 
-  const { content_type, language_code } = request.query;
+    const { content_type, language_code } = request.query;
 
-  if (!content_type) {
-    return response.json({
-      success: false,
-      msg: languageMessage.msgAllFieldReqired,
-      key: "content_type",
-    });
-  }
+    if (!content_type) {
+      return response.json({
+        success: false,
+        msg: languageMessage.msgAllFieldReqired,
+        key: "content_type",
+      });
+    }
 
-  const isLangProvided = language_code && language_code.trim() !== "";
+    // If provided use it, else default en
+    const lang =
+      language_code && language_code.trim() !== ""
+        ? language_code
+        : "en";
 
-  const lang = isLangProvided ? language_code : "en";
+    try {
+      const content_data = await commonModel.getAllContentUrlData(
+        content_type,
+        lang
+      );
 
-  try {
-    const content_data = await commonModel.getAllContentUrlData(
-      content_type,
-      lang,
-      isLangProvided
-    );
+      let html =
+        '<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui"><title>Data</title></head><body style="word-break: break-all;">' +
+        (content_data || "") +
+        "</body></html>";
 
-    let html =
-      '<html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content:"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui"><title>Data</title></head><body style="word-break: break-all;">' +
-      (content_data || "") +
-      "</body></html>";
+      return response.send(html);
 
-    return response.send(html);
-
-  } catch (error) {
-    return response.json({
-      success: false,
-      msg: languageMessage.msgServerError,
-      key: error.message,
-    });
-  }
-};
+    } catch (error) {
+      return response.json({
+        success: false,
+        msg: languageMessage.msgServerError,
+        key: error.message,
+      });
+    }
+  };
 
 //Get My Medications
 
@@ -4203,18 +4204,18 @@ const getFaq = async (request, response) => {
     });
   }
 
-  const isLangProvided = language_code && language_code.trim() !== "";
-
-  const finalLanguage = isLangProvided
-    ? language_code
-    : await getUserLanguage({ user_id }) || "en";
+  // If language provided use it, else default 'en'
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : "en";
 
   request.setLocale(finalLanguage);
 
   // Validate user
   const userQuery =
     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
-  
+
   connection.query(userQuery, [user_id], async (err, result) => {
 
     if (err) {
@@ -4250,49 +4251,25 @@ const getFaq = async (request, response) => {
 
     try {
 
-      let Query = "";
-      let params = [];
+      // Single Query with fallback
+      const Query = `
+        SELECT 
+          fm.faq_id,
+          COALESCE(ft.question, ft_en.question) AS question,
+          COALESCE(ft.answer, ft_en.answer) AS answer
+        FROM faq_master fm
+        LEFT JOIN faq_translation ft 
+          ON fm.faq_id = ft.faq_id 
+          AND ft.language_code = ?
+        LEFT JOIN faq_translation ft_en 
+          ON fm.faq_id = ft_en.faq_id 
+          AND ft_en.language_code = 'en'
+        WHERE fm.delete_flag = 0 
+        AND fm.user_type = 1
+        ORDER BY fm.faq_id DESC
+      `;
 
-      // ✅ CASE 1: language_code provided → NO fallback
-      if (isLangProvided) {
-        Query = `
-          SELECT 
-            fm.faq_id,
-            ft.question AS question,
-            ft.answer AS answer
-          FROM faq_master fm
-          LEFT JOIN faq_translation ft 
-            ON fm.faq_id = ft.faq_id 
-            AND ft.language_code = ?
-          WHERE fm.delete_flag = 0 
-          AND fm.user_type = 1
-          ORDER BY fm.faq_id DESC
-        `;
-        params = [finalLanguage];
-      }
-
-      // ✅ CASE 2: language_code NOT provided → fallback allowed
-      else {
-        Query = `
-          SELECT 
-            fm.faq_id,
-            COALESCE(ft.question, ft_en.question) AS question,
-            COALESCE(ft.answer, ft_en.answer) AS answer
-          FROM faq_master fm
-          LEFT JOIN faq_translation ft 
-            ON fm.faq_id = ft.faq_id 
-            AND ft.language_code = ?
-          LEFT JOIN faq_translation ft_en 
-            ON fm.faq_id = ft_en.faq_id 
-            AND ft_en.language_code = 'en'
-          WHERE fm.delete_flag = 0 
-          AND fm.user_type = 1
-          ORDER BY fm.faq_id DESC
-        `;
-        params = [finalLanguage];
-      }
-
-      connection.query(Query, params, (err, faq) => {
+      connection.query(Query, [finalLanguage], (err, faq) => {
 
         if (err) {
           return response.status(200).json({
@@ -4310,15 +4287,7 @@ const getFaq = async (request, response) => {
           });
         }
 
-        // ✅ If language provided → convert undefined to null
-        if (isLangProvided) {
-          faq = faq.map(item => ({
-            ...item,
-            question: item.question || null,
-            answer: item.answer || null
-          }));
-        }
-
+        // Keep your structure
         faq.map((item) => {
           item.status = false;
         });

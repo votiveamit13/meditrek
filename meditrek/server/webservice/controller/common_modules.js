@@ -288,48 +288,26 @@ module.exports = {
 
     // },
 
-    async getAllContentUrlData(content_type, language_code = "en", isForced = false) {
+    async getAllContentUrlData(content_type, language_code = "en") {
 
         return new Promise((resolve, reject) => {
 
-            let sql = "";
-            let params = [];
-
-            // CASE 1: language forced → NO fallback
-            if (isForced) {
-                sql = `
-                    SELECT ct.content
-                    FROM content_master cm
-                    LEFT JOIN content_translation ct 
-                    ON cm.content_id = ct.content_id 
-                    AND ct.language_code = ?
-                    WHERE cm.delete_flag = 0 
-                    AND cm.content_type = ?
-                    LIMIT 1
-                `;
-                params = [language_code, content_type];
-            }
-
-            // CASE 2: fallback allowed
-            else {
-                sql = `
-                    SELECT 
+            const sql = `
+                SELECT 
                     COALESCE(ct.content, ct_en.content) AS content
-                    FROM content_master cm
-                    LEFT JOIN content_translation ct 
+                FROM content_master cm
+                LEFT JOIN content_translation ct 
                     ON cm.content_id = ct.content_id 
                     AND ct.language_code = ?
-                    LEFT JOIN content_translation ct_en 
+                LEFT JOIN content_translation ct_en 
                     ON cm.content_id = ct_en.content_id 
                     AND ct_en.language_code = 'en'
-                    WHERE cm.delete_flag = 0 
-                    AND cm.content_type = ?
-                    LIMIT 1
-                `;
-                params = [language_code, content_type];
-            }
+                WHERE cm.delete_flag = 0 
+                AND cm.content_type = ?
+                LIMIT 1
+            `;
 
-            connection.query(sql, params, (error, result) => {
+            connection.query(sql, [language_code, content_type], (error, result) => {
 
                 if (error) return reject(error);
 
