@@ -48,5 +48,6 @@
   "msgUserDeleted": "Tu cuenta no está registrada con nosotros",
   "report_not_found": "Reporte no encontrado",
   "report_deleted_successfully": "Reporte eliminado correctamente",
-  "user_deleted": "Usuario eliminado correctamente"
+  "user_deleted": "Usuario eliminado correctamente",
+  "Report Deleted Successfully": "Reporte eliminado correctamente"
 }
