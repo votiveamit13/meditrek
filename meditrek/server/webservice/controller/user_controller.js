@@ -3713,13 +3713,11 @@ const getReminderData = async (request, response) => {
                 t.time_slots_id,
                 t.time,
                 mm.medicine_name,
-                un.current_timezone,
-                um.current_language
+                un.current_timezone
             FROM medication_master m
             JOIN time_slots_master t ON t.medication_id = m.medication_id
             JOIN medicine_master mm ON mm.medicine_id = m.medicine_id
             JOIN user_notification un ON un.user_id = m.user_id
-            JOIN user_master um ON um.user_id = m.user_id
             WHERE 
                 m.delete_flag = 0
                 AND t.delete_flag = 0
@@ -3782,8 +3780,6 @@ const getReminderData = async (request, response) => {
 
                 for (const result of filtered) {
 
-                    const userLang = result.current_language || "en";
-
                     const user_id_notification = 1;
 
                     const other_user_id_notification = result.user_id;
@@ -3826,10 +3822,6 @@ const getReminderData = async (request, response) => {
                         de: `⏰ Es ist Zeit, Ihren Medikament zu nehmen. ${result.medicine_name} – ${result.dosage}`,
                     };
 
-                    const fcmAction = action_json_lang_data[userLang] || action;
-                    const fcmTitle = title_json_lang_data[userLang] || title;
-                    const fcmMessage = message_json_lang_data[userLang] || messages;
-
                     const action_data = {
 
                         user_id: user_id_notification,
@@ -3838,7 +3830,7 @@ const getReminderData = async (request, response) => {
 
                         action_id: action_id,
 
-                        action: fcmAction
+                        action: action
 
                     };
 
@@ -3867,8 +3859,6 @@ const getReminderData = async (request, response) => {
                             title_json_lang_data,
 
                             message_json_lang_data,
-
-                            fcmAction, fcmTitle, fcmMessage,
 
                             action_data,
 
