@@ -247,6 +247,7 @@ async function getNotificationArrSingle(
   action_json_lang_data = {},
   title_json_lang_data = {},
   message_json_lang_data = {},
+  fcmAction, fcmTitle, fcmMessage,
   action_data,
   callback
 ) {
@@ -275,6 +276,7 @@ async function getNotificationArrSingle(
     action_json_lang,
     title_json_lang,
     message_json_lang,
+    fcmAction, fcmTitle, fcmMessage,
     async (insert_status) => {
       if (insert_status !== "yes") return callback(notification_arr);
 
@@ -287,8 +289,8 @@ async function getNotificationArrSingle(
 
         // Build return payload
         notification_arr.player_id = player_id;
-        notification_arr.title = title;
-        notification_arr.message = message;
+        notification_arr.title = fcmTitle;
+        notification_arr.message = fcmMessage;
         notification_arr.action_json = action_data;
         notification_arr.action_json_lang = action_json_lang_data;
         notification_arr.title_json_lang = title_json_lang_data;
@@ -298,8 +300,8 @@ async function getNotificationArrSingle(
         try {
           await sendFCMPush({
             token: player_id,
-            title,
-            body: message,
+            title: fcmTitle,
+            body: fcmMessage,
             data: { action_data: JSON.stringify(action_data) }
           });
         } catch (e) {
