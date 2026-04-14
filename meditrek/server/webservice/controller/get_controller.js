@@ -3291,18 +3291,22 @@ const getSymtoms = async (request, response) => {
 
       //  CASE 1: language_code provided → NO fallback
       if (isLangProvided) {
-        Query = `
-          SELECT 
-            sm.symptom_id,
-            st.symptom_name,
-            st.description,
-            sm.createtime
-          FROM symptoms_master sm
-          LEFT JOIN symptoms_translation st 
-            ON sm.symptom_id = st.symptom_id 
-            AND st.language_code = ?
-          WHERE sm.delete_flag = 0
-        `;
+       Query = `
+  SELECT 
+    
+  sm.symptom_id,
+  COALESCE(st_lang.symptom_name, st_en.symptom_name, sm.symptom_name) AS symptom_name,
+  COALESCE(st_lang.description, st_en.description, sm.description) AS description,
+  sm.createtime
+FROM symptoms_master sm
+LEFT JOIN symptoms_translation st_lang
+  ON sm.symptom_id = st_lang.symptom_id 
+  AND st_lang.language_code = ?
+LEFT JOIN symptoms_translation st_en
+  ON sm.symptom_id = st_en.symptom_id 
+  AND st_en.language_code = 'en'
+WHERE sm.delete_flag = 0
+`;
         params = [finalLanguage];
       }
 
