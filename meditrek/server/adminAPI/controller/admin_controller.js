@@ -1719,6 +1719,73 @@ const deleteDoctor = async (request, response) => {
     });
   }
 };
+const editDoctorEmail = async (request, response) => {
+  try {
+    const { doctor_id, email } = request.body;
+
+    // 1. Validate input
+    if (!doctor_id) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_id",
+      });
+    }
+
+    if (!email) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "email",
+      });
+    }
+
+    // 2. Optional: email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return response.status(200).json({
+        success: false,
+        msg: "Invalid email format",
+      });
+    }
+
+    // 3. Update only email
+    const sql = `
+      UPDATE doctor_master 
+      SET email = ?, updatetime = NOW() 
+      WHERE doctor_id = ? AND delete_flag = 0
+    `;
+
+    connection.query(sql, [email, doctor_id], (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (result.affectedRows === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.msgDataNotFound,
+        });
+      }
+
+      return response.status(200).json({
+        success: true,
+        msg: "Doctor email updated successfully",
+      });
+    });
+
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
+  }
+};
 
 const getAllMedicine = async (request, response) => {
   try {
@@ -10746,4 +10813,5 @@ module.exports = {
   getMedicationReportedHealthAdmin,
   getPatientAnalyticsCustomTableAdmin,
   getDoctorList,
+  editDoctorEmail
 };
