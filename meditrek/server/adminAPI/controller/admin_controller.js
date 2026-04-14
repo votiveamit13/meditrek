@@ -2367,10 +2367,73 @@ const getAllSymptoms = async (request, response) => {
   }
 };
 
+// const addSymptom = async (request, response) => {
+//   try {
+//     const { symptom_name } = request.body;
+
+//     if (!symptom_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "symptom_name",
+//       });
+//     }
+
+//     // Check if symptom_name already exists
+
+//     const checkSql =
+//       "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+
+//     connection.query(checkSql, [symptom_name], (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       if (results.length > 0) {
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: languageMessages.symptomExists });
+//       }
+
+//       // Insert new symptom if not exists
+
+//       const addSymptomSql =
+//         "INSERT INTO symptoms_master (symptom_name, createtime) VALUES (?, ?)";
+
+//       connection.query(addSymptomSql, [symptom_name, createtime], (err) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//         }
+
+//         response
+//           .status(200)
+//           .json({ success: true, msg: languageMessages.symptomAdded });
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
 const addSymptom = async (request, response) => {
   try {
-    const { symptom_name } = request.body;
+    const { symptom_name, description, translations } = request.body;
 
+    const createtime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    //  OLD validation (same rakho)
     if (!symptom_name) {
       return response.status(200).json({
         success: false,
@@ -2379,32 +2442,33 @@ const addSymptom = async (request, response) => {
       });
     }
 
-    // Check if symptom_name already exists
+    //  NEW: translations validation (same as FAQ)
+    if (!translations || typeof translations !== "object") {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "translations",
+      });
+    }
 
-    const checkSql =
-      "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+    if (!translations.en || !translations.en.symptom_name) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
 
-    connection.query(checkSql, [symptom_name], (err, results) => {
-      if (err) {
-        return response.status(200).json({
-          success: false,
-          msg: languageMessages.internalServerError,
-          error: err.message,
-        });
-      }
+    //  Insert into symptoms_master (UNCHANGED)
+    const insertSql = `
+      INSERT INTO symptoms_master (symptom_name, description, createtime) 
+      VALUES (?, ?, ?)
+    `;
 
-      if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.symptomExists });
-      }
-
-      // Insert new symptom if not exists
-
-      const addSymptomSql =
-        "INSERT INTO symptoms_master (symptom_name, createtime) VALUES (?, ?)";
-
-      connection.query(addSymptomSql, [symptom_name, createtime], (err) => {
+    connection.query(
+      insertSql,
+      [symptom_name, description, createtime],
+      (err, result) => {
         if (err) {
           return response.status(200).json({
             success: false,
@@ -2413,11 +2477,41 @@ const addSymptom = async (request, response) => {
           });
         }
 
-        response
-          .status(200)
-          .json({ success: true, msg: languageMessages.symptomAdded });
-      });
-    });
+        const symptomId = result.insertId;
+
+        //  Insert translations (NEW PART same as FAQ)
+        const translationData = Object.entries(translations).map(
+          ([lang, data]) => [
+            symptomId,
+            lang,
+            data.symptom_name,
+            data.description || null,
+          ]
+        );
+
+        const insertTranslationSql = `
+          INSERT INTO symptoms_translation 
+          (symptom_id, language_code, symptom_name, description) 
+          VALUES ?
+        `;
+
+        connection.query(insertTranslationSql, [translationData], (err) => {
+          if (err) {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
+          }
+
+          //  RESPONSE SAME (no change)
+          return response.status(200).json({
+            success: true,
+            msg: languageMessages.dataAdded,
+          });
+        });
+      }
+    );
   } catch (error) {
     return response.status(200).json({
       success: false,

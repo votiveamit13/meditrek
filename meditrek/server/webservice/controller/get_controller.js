@@ -3145,31 +3145,119 @@ const getTemperatureDataStatus = async (request, response) => {
 
 //Get Symptoms
 
+// const getSymtoms = async (request, response) => {
+//   const { user_id } = request.query;
+
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT symptom_id, symptom_name, description, createtime FROM symptoms_master WHERE delete_flag=0";
+
+//       connection.query(Query, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
 const getSymtoms = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   if (!user_id) {
     return response.status(200).json({
       success: false,
-
       msg: languageMessage.msg_empty_param,
     });
   }
 
-  // Validate user
+  const isLangProvided = language_code && language_code.trim() !== "";
+
+  const finalLanguage = isLangProvided
+    ? language_code
+    : await getUserLanguage({ user_id }) || "en";
+
+  request.setLocale(finalLanguage);
 
   const userQuery =
-    "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ? ";
+    "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
 
-  const userValues = [user_id];
-
-  connection.query(userQuery, userValues, async (err, result) => {
+  connection.query(userQuery, [user_id], async (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -3177,17 +3265,14 @@ const getSymtoms = async (request, response) => {
     if (result.length === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userDeleted,
-
+        msg: request.__("user_deactivated"),
         active_flag: 0,
       });
     }
@@ -3195,38 +3280,81 @@ const getSymtoms = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
 
     try {
-      const Query =
-        "SELECT symptom_id, symptom_name, description, createtime FROM symptoms_master WHERE delete_flag=0";
+      let Query = "";
+      let params = [];
 
-      connection.query(Query, async (err, subResult) => {
+      //CASE 1: language_code provided → NO fallback
+      if (isLangProvided) {
+        Query = `
+          SELECT 
+            sm.symptom_id,
+            st.symptom_name,
+            st.description,
+            sm.createtime
+          FROM symptoms_master sm
+          LEFT JOIN symptoms_translation st 
+            ON sm.symptom_id = st.symptom_id 
+            AND st.language_code = ?
+          WHERE sm.delete_flag = 0
+        `;
+        params = [finalLanguage];
+      }
+
+      //  CASE 2: fallback allowed
+      else {
+        Query = `
+          SELECT 
+            sm.symptom_id,
+            COALESCE(st.symptom_name, st_en.symptom_name) AS symptom_name,
+            COALESCE(st.description, st_en.description) AS description,
+            sm.createtime
+          FROM symptoms_master sm
+          LEFT JOIN symptoms_translation st 
+            ON sm.symptom_id = st.symptom_id 
+            AND st.language_code = ?
+          LEFT JOIN symptoms_translation st_en 
+            ON sm.symptom_id = st_en.symptom_id 
+            AND st_en.language_code = 'en'
+          WHERE sm.delete_flag = 0
+        `;
+        params = [finalLanguage];
+      }
+
+      connection.query(Query, params, (err, subResult) => {
         if (err) {
           return response.status(200).json({
             success: false,
-
-            msg: languageMessage.internalServerError,
-
+            msg: request.__("internal_server_error"),
             key: err.message,
           });
         }
 
+        //  language provided → null handling
+        if (isLangProvided) {
+          subResult = subResult.map(item => ({
+            ...item,
+            symptom_name: item.symptom_name || null,
+            description: item.description || null
+          }));
+        }
+
         return response.status(200).json({
           success: true,
-          msg: languageMessage.dataFound,
+          msg: request.__("data_found"),
           dataArray: subResult,
         });
       });
+
     } catch (error) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         error: error.message,
       });
     }
