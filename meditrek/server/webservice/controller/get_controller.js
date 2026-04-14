@@ -3244,9 +3244,8 @@ const getSymtoms = async (request, response) => {
 
   const isLangProvided = language_code && language_code.trim() !== "";
 
-  const finalLanguage = isLangProvided
-    ? language_code
-    : await getUserLanguage({ user_id }) || "en";
+  //  FIXED HERE
+  const finalLanguage = isLangProvided ? language_code : "en";
 
   request.setLocale(finalLanguage);
 
@@ -3254,6 +3253,7 @@ const getSymtoms = async (request, response) => {
     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
 
   connection.query(userQuery, [user_id], async (err, result) => {
+
     if (err) {
       return response.status(200).json({
         success: false,
@@ -3289,7 +3289,7 @@ const getSymtoms = async (request, response) => {
       let Query = "";
       let params = [];
 
-      //CASE 1: language_code provided → NO fallback
+      //  CASE 1: language_code provided → NO fallback
       if (isLangProvided) {
         Query = `
           SELECT 
@@ -3306,24 +3306,31 @@ const getSymtoms = async (request, response) => {
         params = [finalLanguage];
       }
 
-      //  CASE 2: fallback allowed
+      //  CASE 2: default → English fallback
+      // else {
+      //   Query = `
+      //     SELECT 
+      //       sm.symptom_id,
+      //       st_en.symptom_name AS symptom_name,
+      //       st_en.description AS description,
+      //       sm.createtime
+      //     FROM symptoms_master sm
+      //     LEFT JOIN symptoms_translation st_en 
+      //       ON sm.symptom_id = st_en.symptom_id 
+      //       AND st_en.language_code = 'en'
+      //     WHERE sm.delete_flag = 0
+      //   `;
+      // }
       else {
         Query = `
           SELECT 
             sm.symptom_id,
-            COALESCE(st.symptom_name, st_en.symptom_name) AS symptom_name,
-            COALESCE(st.description, st_en.description) AS description,
+            sm.symptom_name,
+            sm.description,
             sm.createtime
           FROM symptoms_master sm
-          LEFT JOIN symptoms_translation st 
-            ON sm.symptom_id = st.symptom_id 
-            AND st.language_code = ?
-          LEFT JOIN symptoms_translation st_en 
-            ON sm.symptom_id = st_en.symptom_id 
-            AND st_en.language_code = 'en'
           WHERE sm.delete_flag = 0
         `;
-        params = [finalLanguage];
       }
 
       connection.query(Query, params, (err, subResult) => {
@@ -3335,7 +3342,7 @@ const getSymtoms = async (request, response) => {
           });
         }
 
-        //  language provided → null handling
+        //  null handling (same as FAQ)
         if (isLangProvided) {
           subResult = subResult.map(item => ({
             ...item,

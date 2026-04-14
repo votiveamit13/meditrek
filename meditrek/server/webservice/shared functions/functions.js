@@ -229,6 +229,16 @@ async function getUserCurrentTZ(user_id) {
   });
 }
 
+function getUserById(user_id) {
+  return new Promise((resolve) => {
+    const sql = "SELECT current_language FROM user_master WHERE user_id = ?";
+    connection.query(sql, [user_id], (err, result) => {
+      if (err || !result.length) return resolve(null);
+      resolve(result[0]);
+    });
+  });
+}
+
 async function getNotificationArrSingle(
   user_id,
   other_user_id,
@@ -251,6 +261,7 @@ async function getNotificationArrSingle(
   callback
 ) {
   const notification_arr = {};
+
   const action_json = JSON.stringify(action_data);
   const action_json_lang = JSON.stringify(action_json_lang_data);
   const title_json_lang = JSON.stringify(title_json_lang_data);
@@ -276,36 +287,49 @@ async function getNotificationArrSingle(
     title_json_lang,
     message_json_lang,
     async (insert_status) => {
+
       if (insert_status !== "yes") return callback(notification_arr);
 
       getNotificationStatus(other_user_id, async (notification_status) => {
+
         if (notification_status !== "yes") return callback(notification_arr);
 
         const player_id = await getUserPlayerIdAsync(other_user_id);
-
         if (!player_id) return callback(notification_arr);
 
-        // Build return payload
-        notification_arr.player_id = player_id;
-        notification_arr.title = title;
-        notification_arr.message = message;
-        notification_arr.action_json = action_data;
-        notification_arr.action_json_lang = action_json_lang_data;
-        notification_arr.title_json_lang = title_json_lang_data;
-        notification_arr.message_json_lang = message_json_lang_data;
+        // GET USER LANGUAGE FROM DB
+        const userData = await getUserById(other_user_id); // create this function
+        let userLang = (userData?.current_language || "en")
+          .toLowerCase()
+          .split("-")[0];
 
-        // Send via FCM
+        // PICK LANGUAGE FROM JSON
+        const finalTitle =
+          title_json_lang_data[userLang] ||
+          title_json_lang_data["en"] ||
+          title;
+
+        const finalMessage =
+          message_json_lang_data[userLang] ||
+          message_json_lang_data["en"] ||
+          message;
+
+        // RESPONSE DATA
+        notification_arr.player_id = player_id;
+        notification_arr.title = finalTitle;
+        notification_arr.message = finalMessage;
+
+        // SEND FCM (ONLY USER LANGUAGE)
         try {
           await sendFCMPush({
             token: player_id,
-            title,
-            body: message,
+            title: finalTitle,
+            body: finalMessage,
             data: { action_data: JSON.stringify(action_data) }
           });
         } catch (e) {
           console.error("FCM Send Error:", e.message);
         }
-
 
         return callback(notification_arr);
       });
