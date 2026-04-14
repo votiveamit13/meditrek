@@ -1642,7 +1642,7 @@ const deleteMedicalReport = async (request, response) => {
           return response.status(200).json({
             success: true,
 
-            msg: languageMessage.reportDeleted,
+            msg: request.__("report_deleted_successfully"),
           });
         },
       );

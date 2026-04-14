@@ -297,13 +297,13 @@ async function getNotificationArrSingle(
         const player_id = await getUserPlayerIdAsync(other_user_id);
         if (!player_id) return callback(notification_arr);
 
-        // ✅ GET USER LANGUAGE FROM DB
+        // GET USER LANGUAGE FROM DB
         const userData = await getUserById(other_user_id); // create this function
         let userLang = (userData?.current_language || "en")
           .toLowerCase()
           .split("-")[0];
 
-        // ✅ PICK LANGUAGE FROM JSON
+        // PICK LANGUAGE FROM JSON
         const finalTitle =
           title_json_lang_data[userLang] ||
           title_json_lang_data["en"] ||
@@ -314,12 +314,12 @@ async function getNotificationArrSingle(
           message_json_lang_data["en"] ||
           message;
 
-        // ✅ RESPONSE DATA
+        // RESPONSE DATA
         notification_arr.player_id = player_id;
         notification_arr.title = finalTitle;
         notification_arr.message = finalMessage;
 
-        // 🚀 SEND FCM (ONLY USER LANGUAGE)
+        // SEND FCM (ONLY USER LANGUAGE)
         try {
           await sendFCMPush({
             token: player_id,
