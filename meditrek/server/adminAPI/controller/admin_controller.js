@@ -7047,6 +7047,89 @@ const bulkUploadDisease = async (request, response) => {
   }
 };
 
+// const bulkUploadSymptoms = async (request, response) => {
+//   try {
+//     const file = request.file;
+
+//     if (!file) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: "File is required",
+//         key: "file",
+//       });
+//     }
+
+//     const filePath = file.path;
+//     const workbook = xlsx.readFile(filePath);
+//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//     const jsonData = xlsx.utils.sheet_to_json(sheet);
+
+//     if (!jsonData || jsonData.length === 0) {
+//       fs.unlinkSync(filePath);
+//       return response.status(200).json({
+//         success: false,
+//         msg: "Excel file is empty or invalid",
+//       });
+//     }
+
+//     let insertedCount = 0;
+//     let skippedCount = 0;
+
+//     for (const row of jsonData) {
+//       const category_name = row["symptoms_name"];
+//       // const description = row["symptoms_description"];
+//       if (!category_name) continue;
+
+//       try {
+//         const checkSql =
+//           "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+//         const checkResult = await new Promise((resolve, reject) => {
+//           connection.query(checkSql, [category_name], (err, results) => {
+//             if (err) return reject(err);
+//             resolve(results);
+//           });
+//         });
+
+//         if (checkResult.length > 0) {
+//           skippedCount++;
+//           continue;
+//         }
+
+//         const insertSql =
+//           "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
+//         await new Promise((resolve, reject) => {
+//           connection.query(insertSql, [category_name], (err) => {
+//             if (err) return reject(err);
+//             insertedCount++;
+//             resolve();
+//           });
+//         });
+//       } catch (innerErr) {
+//         console.error("DB Error:", innerErr.message);
+//         continue;
+//       }
+//     }
+
+//     fs.unlinkSync(filePath);
+
+//     return response.status(200).json({
+//       success: true,
+//       msg: "Bulk category upload completed",
+//       inserted: insertedCount,
+//       skipped: skippedCount,
+//     });
+//   } catch (error) {
+//     console.error("Main Error:", error.message);
+//     return response.status(500).json({
+//       success: false,
+//       msg: "Internal Server Error",
+//       error: error.message,
+//     });
+//   }
+// };
+
+//get compliance of user
+
 const bulkUploadSymptoms = async (request, response) => {
   try {
     const file = request.file;
@@ -7075,14 +7158,28 @@ const bulkUploadSymptoms = async (request, response) => {
     let insertedCount = 0;
     let skippedCount = 0;
 
+    // languages fetch (ADDED)
+    const languages = await new Promise((resolve, reject) => {
+      connection.query(
+        "SELECT language_code FROM languages_master WHERE status = 1",
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        }
+      );
+    });
+
     for (const row of jsonData) {
-      const category_name = row["symptoms_name"];
-      // const description = row["symptoms_description"];
+
+      // CHANGED (symptoms_name → symptoms_name_en)
+      const category_name = row["symptoms_name_en"];
+
       if (!category_name) continue;
 
       try {
         const checkSql =
           "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+
         const checkResult = await new Promise((resolve, reject) => {
           connection.query(checkSql, [category_name], (err, results) => {
             if (err) return reject(err);
@@ -7097,13 +7194,45 @@ const bulkUploadSymptoms = async (request, response) => {
 
         const insertSql =
           "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
-        await new Promise((resolve, reject) => {
-          connection.query(insertSql, [category_name], (err) => {
+
+        // FIXED (no await inside callback)
+        const result = await new Promise((resolve, reject) => {
+          connection.query(insertSql, [category_name], (err, result) => {
             if (err) return reject(err);
-            insertedCount++;
-            resolve();
+            resolve(result);
           });
         });
+
+        const symptomId = result.insertId;
+
+        // MULTI LANGUAGE INSERT (ADDED)
+        for (const lang of languages) {
+          const langCode = lang.language_code;
+
+          const name = row[`symptoms_name_${langCode}`];
+
+          if (!name) continue;
+
+          const insertTranslationSql = `
+            INSERT INTO symptoms_translation 
+            (symptom_id, language_code, symptom_name, description) 
+            VALUES (?, ?, ?, ?)
+          `;
+
+          await new Promise((resolve, reject) => {
+            connection.query(
+              insertTranslationSql,
+              [symptomId, langCode, name, null],
+              (err) => {
+                if (err) return reject(err);
+                resolve();
+              }
+            );
+          });
+        }
+
+        insertedCount++;
+
       } catch (innerErr) {
         console.error("DB Error:", innerErr.message);
         continue;
@@ -7118,6 +7247,7 @@ const bulkUploadSymptoms = async (request, response) => {
       inserted: insertedCount,
       skipped: skippedCount,
     });
+
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
@@ -7127,8 +7257,6 @@ const bulkUploadSymptoms = async (request, response) => {
     });
   }
 };
-
-//get compliance of user
 const getAllCompliance = async (request, response) => {
   try {
     const delete_flag = 0;
