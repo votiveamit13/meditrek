@@ -2375,8 +2375,8 @@ const getAllSymptoms = async (request, response) => {
     const getsymptomsql = `
       SELECT 
         sm.symptom_id,
-        COALESCE(st_en.symptom_name, '') AS symptom_name,
-        COALESCE(st_en.description, '') AS description,
+       COALESCE(st_en.symptom_name, sm.symptom_name) AS symptom_name,
+      COALESCE(st_en.description, sm.description) AS description,
         sm.createtime
       FROM symptoms_master sm
       LEFT JOIN symptoms_translation st_en 
@@ -2528,7 +2528,7 @@ const getAllSymptoms = async (request, response) => {
 
 const addSymptom = async (request, response) => {
   try {
-    const { symptom_name, description, translations } = request.body;
+    const { symptom_name, description = null, translations } = request.body;
 
     const createtime = moment().format("YYYY-MM-DD HH:mm:ss");
 
@@ -2566,7 +2566,7 @@ const addSymptom = async (request, response) => {
 
     connection.query(
       insertSql,
-      [symptom_name, description, createtime],
+      [symptom_name, description , createtime],
       (err, result) => {
         if (err) {
           return response.status(200).json({
