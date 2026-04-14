@@ -8065,7 +8065,7 @@ const deleteMedicineBulk = (req, res) => {
 //   });
 // };
 const getAdminPatientDemographics = (req, res) => {
-  const { doctor_id, gender, age_group, page = 1, limit = 10 } = req.body;
+  const { doctor_ids, gender, age_group, page = 1, limit = 10 } = req.body;
 
   let baseWhere = `WHERE pm.delete_flag = 0`;
   let matchWhere = `WHERE pm.delete_flag = 0`;
@@ -8075,27 +8075,19 @@ const getAdminPatientDemographics = (req, res) => {
 
   const offset = (page - 1) * limit;
 
-  // -------------------------
-  // DOCTOR FILTER (BOTH)
-  // -------------------------
-  if (doctor_id) {
-    baseWhere += ` AND pm.doctor_id = ?`;
-    matchWhere += ` AND pm.doctor_id = ?`;
-    baseParams.push(doctor_id);
-    matchParams.push(doctor_id);
+  if (Array.isArray(doctor_ids) && doctor_ids.length > 0) {
+    const placeholders = doctor_ids.map(() => "?").join(", ");
+    baseWhere += ` AND pm.doctor_id IN (${placeholders})`;
+    matchWhere += ` AND pm.doctor_id IN (${placeholders})`;
+    baseParams.push(...doctor_ids);
+    matchParams.push(...doctor_ids);
   }
 
-  // -------------------------
-  // GENDER FILTER (ONLY MATCH)
-  // -------------------------
   if (gender !== undefined && gender !== "") {
     matchWhere += ` AND um.gender = ?`;
     matchParams.push(Number(gender));
   }
 
-  // -------------------------
-  // AGE FILTER (ONLY MATCH)
-  // -------------------------
   if (age_group && age_group !== "") {
     if (age_group.includes("-")) {
       const [min, max] = age_group.split("-").map(Number);
@@ -8107,9 +8099,6 @@ const getAdminPatientDemographics = (req, res) => {
     }
   }
 
-  // -------------------------
-  // TOTAL PATIENTS (ONLY DOCTOR BASED)
-  // -------------------------
   const totalSql = `
     SELECT COUNT(DISTINCT pm.user_id) as total
     FROM patient_master pm
@@ -8122,9 +8111,6 @@ const getAdminPatientDemographics = (req, res) => {
 
     const total_patients = totalResult[0]?.total || 0;
 
-    // -------------------------
-    // MATCHED DATA (ALL FILTERS)
-    // -------------------------
     const dataSql = `
       SELECT 
         CASE 
@@ -8153,20 +8139,9 @@ const getAdminPatientDemographics = (req, res) => {
     connection.query(dataSql, matchParams, (err2, rows) => {
       if (err2) return res.json({ success: false, error: err2.message });
 
-      // -------------------------
-      // MATCHED PATIENTS COUNT (CORRECT)
-      // -------------------------
       const matched_patients = rows.reduce((sum, r) => sum + r.count, 0);
 
-      const ageGroups = [
-        "0-18",
-        "19-30",
-        "31-44",
-        "45-64",
-        "65-74",
-        "75-84",
-        "85+",
-      ];
+      const ageGroups = ["0-18", "19-30", "31-44", "45-64", "65-74", "75-84", "85+"];
       const genders = ["Male", "Female", "Other", "Not Specified"];
 
       const ageSexCross = {};
@@ -8174,16 +8149,9 @@ const getAdminPatientDemographics = (req, res) => {
       const sexDist = {};
 
       ageGroups.forEach((a) => {
-        ageSexCross[a] = {
-          Male: 0,
-          Female: 0,
-          Other: 0,
-          "Not Specified": 0,
-          total: 0,
-        };
+        ageSexCross[a] = { Male: 0, Female: 0, Other: 0, "Not Specified": 0, total: 0 };
         ageDist[a] = 0;
       });
-
       genders.forEach((g) => {
         sexDist[g] = 0;
       });
@@ -8195,33 +8163,46 @@ const getAdminPatientDemographics = (req, res) => {
         sexDist[r.gender] += r.count;
       });
 
-      const ageDistribution = ageGroups.map((a) => ({
-        age_group: a,
-        count: ageDist[a],
-        percentage:
-          total_patients > 0
-            ? ((ageDist[a] / total_patients) * 100).toFixed(1)
-            : "0.0",
-      }));
+      const ageDistribution = ageGroups
+        .filter((a) => ageDist[a] > 0)
+        .map((a) => ({
+          age_group: a,
+          count: ageDist[a],
+          percentage:
+            total_patients > 0
+              ? ((ageDist[a] / total_patients) * 100).toFixed(1)
+              : "0.0",
+        }));
 
-      const sexDistribution = genders.map((g) => ({
-        gender: g,
-        count: sexDist[g],
-        percentage:
-          total_patients > 0
-            ? ((sexDist[g] / total_patients) * 100).toFixed(1)
-            : "0.0",
-      }));
+      const sexDistribution = genders
+        .filter((g) => sexDist[g] > 0)
+        .map((g) => ({
+          gender: g,
+          count: sexDist[g],
+          percentage:
+            total_patients > 0
+              ? ((sexDist[g] / total_patients) * 100).toFixed(1)
+              : "0.0",
+        }));
 
-      const crossTable = ageGroups.map((a) => ({
-        age_group: a,
-        ...genders.reduce((acc, g) => {
-          acc[g] =
-            `${ageSexCross[a][g]} (${total_patients > 0 ? ((ageSexCross[a][g] / total_patients) * 100).toFixed(1) : "0.0"}%)`;
-          return acc;
-        }, {}),
-        total: `${ageSexCross[a].total} (${total_patients > 0 ? ((ageSexCross[a].total / total_patients) * 100).toFixed(1) : "0.0"}%)`,
-      }));
+      const crossTable = ageGroups
+        .filter((a) => ageSexCross[a].total > 0)
+        .map((a) => ({
+          age_group: a,
+          ...genders.reduce((acc, g) => {
+            acc[g] = `${ageSexCross[a][g]} (${
+              total_patients > 0
+                ? ((ageSexCross[a][g] / total_patients) * 100).toFixed(1)
+                : "0.0"
+            }%)`;
+            return acc;
+          }, {}),
+          total: `${ageSexCross[a].total} (${
+            total_patients > 0
+              ? ((ageSexCross[a].total / total_patients) * 100).toFixed(1)
+              : "0.0"
+          }%)`,
+        }));
 
       return res.json({
         success: true,
@@ -8379,96 +8360,73 @@ const getAdminPatientDemographics = (req, res) => {
 
 const getPatientDemographicsDetailsAdmin = (req, res) => {
   const {
-    doctor_id,
+    doctor_ids, 
     gender,
     age_group,
     search,
     page = 1,
     limit = 10,
   } = req.body;
+
   const offset = (page - 1) * limit;
 
-  // Base WHERE clause
-  let where = `WHERE pm.delete_flag = 0`;
-  const params = [];
+  const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+  const doctorPlaceholders = hasDoctors
+    ? doctor_ids.map(() => "?").join(", ")
+    : null;
 
-  if (doctor_id) {
-    where += ` AND pm.doctor_id = ?`;
-    params.push(doctor_id);
+  let totalWhere = `WHERE pm.delete_flag = 0`;
+  const totalParams = [];
+
+  if (hasDoctors) {
+    totalWhere += ` AND pm.doctor_id IN (${doctorPlaceholders})`;
+    totalParams.push(...doctor_ids);
+  }
+
+  let matchWhere = `WHERE pm.delete_flag = 0`;
+  const matchParams = [];
+
+  if (hasDoctors) {
+    matchWhere += ` AND pm.doctor_id IN (${doctorPlaceholders})`;
+    matchParams.push(...doctor_ids);
   }
 
   if (gender !== undefined && gender !== null && gender !== "") {
-    where += ` AND um.gender = ?`;
-    params.push(gender);
+    matchWhere += ` AND um.gender = ?`;
+    matchParams.push(Number(gender));
   }
 
-  if (age_group) {
+  if (age_group && age_group !== "") {
     if (age_group.includes("+")) {
-      const min = parseInt(age_group.replace("+", ""));
-      where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?`;
-      params.push(min);
+      const min = parseInt(age_group.replace("+", ""), 10);
+      matchWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?`;
+      matchParams.push(min);
     } else {
       const [min, max] = age_group.split("-").map(Number);
-      where += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?`;
-      params.push(min, max);
+      matchWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?`;
+      matchParams.push(min, max);
     }
   }
 
-  if (search) {
-    where += ` AND um.name LIKE ?`;
-    params.push(`%${search}%`);
+  if (search && search !== "") {
+    matchWhere += ` AND um.name LIKE ?`;
+    matchParams.push(`%${search}%`);
   }
 
-  // =========================
-  // TOTAL PATIENTS (UNCHANGED)
-  // =========================
   const totalSql = `
     SELECT COUNT(DISTINCT pm.user_id) AS total
     FROM patient_master pm
     JOIN user_master um ON pm.user_id = um.user_id
-    ${doctor_id ? "WHERE pm.delete_flag = 0 AND pm.doctor_id = ?" : "WHERE pm.delete_flag = 0"}
+    ${totalWhere}
   `;
 
-  connection.query(totalSql, params, (err, countResult) => {
+  connection.query(totalSql, totalParams, (err, countResult) => {
     if (err) {
       console.log(err);
       return res.json({ success: false, msg: "Count error" });
     }
 
-    const total = countResult[0].total;
-
-    // =========================
-    // MATCHED PATIENTS (NEW ADD)
-    // =========================
-    let matchWhere = `WHERE pm.delete_flag = 0`;
-    const matchParams = [];
-
-    if (doctor_id) {
-      matchWhere += ` AND pm.doctor_id = ?`;
-      matchParams.push(doctor_id);
-    }
-
-    if (gender !== undefined && gender !== null && gender !== "") {
-      matchWhere += ` AND um.gender = ?`;
-      matchParams.push(gender);
-    }
-
-    if (age_group) {
-      if (age_group.includes("+")) {
-        const min = parseInt(age_group.replace("+", ""));
-        matchWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?`;
-        matchParams.push(min);
-      } else {
-        const [min, max] = age_group.split("-").map(Number);
-        matchWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?`;
-        matchParams.push(min, max);
-      }
-    }
-
-    if (search) {
-      matchWhere += ` AND um.name LIKE ?`;
-      matchParams.push(`%${search}%`);
-    }
+    const total = countResult[0]?.total || 0;
 
     const matchSql = `
       SELECT COUNT(DISTINCT pm.user_id) AS matched
@@ -8485,10 +8443,7 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
 
       const matched_patients = matchResult[0]?.matched || 0;
 
-      // =========================
-      // FETCH PATIENT DETAILS (UNCHANGED)
-      // =========================
-      const sql = `
+      const dataSql = `
         SELECT 
           pm.user_id,
           pm.doctor_id,
@@ -8503,15 +8458,15 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
           um.diseases
         FROM patient_master pm
         JOIN user_master um ON pm.user_id = um.user_id
-        ${where}
+        ${matchWhere}
         GROUP BY pm.user_id, pm.doctor_id
         ORDER BY um.name ASC
         LIMIT ? OFFSET ?
       `;
 
       connection.query(
-        sql,
-        [...params, Number(limit), Number(offset)],
+        dataSql,
+        [...matchParams, Number(limit), Number(offset)],
         (err3, rows) => {
           if (err3) {
             console.log(err3);
@@ -8522,17 +8477,17 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
             (patient) =>
               new Promise((resolve, reject) => {
                 const checkShare = `
-            SELECT report_share_id, information_type, createtime
-            FROM report_share_master
-            WHERE user_id = ? 
-              ${doctor_id ? "AND doctor_id = ?" : ""}
-              AND share_type = 0 
-              AND delete_flag = 0
-            ORDER BY createtime DESC
-          `;
+                  SELECT report_share_id, information_type, createtime
+                  FROM report_share_master
+                  WHERE user_id = ?
+                    ${hasDoctors ? `AND doctor_id IN (${doctorPlaceholders})` : ""}
+                    AND share_type = 0
+                    AND delete_flag = 0
+                  ORDER BY createtime DESC
+                `;
 
-                const shareParams = doctor_id
-                  ? [patient.user_id, doctor_id]
+                const shareParams = hasDoctors
+                  ? [patient.user_id, ...doctor_ids]
                   : [patient.user_id];
 
                 connection.query(checkShare, shareParams, (err4, shareList) => {
@@ -8547,31 +8502,27 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
                     return resolve(patient);
                   }
 
-                  const shareTime = latestShare.createtime;
-
                   const medSql = `
-              SELECT DISTINCT a.medicine_id, a.medicine_name
-              FROM medication_master m
-              JOIN medicine_master a ON a.medicine_id = m.medicine_id
-              JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-              WHERE m.user_id = ? 
-                AND m.delete_flag = 0 
-                AND tm.delete_flag = 0 
-                AND m.createtime <= ?
-              ORDER BY a.medicine_name ASC
-            `;
+                    SELECT DISTINCT a.medicine_id, a.medicine_name
+                    FROM medication_master m
+                    JOIN medicine_master a ON a.medicine_id = m.medicine_id
+                    JOIN time_slots_master tm ON tm.medication_id = m.medication_id
+                    WHERE m.user_id = ?
+                      AND m.delete_flag = 0
+                      AND tm.delete_flag = 0
+                      AND m.createtime <= ?
+                    ORDER BY a.medicine_name ASC
+                  `;
 
                   connection.query(
                     medSql,
-                    [patient.user_id, shareTime],
+                    [patient.user_id, latestShare.createtime],
                     (err5, meds) => {
                       if (err5) return reject(err5);
-
                       patient.medications = meds.map((m) => ({
                         id: m.medicine_id,
                         name: m.medicine_name,
                       }));
-
                       resolve(patient);
                     },
                   );
