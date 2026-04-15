@@ -2051,12 +2051,82 @@ const deleteMedicine = async (request, response) => {
   }
 };
 
+// const getdisease = async (request, response) => {
+//   try {
+//     const getDiseaseSql =
+//       "SELECT disease_id, disease_name,description,createtime,updatetime FROM disease_master WHERE delete_flag = 0 Order by disease_id desc";
+
+//     connection.query(getDiseaseSql, (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       const disease_arr = [];
+
+//       var s_no = 0;
+
+//       results.forEach((item) => {
+//         s_no++;
+
+//         disease_arr.push({
+//           s_no: s_no,
+
+//           disease_id: item.disease_id,
+
+//           disease_name: item.disease_name,
+
+//           description: item.description,
+
+//           createtime: moment(item.createtime)
+//             .tz("Europe/Paris")
+//             .format("DD-MM-YYYY hh:mm A"),
+
+//           updatetime: moment(item.updatetime)
+//             .tz("Europe/Paris")
+//             .format("DD-MM-YYYY hh:mm A"),
+//         });
+//       });
+
+//       response.status(200).json({
+//         success: true,
+//         msg: languageMessages.diseaseList,
+//         data: disease_arr,
+//       });
+//     });
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
 const getdisease = async (request, response) => {
   try {
-    const getDiseaseSql =
-      "SELECT disease_id, disease_name,description,createtime,updatetime FROM disease_master WHERE delete_flag = 0 Order by disease_id desc";
+
+    // Main query (EN as default)
+    const getDiseaseSql = `
+      SELECT 
+        dm.disease_id,
+        COALESCE(dt_en.disease_name, '') AS disease_name,
+        COALESCE(dt_en.description, '') AS description,
+        dm.createtime,
+        dm.updatetime
+      FROM disease_master dm
+      LEFT JOIN disease_translation dt_en 
+        ON dm.disease_id = dt_en.disease_id 
+        AND dt_en.language_code = 'en'
+      WHERE dm.delete_flag = 0
+      ORDER BY dm.disease_id DESC
+    `;
 
     connection.query(getDiseaseSql, (err, results) => {
+
       if (err) {
         return response.status(200).json({
           success: false,
@@ -2065,37 +2135,275 @@ const getdisease = async (request, response) => {
         });
       }
 
-      const disease_arr = [];
-
-      var s_no = 0;
-
-      results.forEach((item) => {
-        s_no++;
-
-        disease_arr.push({
-          s_no: s_no,
-
-          disease_id: item.disease_id,
-
-          disease_name: item.disease_name,
-
-          description: item.description,
-
-          createtime: moment(item.createtime)
-            .tz("Europe/Paris")
-            .format("DD-MM-YYYY hh:mm A"),
-
-          updatetime: moment(item.updatetime)
-            .tz("Europe/Paris")
-            .format("DD-MM-YYYY hh:mm A"),
+      if (results.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.dataNotFound,
+          data: [],
         });
+      }
+
+      // Get all translations
+      const translationSql = `
+        SELECT disease_id, language_code, disease_name, description
+        FROM disease_translation
+      `;
+
+      connection.query(translationSql, (err, translations) => {
+
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        // Map translations
+        const translationMap = {};
+
+        translations.forEach((t) => {
+          if (!translationMap[t.disease_id]) {
+            translationMap[t.disease_id] = {};
+          }
+
+          translationMap[t.disease_id][t.language_code] = {
+            disease_name: t.disease_name,
+            description: t.description,
+          };
+        });
+
+        // Final response (KEEP ORDER)
+        let s_no = 0;
+
+        const disease_arr = results.map((item) => {
+          s_no++;
+
+          return {
+            s_no: s_no,
+            disease_id: item.disease_id,
+
+            // existing keys (EN default)
+            disease_name: item.disease_name || "N/A",
+            description: item.description || "N/A",
+
+            // NEW translations key
+            translations: translationMap[item.disease_id] || {},
+
+            createtime: moment(item.createtime)
+              .tz("Europe/Paris")
+              .format("DD-MM-YYYY hh:mm A"),
+
+            updatetime: moment(item.updatetime)
+              .tz("Europe/Paris")
+              .format("DD-MM-YYYY hh:mm A"),
+          };
+        });
+
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.diseaseList,
+          data: disease_arr,
+        });
+
       });
 
-      response.status(200).json({
-        success: true,
-        msg: languageMessages.diseaseList,
-        data: disease_arr,
+    });
+
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
+  }
+};
+
+
+// const addDisease = async (request, response) => {
+//   try {
+//     const { disease_name, description } = request.body;
+
+//     if (!disease_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "disease_name",
+//       });
+//     }
+
+//     if (!description) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "description",
+//       });
+//     }
+
+//     // Check if disease_name already exists
+
+//     const checkSql =
+//       "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
+
+//     connection.query(checkSql, [disease_name], (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       if (results.length > 0) {
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: languageMessages.diseaseExists });
+//       }
+
+//       // Insert new disease if not exists
+
+//       const addDiseaseSql =
+//         "INSERT INTO disease_master (disease_name, description, createtime,updatetime) VALUES (?, ?, ?,now())";
+
+//       connection.query(
+//         addDiseaseSql,
+//         [disease_name, description, createtime],
+//         (err) => {
+//           if (err) {
+//             return response.status(200).json({
+//               success: false,
+//               msg: languageMessages.internalServerError,
+//               error: err.message,
+//             });
+//           }
+
+//           response
+//             .status(200)
+//             .json({ success: true, msg: languageMessages.diseaseAdded });
+//         },
+//       );
+//     });
+//   } catch (error) {
+//     response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
+const addDisease = async (request, response) => {
+  try {
+    const { translations } = request.body;
+
+    const createtime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate translations
+    if (!translations || typeof translations !== "object") {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "translations",
       });
+    }
+
+    // ENGLISH REQUIRED
+    if (
+      !translations.en ||
+      !translations.en.disease_name ||
+      !translations.en.description
+    ) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
+
+    const englishName = translations.en.disease_name;
+
+    // Duplicate check based on EN
+    const checkSql = `
+      SELECT dt.disease_id
+      FROM disease_translation dt
+      JOIN disease_master dm ON dm.disease_id = dt.disease_id
+      WHERE dt.language_code = 'en'
+      AND dt.disease_name = ?
+      AND dm.delete_flag = 0
+    `;
+
+    connection.query(checkSql, [englishName], (err, results) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (results.length > 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.diseaseExists,
+        });
+      }
+
+      // Insert master (no name/description)
+      const insertMasterSql = `
+        INSERT INTO disease_master (createtime, updatetime) 
+        VALUES (?, ?)
+      `;
+
+      connection.query(
+        insertMasterSql,
+        [createtime, createtime],
+        (err, result) => {
+          if (err) {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
+          }
+
+          const diseaseId = result.insertId;
+
+          // Insert translations
+          const translationData = Object.entries(translations).map(
+            ([lang, data]) => [
+              diseaseId,
+              lang,
+              data.disease_name,
+              data.description,
+            ]
+          );
+
+          const insertTranslationSql = `
+            INSERT INTO disease_translation 
+            (disease_id, language_code, disease_name, description)
+            VALUES ?
+          `;
+
+          connection.query(
+            insertTranslationSql,
+            [translationData],
+            (err) => {
+              if (err) {
+                return response.status(200).json({
+                  success: false,
+                  msg: languageMessages.internalServerError,
+                  error: err.message,
+                });
+              }
+
+              return response.status(200).json({
+                success: true,
+                msg: languageMessages.diseaseAdded,
+              });
+            }
+          );
+        }
+      );
     });
   } catch (error) {
     return response.status(200).json({
@@ -2106,32 +2414,140 @@ const getdisease = async (request, response) => {
   }
 };
 
-const addDisease = async (request, response) => {
+// const editDisease = async (request, response) => {
+//   try {
+//     const { disease_id, disease_name, description } = request.body;
+
+//     if (!disease_id) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "disease_id",
+//       });
+//     }
+
+//     if (!disease_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "disease_name",
+//       });
+//     }
+
+//     if (!description) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "description",
+//       });
+//     }
+
+//     // Check if disease_name already exists
+
+//     const checkDiseaseSql =
+//       "SELECT disease_id FROM disease_master WHERE disease_name = ? AND disease_id != ? AND delete_flag = 0";
+
+//     connection.query(
+//       checkDiseaseSql,
+//       [disease_name, disease_id],
+//       (err, results) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//         }
+
+//         if (results.length > 0) {
+//           return response
+//             .status(200)
+//             .json({ success: false, msg: languageMessages.diseaseExists });
+//         }
+
+//         const updateDiseaseSql =
+//           "UPDATE disease_master SET disease_name = ?, description = ?, updatetime=? WHERE disease_id = ?";
+
+//         const updatetime = new Date();
+
+//         connection.query(
+//           updateDiseaseSql,
+//           [disease_name, description, updatetime, disease_id],
+//           (err) => {
+//             if (err) {
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: languageMessages.internalServerError,
+//                 error: err.message,
+//               });
+//             }
+
+//             response
+//               .status(200)
+//               .json({ success: true, msg: languageMessages.diseaseUpdated });
+//           },
+//         );
+//       },
+//     );
+//   } catch (error) {
+//     return response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
+const editDisease = async (request, response) => {
   try {
-    const { disease_name, description } = request.body;
+    const { disease_id, translations } = request.body;
 
-    if (!disease_name) {
+    const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate
+    if (!disease_id) {
       return response.status(200).json({
         success: false,
         msg: languageMessages.msg_empty_param,
-        key: "disease_name",
+        key: "disease_id",
       });
     }
 
-    if (!description) {
+    if (!translations || typeof translations !== "object") {
       return response.status(200).json({
         success: false,
         msg: languageMessages.msg_empty_param,
-        key: "description",
+        key: "translations",
       });
     }
 
-    // Check if disease_name already exists
+    // EN required
+    if (
+      !translations.en ||
+      !translations.en.disease_name ||
+      !translations.en.description
+    ) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
 
-    const checkSql =
-      "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
+    const englishName = translations.en.disease_name;
 
-    connection.query(checkSql, [disease_name], (err, results) => {
+    // Duplicate check (EN only)
+    const checkSql = `
+      SELECT dt.disease_id
+      FROM disease_translation dt
+      JOIN disease_master dm ON dm.disease_id = dt.disease_id
+      WHERE dt.language_code = 'en'
+      AND dt.disease_name = ?
+      AND dt.disease_id != ?
+      AND dm.delete_flag = 0
+    `;
+
+    connection.query(checkSql, [englishName, disease_id], (err, results) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -2141,80 +2557,20 @@ const addDisease = async (request, response) => {
       }
 
       if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.diseaseExists });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.diseaseExists,
+        });
       }
 
-      // Insert new disease if not exists
+      // Update master (ONLY timestamp)
+      const updateMasterSql = `
+        UPDATE disease_master 
+        SET updatetime = ? 
+        WHERE disease_id = ?
+      `;
 
-      const addDiseaseSql =
-        "INSERT INTO disease_master (disease_name, description, createtime,updatetime) VALUES (?, ?, ?,now())";
-
-      connection.query(
-        addDiseaseSql,
-        [disease_name, description, createtime],
-        (err) => {
-          if (err) {
-            return response.status(200).json({
-              success: false,
-              msg: languageMessages.internalServerError,
-              error: err.message,
-            });
-          }
-
-          response
-            .status(200)
-            .json({ success: true, msg: languageMessages.diseaseAdded });
-        },
-      );
-    });
-  } catch (error) {
-    response.status(200).json({
-      success: false,
-      msg: languageMessages.internalServerError,
-      error: error.message,
-    });
-  }
-};
-
-const editDisease = async (request, response) => {
-  try {
-    const { disease_id, disease_name, description } = request.body;
-
-    if (!disease_id) {
-      return response.status(200).json({
-        success: false,
-        msg: languageMessages.msg_empty_param,
-        key: "disease_id",
-      });
-    }
-
-    if (!disease_name) {
-      return response.status(200).json({
-        success: false,
-        msg: languageMessages.msg_empty_param,
-        key: "disease_name",
-      });
-    }
-
-    if (!description) {
-      return response.status(200).json({
-        success: false,
-        msg: languageMessages.msg_empty_param,
-        key: "description",
-      });
-    }
-
-    // Check if disease_name already exists
-
-    const checkDiseaseSql =
-      "SELECT disease_id FROM disease_master WHERE disease_name = ? AND disease_id != ? AND delete_flag = 0";
-
-    connection.query(
-      checkDiseaseSql,
-      [disease_name, disease_id],
-      (err, results) => {
+      connection.query(updateMasterSql, [updatetime, disease_id], (err) => {
         if (err) {
           return response.status(200).json({
             success: false,
@@ -2223,36 +2579,74 @@ const editDisease = async (request, response) => {
           });
         }
 
-        if (results.length > 0) {
-          return response
-            .status(200)
-            .json({ success: false, msg: languageMessages.diseaseExists });
-        }
+        // UPSERT translations
+        const tasks = Object.entries(translations).map(([lang, data]) => {
+          return new Promise((resolve, reject) => {
 
-        const updateDiseaseSql =
-          "UPDATE disease_master SET disease_name = ?, description = ?, updatetime=? WHERE disease_id = ?";
+            const checkLangSql = `
+              SELECT id FROM disease_translation 
+              WHERE disease_id = ? AND language_code = ?
+            `;
 
-        const updatetime = new Date();
+            connection.query(checkLangSql, [disease_id, lang], (err, result) => {
+              if (err) return reject(err);
 
-        connection.query(
-          updateDiseaseSql,
-          [disease_name, description, updatetime, disease_id],
-          (err) => {
-            if (err) {
-              return response.status(200).json({
-                success: false,
-                msg: languageMessages.internalServerError,
-                error: err.message,
-              });
-            }
+              if (result.length > 0) {
+                // 🔁 UPDATE
+                const updateLangSql = `
+                  UPDATE disease_translation 
+                  SET disease_name = ?, description = ?
+                  WHERE disease_id = ? AND language_code = ?
+                `;
 
-            response
-              .status(200)
-              .json({ success: true, msg: languageMessages.diseaseUpdated });
-          },
-        );
-      },
-    );
+                connection.query(
+                  updateLangSql,
+                  [data.disease_name, data.description, disease_id, lang],
+                  (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  }
+                );
+              } else {
+                // ➕ INSERT
+                const insertLangSql = `
+                  INSERT INTO disease_translation 
+                  (disease_id, language_code, disease_name, description)
+                  VALUES (?, ?, ?, ?)
+                `;
+
+                connection.query(
+                  insertLangSql,
+                  [disease_id, lang, data.disease_name, data.description],
+                  (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                  }
+                );
+              }
+            });
+
+          });
+        });
+
+        Promise.all(tasks)
+          .then(() => {
+            return response.status(200).json({
+              success: true,
+              msg: languageMessages.diseaseUpdated,
+            });
+          })
+          .catch((error) => {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: error.message,
+            });
+          });
+
+      });
+    });
+
   } catch (error) {
     return response.status(200).json({
       success: false,
@@ -6966,6 +7360,87 @@ const bulkUploadMedicine = async (request, response) => {
   }
 };
 
+// const bulkUploadDisease = async (request, response) => {
+//   try {
+//     const file = request.file;
+
+//     if (!file) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: "File is required",
+//         key: "file",
+//       });
+//     }
+
+//     const filePath = file.path;
+//     const workbook = xlsx.readFile(filePath);
+//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//     const jsonData = xlsx.utils.sheet_to_json(sheet);
+
+//     if (!jsonData || jsonData.length === 0) {
+//       fs.unlinkSync(filePath);
+//       return response.status(200).json({
+//         success: false,
+//         msg: "Excel file is empty or invalid",
+//       });
+//     }
+
+//     let insertedCount = 0;
+//     let skippedCount = 0;
+
+//     for (const row of jsonData) {
+//       const category_name = row["disease_name"];
+//       const description = row["disease_description"];
+//       if (!category_name) continue;
+
+//       try {
+//         const checkSql =
+//           "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
+//         const checkResult = await new Promise((resolve, reject) => {
+//           connection.query(checkSql, [category_name], (err, results) => {
+//             if (err) return reject(err);
+//             resolve(results);
+//           });
+//         });
+
+//         if (checkResult.length > 0) {
+//           skippedCount++;
+//           continue;
+//         }
+
+//         const insertSql =
+//           "INSERT INTO disease_master (disease_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
+//         await new Promise((resolve, reject) => {
+//           connection.query(insertSql, [category_name, description], (err) => {
+//             if (err) return reject(err);
+//             insertedCount++;
+//             resolve();
+//           });
+//         });
+//       } catch (innerErr) {
+//         console.error("DB Error:", innerErr.message);
+//         continue;
+//       }
+//     }
+
+//     fs.unlinkSync(filePath);
+
+//     return response.status(200).json({
+//       success: true,
+//       msg: "Bulk category upload completed",
+//       inserted: insertedCount,
+//       skipped: skippedCount,
+//     });
+//   } catch (error) {
+//     console.error("Main Error:", error.message);
+//     return response.status(500).json({
+//       success: false,
+//       msg: "Internal Server Error",
+//       error: error.message,
+//     });
+//   }
+// };
+
 const bulkUploadDisease = async (request, response) => {
   try {
     const file = request.file;
@@ -6994,16 +7469,27 @@ const bulkUploadDisease = async (request, response) => {
     let insertedCount = 0;
     let skippedCount = 0;
 
+    const languages = ["en", "fr", "de", "es", "pt", "ar", "it"];
+
     for (const row of jsonData) {
-      const category_name = row["disease_name"];
-      const description = row["disease_description"];
-      if (!category_name) continue;
+      const englishName = row["disease_name_en"];
+      const englishDesc = row["description_en"];
+
+      if (!englishName) continue;
 
       try {
-        const checkSql =
-          "SELECT disease_id FROM disease_master WHERE disease_name = ? AND delete_flag = 0";
+        // Duplicate check (EN)
+        const checkSql = `
+          SELECT dt.disease_id
+          FROM disease_translation dt
+          JOIN disease_master dm ON dm.disease_id = dt.disease_id
+          WHERE dt.language_code = 'en'
+          AND dt.disease_name = ?
+          AND dm.delete_flag = 0
+        `;
+
         const checkResult = await new Promise((resolve, reject) => {
-          connection.query(checkSql, [category_name], (err, results) => {
+          connection.query(checkSql, [englishName], (err, results) => {
             if (err) return reject(err);
             resolve(results);
           });
@@ -7014,15 +7500,60 @@ const bulkUploadDisease = async (request, response) => {
           continue;
         }
 
-        const insertSql =
-          "INSERT INTO disease_master (disease_name, description, createtime, updatetime) VALUES (?, ?, now(), now())";
-        await new Promise((resolve, reject) => {
-          connection.query(insertSql, [category_name, description], (err) => {
+        // Insert master
+        const insertMasterSql = `
+          INSERT INTO disease_master (createtime, updatetime)
+          VALUES (NOW(), NOW())
+        `;
+
+        const result = await new Promise((resolve, reject) => {
+          connection.query(insertMasterSql, (err, res) => {
             if (err) return reject(err);
-            insertedCount++;
-            resolve();
+            resolve(res);
           });
         });
+
+        const diseaseId = result.insertId;
+
+        // Prepare translations
+        const translationData = [];
+
+        languages.forEach((lang) => {
+          const nameKey = `disease_name_${lang}`;
+          const descKey = `description_${lang}`;
+
+          if (row[nameKey]) {
+            translationData.push([
+              diseaseId,
+              lang,
+              row[nameKey],
+              row[descKey] || "",
+            ]);
+          }
+        });
+
+        // Insert translations
+        if (translationData.length > 0) {
+          const insertTranslationSql = `
+            INSERT INTO disease_translation 
+            (disease_id, language_code, disease_name, description)
+            VALUES ?
+          `;
+
+          await new Promise((resolve, reject) => {
+            connection.query(
+              insertTranslationSql,
+              [translationData],
+              (err) => {
+                if (err) return reject(err);
+                resolve();
+              }
+            );
+          });
+        }
+
+        insertedCount++;
+
       } catch (innerErr) {
         console.error("DB Error:", innerErr.message);
         continue;
@@ -7033,10 +7564,11 @@ const bulkUploadDisease = async (request, response) => {
 
     return response.status(200).json({
       success: true,
-      msg: "Bulk category upload completed",
+      msg: "Bulk disease upload completed",
       inserted: insertedCount,
       skipped: skippedCount,
     });
+
   } catch (error) {
     console.error("Main Error:", error.message);
     return response.status(500).json({
