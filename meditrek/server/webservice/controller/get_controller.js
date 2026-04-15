@@ -4201,43 +4201,43 @@ const getAdverseReactionPromise = (user_id) => {
   });
 };
 
-const getDisease = async (request, response) => {
-  const query1 = `
+// const getDisease = async (request, response) => {
+//   const query1 = `
 
-        SELECT 
-        disease_id, disease_name, description, createtime
-        FROM 
-        disease_master
-        WHERE delete_flag=0`;
+//         SELECT 
+//         disease_id, disease_name, description, createtime
+//         FROM 
+//         disease_master
+//         WHERE delete_flag=0`;
 
-  connection.query(query1, async (err, subResult) => {
-    if (err) {
-      return response.status(200).json({
-        success: false,
-        msg: languageMessage.internalServerError,
-        key: err.message,
-      });
-    }
+//   connection.query(query1, async (err, subResult) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         key: err.message,
+//       });
+//     }
 
-    if (subResult.length === 0) {
-      return response.status(200).json({
-        success: true,
-        msg: languageMessage.dataNotFound,
-        dataArray: "NA",
-      });
-    }
+//     if (subResult.length === 0) {
+//       return response.status(200).json({
+//         success: true,
+//         msg: languageMessage.dataNotFound,
+//         dataArray: "NA",
+//       });
+//     }
 
-    subResult.map((item) => {
-      item.status = false;
-    });
+//     subResult.map((item) => {
+//       item.status = false;
+//     });
 
-    return response.status(200).json({
-      success: true,
-      msg: languageMessage.dataFound,
-      dataArray: subResult,
-    });
-  });
-};
+//     return response.status(200).json({
+//       success: true,
+//       msg: languageMessage.dataFound,
+//       dataArray: subResult,
+//     });
+//   });
+// };
 
 // const getFaq = async (request, response) => {
 //   const { user_id } = request.query;
@@ -4333,6 +4333,67 @@ const getDisease = async (request, response) => {
 
 
 //  new api - get reports by category wise
+
+const getDisease = async (request, response) => {
+
+  const { language_code } = request.query;
+
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : "en";
+
+  request.setLocale(finalLanguage);
+
+  const query = `
+    SELECT 
+      dm.disease_id,
+      COALESCE(dt.disease_name, dt_en.disease_name) AS disease_name,
+      COALESCE(dt.description, dt_en.description) AS description,
+      dm.createtime
+    FROM disease_master dm
+    LEFT JOIN disease_translation dt 
+      ON dm.disease_id = dt.disease_id 
+      AND dt.language_code = ?
+    LEFT JOIN disease_translation dt_en 
+      ON dm.disease_id = dt_en.disease_id 
+      AND dt_en.language_code = 'en'
+    WHERE dm.delete_flag = 0
+    ORDER BY dm.disease_id DESC
+  `;
+
+  connection.query(query, [finalLanguage], (err, subResult) => {
+
+    if (err) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
+    }
+
+    if (subResult.length === 0) {
+      return response.status(200).json({
+        success: true,
+        msg: request.__("data_not_found"),
+        dataArray: "NA",
+      });
+    }
+
+    // Keep same structure
+    subResult.map((item) => {
+      item.status = false;
+    });
+
+    return response.status(200).json({
+      success: true,
+      msg: request.__("data_found"),
+      dataArray: subResult,
+    });
+
+  });
+};
+
 const getFaq = async (request, response) => {
   const { user_id, language_code } = request.query;
 
