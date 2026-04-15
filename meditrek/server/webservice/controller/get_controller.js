@@ -3463,7 +3463,7 @@ WHERE sm.delete_flag = 0
 // };
 
 const getAdverseReaction = async (request, response) => {
-  const { user_id, page = 1, limit = 10 } = request.query;
+  const { user_id, language_code , page = 1, limit = 10 } = request.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
@@ -3518,10 +3518,47 @@ const getAdverseReaction = async (request, response) => {
     }
 
     try {
-      const Query =
-        "SELECT arm.adverse_reaction_id,arm.medicine_id,mm.medicine_name, arm.dosage, arm.type, arm.symptom_id, sm.symptom_name,  arm.medication_start_date,DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') reaction_date, DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') as createtime, arm.details FROM adverse_reaction_master AS arm LEFT JOIN symptoms_master AS sm ON arm.symptom_id = sm.symptom_id LEFT JOIN medicine_master AS mm ON arm.medicine_id = mm.medicine_id WHERE arm.user_id = ? AND arm.delete_flag=0 ORDER BY arm.adverse_reaction_id DESC LIMIT ? OFFSET ?";
 
-      const Values = [user_id, limitNum, offset];
+        const Query = `
+        SELECT 
+          arm.adverse_reaction_id,
+          arm.medicine_id,
+          mm.medicine_name,
+          arm.dosage,
+          arm.type,
+          arm.symptom_id,
+
+          COALESCE(st_lang.symptom_name, st_en.symptom_name, sm.symptom_name) AS symptom_name,
+
+          arm.medication_start_date,
+          DATE_FORMAT(arm.reaction_date,'%d %b %Y %h:%i:%s %p') AS reaction_date,
+          DATE_FORMAT(arm.createtime,'%d %b %Y %h:%i:%s %p') AS createtime,
+          arm.details
+
+        FROM adverse_reaction_master AS arm
+
+        LEFT JOIN symptoms_translation AS st_lang 
+          ON arm.symptom_id = st_lang.symptom_id 
+          AND st_lang.language_code = ?
+
+        LEFT JOIN symptoms_translation AS st_en 
+          ON arm.symptom_id = st_en.symptom_id 
+          AND st_en.language_code = 'en'
+
+        LEFT JOIN symptoms_master AS sm
+          ON arm.symptom_id = sm.symptom_id
+
+        LEFT JOIN medicine_master AS mm 
+          ON arm.medicine_id = mm.medicine_id
+
+        WHERE arm.user_id = ? 
+        AND arm.delete_flag = 0
+
+        ORDER BY arm.adverse_reaction_id DESC 
+        LIMIT ? OFFSET ?
+        `;
+
+      const Values = [language_code, user_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
