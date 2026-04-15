@@ -1015,14 +1015,117 @@ const getAllDeletedUser = async (request, response) => {
   }
 };
 
+// const getDoctorSpecialization = async (request, response) => {
+//   try {
+//     const DoctorSpecializationSql =
+//       "SELECT * FROM doctor_category WHERE delete_flag = 0 ORDER by doctor_category_id desc";
+
+//     connection.query(
+//       DoctorSpecializationSql,
+//       async (err, DoctorSpecializationResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             err: err.message,
+//           });
+//         }
+
+//         const DoctorSpecialization_arr = [];
+
+//         if (DoctorSpecializationResult.length <= 0) {
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessages.msgDataFound,
+//             DoctorSpecialization_arr: [],
+//           });
+//         }
+
+//         var s_no = 0;
+
+//         if (DoctorSpecializationResult.length > 0) {
+//           for (var data of DoctorSpecializationResult) {
+//             s_no++;
+
+//             DoctorSpecialization_arr.push({
+//               s_no: s_no,
+
+//               doctor_specialization_id: data.doctor_category_id,
+
+//               doctor_specialization_name: data.category_name,
+
+//               delete_flag: data.delete_flag,
+
+//               createtime: moment(data.createtime)
+//                 .tz("Europe/Paris")
+//                 .format("DD-MM-YYYY hh:mm A"),
+
+//               updatetime: moment(data.updatetime)
+//                 .tz("Europe/Paris")
+//                 .format("DD-MM-YYYY hh:mm A"),
+//             });
+//           }
+
+//           return response.status(200).json({
+//             success: true,
+//             msg: languageMessages.msgDataFound,
+//             DoctorSpecialization_arr: DoctorSpecialization_arr,
+//           });
+//         }
+//       },
+//     );
+//   } catch (error) {
+//     return response
+//       .status(200)
+//       .json({ success: false, msg: languageMessages.internalServerError });
+//   }
+// };
+
 const getDoctorSpecialization = async (request, response) => {
   try {
-    const DoctorSpecializationSql =
-      "SELECT * FROM doctor_category WHERE delete_flag = 0 ORDER by doctor_category_id desc";
 
-    connection.query(
-      DoctorSpecializationSql,
-      async (err, DoctorSpecializationResult) => {
+    // Get EN default data
+    const DoctorSpecializationSql = `
+      SELECT 
+        dc.doctor_category_id,
+        COALESCE(dct_en.category_name, '') AS doctor_specialization_name,
+        dc.delete_flag,
+        dc.createtime,
+        dc.updatetime
+      FROM doctor_category dc
+      LEFT JOIN doctor_category_translation dct_en 
+        ON dc.doctor_category_id = dct_en.doctor_category_id 
+        AND dct_en.language_code = 'en'
+      WHERE dc.delete_flag = 0
+      ORDER BY dc.doctor_category_id DESC
+    `;
+
+    connection.query(DoctorSpecializationSql, (err, result) => {
+
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      if (result.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          DoctorSpecialization_arr: [],
+        });
+      }
+
+      // Get all translations
+      const translationSql = `
+        SELECT doctor_category_id, language_code, category_name
+        FROM doctor_category_translation
+      `;
+
+      connection.query(translationSql, (err, translations) => {
+
         if (err) {
           return response.status(200).json({
             success: false,
@@ -1031,74 +1134,166 @@ const getDoctorSpecialization = async (request, response) => {
           });
         }
 
-        const DoctorSpecialization_arr = [];
+        // Map translations
+        const translationMap = {};
 
-        if (DoctorSpecializationResult.length <= 0) {
-          return response.status(200).json({
-            success: true,
-            msg: languageMessages.msgDataFound,
-            DoctorSpecialization_arr: [],
-          });
-        }
-
-        var s_no = 0;
-
-        if (DoctorSpecializationResult.length > 0) {
-          for (var data of DoctorSpecializationResult) {
-            s_no++;
-
-            DoctorSpecialization_arr.push({
-              s_no: s_no,
-
-              doctor_specialization_id: data.doctor_category_id,
-
-              doctor_specialization_name: data.category_name,
-
-              delete_flag: data.delete_flag,
-
-              createtime: moment(data.createtime)
-                .tz("Europe/Paris")
-                .format("DD-MM-YYYY hh:mm A"),
-
-              updatetime: moment(data.updatetime)
-                .tz("Europe/Paris")
-                .format("DD-MM-YYYY hh:mm A"),
-            });
+        translations.forEach((t) => {
+          if (!translationMap[t.doctor_category_id]) {
+            translationMap[t.doctor_category_id] = {};
           }
 
-          return response.status(200).json({
-            success: true,
-            msg: languageMessages.msgDataFound,
-            DoctorSpecialization_arr: DoctorSpecialization_arr,
-          });
-        }
-      },
-    );
+          translationMap[t.doctor_category_id][t.language_code] =
+            t.category_name;
+        });
+
+        // Final response
+        let s_no = 0;
+
+        const DoctorSpecialization_arr = result.map((data) => {
+          s_no++;
+
+          return {
+            s_no: s_no,
+
+            doctor_specialization_id: data.doctor_category_id,
+
+            // existing key (EN default)
+            doctor_specialization_name:
+              data.doctor_specialization_name || "N/A",
+
+            delete_flag: data.delete_flag,
+
+            // NEW translations
+            translations:
+              translationMap[data.doctor_category_id] || {},
+
+            createtime: moment(data.createtime)
+              .tz("Europe/Paris")
+              .format("DD-MM-YYYY hh:mm A"),
+
+            updatetime: moment(data.updatetime)
+              .tz("Europe/Paris")
+              .format("DD-MM-YYYY hh:mm A"),
+          };
+        });
+
+        return response.status(200).json({
+          success: true,
+          msg: languageMessages.msgDataFound,
+          DoctorSpecialization_arr: DoctorSpecialization_arr,
+        });
+
+      });
+
+    });
+
   } catch (error) {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessages.internalServerError });
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
   }
 };
 
+// const addDoctorSpecialization = async (request, response) => {
+//   try {
+//     const { category_name } = request.body;
+
+//     if (!category_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "category_name",
+//       });
+//     }
+
+//     // Check if category_name already exists
+
+//     const checkSql =
+//       "SELECT doctor_category_id  FROM doctor_category WHERE category_name = ? AND delete_flag = 0";
+
+//     connection.query(checkSql, [category_name], (err, results) => {
+//       if (err) {
+//         return response.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: err.message,
+//         });
+//       }
+
+//       if (results.length > 0) {
+//         return response
+//           .status(200)
+//           .json({ success: false, msg: languageMessages.categoryExists });
+//       }
+
+//       // Insert new category if not exists
+
+//       const insertSql =
+//         "INSERT INTO doctor_category (category_name, createtime,updatetime) VALUES (?, ?,now())";
+
+//       connection.query(insertSql, [category_name, createtime], (err) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//         }
+
+//         response
+//           .status(200)
+//           .json({ success: true, msg: languageMessages.categoryAdded });
+//       });
+//     });
+//   } catch (error) {
+//     response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
 const addDoctorSpecialization = async (request, response) => {
   try {
-    const { category_name } = request.body;
+    const { translations } = request.body;
 
-    if (!category_name) {
+    const createtime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate translations
+    if (!translations || typeof translations !== "object") {
       return response.status(200).json({
         success: false,
         msg: languageMessages.msg_empty_param,
-        key: "category_name",
+        key: "translations",
       });
     }
 
-    // Check if category_name already exists
+    // English required
+    if (!translations.en || !translations.en.category_name) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
 
-    const checkSql =
-      "SELECT doctor_category_id  FROM doctor_category WHERE category_name = ? AND delete_flag = 0";
+    const englishName = translations.en.category_name;
 
-    connection.query(checkSql, [category_name], (err, results) => {
+    // Duplicate check (EN)
+    const checkSql = `
+      SELECT dct.doctor_category_id
+      FROM doctor_category_translation dct
+      JOIN doctor_category dc 
+        ON dc.doctor_category_id = dct.doctor_category_id
+      WHERE dct.language_code = 'en'
+      AND dct.category_name = ?
+      AND dc.delete_flag = 0
+    `;
+
+    connection.query(checkSql, [englishName], (err, results) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -1108,32 +1303,71 @@ const addDoctorSpecialization = async (request, response) => {
       }
 
       if (results.length > 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessages.categoryExists });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.categoryExists,
+        });
       }
 
-      // Insert new category if not exists
+      // Insert master
+      const insertMasterSql = `
+        INSERT INTO doctor_category (createtime, updatetime)
+        VALUES (?, ?)
+      `;
 
-      const insertSql =
-        "INSERT INTO doctor_category (category_name, createtime,updatetime) VALUES (?, ?,now())";
+      connection.query(
+        insertMasterSql,
+        [createtime, createtime],
+        (err, result) => {
+          if (err) {
+            return response.status(200).json({
+              success: false,
+              msg: languageMessages.internalServerError,
+              error: err.message,
+            });
+          }
 
-      connection.query(insertSql, [category_name, createtime], (err) => {
-        if (err) {
-          return response.status(200).json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: err.message,
-          });
+          const categoryId = result.insertId;
+
+          // Insert translations
+          const translationData = Object.entries(translations).map(
+            ([lang, data]) => [
+              categoryId,
+              lang,
+              data.category_name,
+            ]
+          );
+
+          const insertTranslationSql = `
+            INSERT INTO doctor_category_translation 
+            (doctor_category_id, language_code, category_name)
+            VALUES ?
+          `;
+
+          connection.query(
+            insertTranslationSql,
+            [translationData],
+            (err) => {
+              if (err) {
+                return response.status(200).json({
+                  success: false,
+                  msg: languageMessages.internalServerError,
+                  error: err.message,
+                });
+              }
+
+              return response.status(200).json({
+                success: true,
+                msg: languageMessages.categoryAdded,
+              });
+            }
+          );
         }
-
-        response
-          .status(200)
-          .json({ success: true, msg: languageMessages.categoryAdded });
-      });
+      );
     });
+
   } catch (error) {
-    response.status(200).json({
+    return response.status(200).json({
       success: false,
       msg: languageMessages.internalServerError,
       error: error.message,
@@ -1141,10 +1375,88 @@ const addDoctorSpecialization = async (request, response) => {
   }
 };
 
+// const editDoctorSpecialization = async (request, response) => {
+//   try {
+//     const { doctor_specialization_id, category_name } = request.body;
+
+//     if (!doctor_specialization_id) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "doctor_specialization_id",
+//       });
+//     }
+
+//     if (!category_name) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "category_name",
+//       });
+//     }
+
+//     // Check if category_name already exists
+
+//     const checkSql =
+//       "SELECT doctor_category_id FROM doctor_category WHERE category_name = ? AND doctor_category_id != ? AND delete_flag = 0";
+
+//     connection.query(
+//       checkSql,
+//       [category_name, doctor_specialization_id],
+//       (err, results) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.internalServerError,
+//             error: err.message,
+//           });
+//         }
+
+//         if (results.length > 0) {
+//           return response.status(200).json({
+//             success: false,
+//             msg: languageMessages.categoryAlreadyExists,
+//           });
+//         }
+
+//         const sql =
+//           "UPDATE doctor_category SET category_name = ? , updatetime = ? WHERE doctor_category_id = ?";
+
+//         connection.query(
+//           sql,
+//           [category_name, updatetime, doctor_specialization_id],
+//           (err) => {
+//             if (err) {
+//               return response.status(200).json({
+//                 success: false,
+//                 msg: languageMessages.internalServerError,
+//                 error: err.message,
+//               });
+//             }
+
+//             response
+//               .status(200)
+//               .json({ success: true, msg: languageMessages.DetailsUpdated });
+//           },
+//         );
+//       },
+//     );
+//   } catch (error) {
+//     response.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       error: error.message,
+//     });
+//   }
+// };
+
 const editDoctorSpecialization = async (request, response) => {
   try {
-    const { doctor_specialization_id, category_name } = request.body;
+    const { doctor_specialization_id, translations } = request.body;
 
+    const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Validate
     if (!doctor_specialization_id) {
       return response.status(200).json({
         success: false,
@@ -1153,22 +1465,40 @@ const editDoctorSpecialization = async (request, response) => {
       });
     }
 
-    if (!category_name) {
+    if (!translations || typeof translations !== "object") {
       return response.status(200).json({
         success: false,
         msg: languageMessages.msg_empty_param,
-        key: "category_name",
+        key: "translations",
       });
     }
 
-    // Check if category_name already exists
+    // English required
+    if (!translations.en || !translations.en.category_name) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "en",
+      });
+    }
 
-    const checkSql =
-      "SELECT doctor_category_id FROM doctor_category WHERE category_name = ? AND doctor_category_id != ? AND delete_flag = 0";
+    const englishName = translations.en.category_name;
+
+    // Duplicate check (EN only)
+    const checkSql = `
+      SELECT dct.doctor_category_id
+      FROM doctor_category_translation dct
+      JOIN doctor_category dc 
+        ON dc.doctor_category_id = dct.doctor_category_id
+      WHERE dct.language_code = 'en'
+      AND dct.category_name = ?
+      AND dct.doctor_category_id != ?
+      AND dc.delete_flag = 0
+    `;
 
     connection.query(
       checkSql,
-      [category_name, doctor_specialization_id],
+      [englishName, doctor_specialization_id],
       (err, results) => {
         if (err) {
           return response.status(200).json({
@@ -1185,12 +1515,16 @@ const editDoctorSpecialization = async (request, response) => {
           });
         }
 
-        const sql =
-          "UPDATE doctor_category SET category_name = ? , updatetime = ? WHERE doctor_category_id = ?";
+        // Update master (ONLY timestamp)
+        const updateMasterSql = `
+          UPDATE doctor_category 
+          SET updatetime = ? 
+          WHERE doctor_category_id = ?
+        `;
 
         connection.query(
-          sql,
-          [category_name, updatetime, doctor_specialization_id],
+          updateMasterSql,
+          [updatetime, doctor_specialization_id],
           (err) => {
             if (err) {
               return response.status(200).json({
@@ -1200,15 +1534,90 @@ const editDoctorSpecialization = async (request, response) => {
               });
             }
 
-            response
-              .status(200)
-              .json({ success: true, msg: languageMessages.DetailsUpdated });
-          },
+            // UPSERT translations
+            const tasks = Object.entries(translations).map(
+              ([lang, data]) => {
+                return new Promise((resolve, reject) => {
+
+                  const checkLangSql = `
+                    SELECT id 
+                    FROM doctor_category_translation
+                    WHERE doctor_category_id = ? 
+                    AND language_code = ?
+                  `;
+
+                  connection.query(
+                    checkLangSql,
+                    [doctor_specialization_id, lang],
+                    (err, result) => {
+                      if (err) return reject(err);
+
+                      if (result.length > 0) {
+                        // 🔁 UPDATE
+                        const updateLangSql = `
+                          UPDATE doctor_category_translation
+                          SET category_name = ?
+                          WHERE doctor_category_id = ? 
+                          AND language_code = ?
+                        `;
+
+                        connection.query(
+                          updateLangSql,
+                          [data.category_name, doctor_specialization_id, lang],
+                          (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                          }
+                        );
+                      } else {
+                        // ➕ INSERT
+                        const insertLangSql = `
+                          INSERT INTO doctor_category_translation
+                          (doctor_category_id, language_code, category_name)
+                          VALUES (?, ?, ?)
+                        `;
+
+                        connection.query(
+                          insertLangSql,
+                          [
+                            doctor_specialization_id,
+                            lang,
+                            data.category_name,
+                          ],
+                          (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                          }
+                        );
+                      }
+                    }
+                  );
+
+                });
+              }
+            );
+
+            Promise.all(tasks)
+              .then(() => {
+                return response.status(200).json({
+                  success: true,
+                  msg: languageMessages.DetailsUpdated,
+                });
+              })
+              .catch((error) => {
+                return response.status(200).json({
+                  success: false,
+                  msg: languageMessages.internalServerError,
+                  error: error.message,
+                });
+              });
+          }
         );
-      },
+      }
     );
+
   } catch (error) {
-    response.status(200).json({
+    return response.status(200).json({
       success: false,
       msg: languageMessages.internalServerError,
       error: error.message,
