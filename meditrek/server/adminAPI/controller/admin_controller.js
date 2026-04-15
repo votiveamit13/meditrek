@@ -2960,7 +2960,7 @@ const addSymptom = async (request, response) => {
 
     connection.query(
       insertSql,
-      [symptom_name, description , createtime],
+      [symptom_name,  description || "" , createtime],
       (err, result) => {
         if (err) {
           return response.status(200).json({
@@ -2978,7 +2978,7 @@ const addSymptom = async (request, response) => {
             symptomId,
             lang,
             data.symptom_name,
-            data.description || null,
+            data.description || "",
           ]
         );
 
@@ -7704,13 +7704,14 @@ const bulkUploadSymptoms = async (request, response) => {
     for (const row of jsonData) {
 
       // CHANGED (symptoms_name → symptoms_name_en)
-      const category_name = row["symptoms_name_en"];
+      // const category_name = row["symptoms_name_en"];
+      const category_name = row["symptoms_name_en"]?.trim();
 
       if (!category_name) continue;
 
       try {
         const checkSql =
-          "SELECT symptom_id FROM symptoms_master WHERE symptom_name = ? AND delete_flag = 0";
+          "SELECT symptom_id FROM symptoms_master WHERE TRIM(LOWER(symptom_name)) = TRIM(LOWER(?)) AND delete_flag = 0";
 
         const checkResult = await new Promise((resolve, reject) => {
           connection.query(checkSql, [category_name], (err, results) => {
@@ -7719,37 +7720,66 @@ const bulkUploadSymptoms = async (request, response) => {
           });
         });
 
+        // if (checkResult.length > 0) {
+        //   skippedCount++;
+        //   continue;
+        // }
+        let symptomId;
+
         if (checkResult.length > 0) {
-          skippedCount++;
-          continue;
+          // already exist → use existing id
+          symptomId = checkResult[0].symptom_id;
+        } else {
+          //  new insert
+          const insertSql =
+            "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
+
+          const result = await new Promise((resolve, reject) => {
+            connection.query(insertSql, [category_name], (err, result) => {
+              if (err) return reject(err);
+              resolve(result);
+            });
+          });
+
+          symptomId = result.insertId;
+          insertedCount++;
         }
 
-        const insertSql =
-          "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
+        // const insertSql =
+        //   "INSERT INTO symptoms_master (symptom_name, createtime, updatetime) VALUES (?, now(), now())";
 
-        // FIXED (no await inside callback)
-        const result = await new Promise((resolve, reject) => {
-          connection.query(insertSql, [category_name], (err, result) => {
-            if (err) return reject(err);
-            resolve(result);
-          });
-        });
+        // // FIXED (no await inside callback)
+        // const result = await new Promise((resolve, reject) => {
+        //   connection.query(insertSql, [category_name], (err, result) => {
+        //     if (err) return reject(err);
+        //     resolve(result);
+        //   });
+        // });
 
-        const symptomId = result.insertId;
+        // const symptomId = result.insertId;
 
         // MULTI LANGUAGE INSERT (ADDED)
         for (const lang of languages) {
           const langCode = lang.language_code;
-
+          if (langCode === "en") continue;
           const name = row[`symptoms_name_${langCode}`];
 
+        
           if (!name) continue;
 
+          // const insertTranslationSql = `
+          //   INSERT INTO symptoms_translation 
+          //   (symptom_id, language_code, symptom_name, description) 
+          //   VALUES (?, ?, ?, ?)
+          // `;
           const insertTranslationSql = `
-            INSERT INTO symptoms_translation 
-            (symptom_id, language_code, symptom_name, description) 
-            VALUES (?, ?, ?, ?)
-          `;
+              INSERT INTO symptoms_translation 
+              (symptom_id, language_code, symptom_name, description) 
+              VALUES (?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE 
+                symptom_name = VALUES(symptom_name),
+                description = VALUES(description)
+            `;
 
           await new Promise((resolve, reject) => {
             connection.query(
@@ -7763,7 +7793,7 @@ const bulkUploadSymptoms = async (request, response) => {
           });
         }
 
-        insertedCount++;
+        // insertedCount++;
 
       } catch (innerErr) {
         console.error("DB Error:", innerErr.message);
