@@ -1156,8 +1156,8 @@ const getMyMedicationsHistory = async (request, response) => {
               }
 
               if (item.createtime) {
-                item.date = moment(item.createtime).format("DD MMM YYYY");
-                item.time = moment(item.createtime).format("hh:mm A");
+                item.date = moment(item.createtime).locale("en").format("DD MMM YYYY");
+                item.time = moment(item.createtime).locale("en").format("hh:mm A");
               } else {
                 item.date = "NA";
                 item.time = "NA";
