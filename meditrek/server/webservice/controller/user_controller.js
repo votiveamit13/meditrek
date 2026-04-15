@@ -4987,6 +4987,75 @@ const getUserLanguages = (req, res) => {
     );
   };
 
+const getLanguages = (req, res) => {
+  const languageMap = {
+    en: "English",
+    es: "Español",
+    fr: "Français",
+    ar: "العربية",
+    it: "Italiano",
+    de: "Deutsch",
+    pt: "Português",
+  };
+
+  const { admin_id } = req.query;
+
+  if (!admin_id) {
+    return res.json({
+      success: false,
+      msg: "admin_id required",
+    });
+  }
+
+  connection.query(
+    `SELECT 
+        lm.id, 
+        lm.language_name, 
+        lm.language_code, 
+        lm.is_default
+     FROM admin_selected_languages asl
+     JOIN languages_master lm 
+       ON lm.id = asl.language_id
+     WHERE asl.admin_id = ?
+     ORDER BY lm.is_default DESC`,
+    [admin_id],
+    (err, rows) => {
+      if (err) {
+        return res.json({
+          success: false,
+          error: err.message,
+        });
+      }
+
+      if (!rows || rows.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            default_language: null,
+            language: [],
+          },
+        });
+      }
+
+      const defaultLang = rows.find((r) => r.is_default == 1);
+
+      return res.json({
+        success: true,
+        data: {
+          default_language: defaultLang?.language_code || null,
+
+          language: rows.map((r) => ({
+            id: r.id,
+            language_name:
+              languageMap[r.language_code] || r.language_name,
+            language_code: r.language_code,
+          })),
+        },
+      });
+    }
+  );
+};
+
 const updateUserLanguage = (req, res) => {
 
     const { user_id, language_code } = req.body;
@@ -5078,6 +5147,7 @@ module.exports = {
     getHomePageStatus,
     
     updateTimezone,
-    getUserLanguages
+    getUserLanguages,
+    getLanguages
 
 }
