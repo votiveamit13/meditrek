@@ -1556,7 +1556,7 @@ const getDocumentType = async (request, response) => {
 //   });
 // };
 const getReports = async (request, response) => {
-  const { user_id, report_category_id ,page=1,limit=10 } = request.query;
+  const { user_id, report_category_id, language_code, page = 1, limit = 10 } = request.query;
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
@@ -1621,10 +1621,39 @@ const getReports = async (request, response) => {
     }
 
     try {
-      const Query =
-        "SELECT mrm.medical_report_id, mrm.report_category_id,rc.category_name, mrm.file,mrm.file_size, mrm.createtime FROM medical_report_master mrm LEFT JOIN report_category rc ON mrm.report_category_id=rc.report_category_id WHERE mrm.user_id = ? AND mrm.report_category_id = ? AND mrm.delete_flag=0 LIMIT ? OFFSET ?";
+      const Query = `
+                    SELECT 
+                      mrm.medical_report_id, 
+                      mrm.report_category_id,
 
-      const Values = [user_id, report_category_id, limitNum, offset];
+                      COALESCE(rct_lang.category_name, rct_en.category_name, rc.category_name) AS category_name,
+
+                      mrm.file,
+                      mrm.file_size, 
+                      mrm.createtime
+
+                    FROM medical_report_master mrm
+
+                    LEFT JOIN report_category_translation AS rct_lang
+                      ON mrm.report_category_id = rct_lang.report_category_id
+                      AND rct_lang.language_code = ?
+
+                    LEFT JOIN report_category_translation AS rct_en
+                      ON mrm.report_category_id = rct_en.report_category_id
+                      AND rct_en.language_code = 'en'
+
+                    LEFT JOIN report_category rc
+                      ON mrm.report_category_id = rc.report_category_id
+
+                    WHERE mrm.user_id = ? 
+                    AND mrm.report_category_id = ? 
+                    AND mrm.delete_flag = 0
+
+                    ORDER BY mrm.medical_report_id DESC
+                    LIMIT ? OFFSET ?
+                    `;
+
+      const Values = [language_code, user_id, report_category_id, limitNum, offset];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
