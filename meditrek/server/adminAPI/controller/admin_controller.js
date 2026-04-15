@@ -11610,183 +11610,180 @@ const getDoctorList = (req, res) => {
 
 const getDoctorAnalytics = (req, res) => {
   const { doctor_ids, period = "last_30_days", page = 1, limit = 10 } = req.body;
-  
   const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
   const offset = (page - 1) * limit;
-  
-  // Helper function to format date
+
   const formatDate = (date) => {
     const now = new Date();
     const loginDate = new Date(date);
     const diffDays = Math.floor((now - loginDate) / (1000 * 60 * 60 * 24));
-    
     if (diffDays === 0) {
       const hours = loginDate.getHours();
       const minutes = loginDate.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const ampm = hours >= 12 ? "PM" : "AM";
       const hour12 = hours % 12 || 12;
-      return `Today, ${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+      return `Today, ${hour12}:${minutes.toString().padStart(2, "0")} ${ampm}`;
     } else if (diffDays === 1) {
       return `Yesterday, ${loginDate.toLocaleTimeString()}`;
-    } else {
-      return `${diffDays} days ago`;
     }
+    return `${diffDays} days ago`;
   };
-  
-  // Build doctor filter condition - MUST match getDoctorList logic
+
+  // Mirrors getDoctorList exactly
   let doctorWhere = `WHERE dm.approve_status = 1 AND dm.active_flag = 1 AND dm.delete_flag = 0`;
   let doctorParams = [];
-  
+
   if (hasDoctors) {
     const ph = doctor_ids.map(() => "?").join(", ");
     doctorWhere += ` AND dm.doctor_id IN (${ph})`;
     doctorParams.push(...doctor_ids);
   }
-  
-  // Get total doctors count (only approved & active)
+
+  // 1. Total doctor count
   const totalDoctorsSql = `
-    SELECT COUNT(*) as total
+    SELECT COUNT(*) AS total
     FROM doctor_master dm
     ${doctorWhere}
   `;
-  
+
   connection.query(totalDoctorsSql, doctorParams, (err, totalResult) => {
-    if (err) {
-      return res.json({ success: false, error: err.message });
-    }
-    
+    if (err) return res.json({ success: false, error: err.message });
+
     const total_doctors = totalResult[0]?.total || 0;
-    
-    // Get paginated doctor analytics - ONLY for approved & active doctors
-    // IMPORTANT: Only count patients linked to approved & active doctors
-    const doctorAnalyticsSql = `
-      SELECT 
-        dm.doctor_id,
-        dm.doctor_name,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as total_patients,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
+
+    // 2. GLOBAL stats — COUNT(DISTINCT user_id) so patients shared across
+    //    doctors are never double-counted. This mirrors getAdminPatientDemographics.
+    //    These numbers appear in the stat cards and must NOT be affected by pagination.
+    const globalStatsSql = `
+      SELECT
+        COUNT(DISTINCT CASE
+          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          THEN pm.user_id END) AS total_patients,
+        COUNT(DISTINCT CASE
+          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as new_patients_last_30,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
+          THEN pm.user_id END) AS new_patients_last_30,
+        COUNT(DISTINCT CASE
+          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as new_patients_last_90,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
+          THEN pm.user_id END) AS new_patients_last_90,
+        COUNT(DISTINCT CASE
+          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as new_patients_last_6_months,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
+          THEN pm.user_id END) AS new_patients_last_6_months,
+        COUNT(DISTINCT CASE
+          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as new_patients_last_year,
-        MAX(pm.createtime) as last_patient_added,
-        COUNT(DISTINCT CASE 
-          WHEN pm.delete_flag = 0 
-            AND um.dob IS NOT NULL 
-            AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            AND pm.doctor_id IN (
-              SELECT doctor_id FROM doctor_master 
-              WHERE approve_status = 1 AND active_flag = 1 AND delete_flag = 0
-            )
-          THEN pm.user_id 
-        END) as active_patients_last_7_days
+          THEN pm.user_id END) AS new_patients_last_year
       FROM doctor_master dm
       LEFT JOIN patient_master pm ON dm.doctor_id = pm.doctor_id
-      LEFT JOIN user_master um ON pm.user_id = um.user_id
+      LEFT JOIN user_master um    ON pm.user_id    = um.user_id
       ${doctorWhere}
-      GROUP BY dm.doctor_id, dm.doctor_name
-      ORDER BY total_patients DESC
-      LIMIT ? OFFSET ?
     `;
-    
-    const paginationParams = [...doctorParams, Number(limit), Number(offset)];
-    
-    connection.query(doctorAnalyticsSql, paginationParams, (err2, doctors) => {
-      if (err2) {
-        return res.json({ success: false, error: err2.message });
-      }
-      
-      if (doctors.length === 0) {
+
+    connection.query(globalStatsSql, doctorParams, (err2, globalResult) => {
+      if (err2) return res.json({ success: false, error: err2.message });
+
+      const g = globalResult[0] || {};
+      const total_patients     = g.total_patients     || 0;
+      const total_new_patients = 
+        period === "last_90_days"   ? (g.new_patients_last_90      || 0) :
+        period === "last_6_months"  ? (g.new_patients_last_6_months || 0) :
+        period === "last_year"      ? (g.new_patients_last_year     || 0) :
+                                      (g.new_patients_last_30       || 0);
+
+      const avg_patients_per_doctor = total_doctors > 0
+        ? (total_patients / total_doctors).toFixed(1)
+        : "0";
+
+      if (total_doctors === 0) {
         return res.json({
           success: true,
-          total_doctors,
+          total_doctors: 0,
           total_patients: 0,
           avg_patients_per_doctor: "0",
           total_new_patients: 0,
           doctors: [],
           page: Number(page),
           limit: Number(limit),
-          has_more: false
+          has_more: false,
         });
       }
-      
-      // Calculate totals
-      let totalPatientsAllDoctors = 0;
-      let totalNewPatientsAllDoctors = 0;
-      
-      const analyticsData = doctors.map(doctor => {
-        totalPatientsAllDoctors += doctor.total_patients;
-        totalNewPatientsAllDoctors += doctor.new_patients_last_30;
-        
-        return {
-          doctor_id: doctor.doctor_id,
-          doctor_name: doctor.doctor_name,
-          total_patients: doctor.total_patients,
-          new_patients: doctor.new_patients_last_30,
-          growth_percent: "0",
-          trend: "stable",
-          active_patients_last_7_days: doctor.active_patients_last_7_days || 0,
-          last_login: "Never",
-          last_patient_added: doctor.last_patient_added ? formatDate(doctor.last_patient_added) : "No patients",
-        };
-      });
-      
-      const avgPatientsPerDoctor = total_doctors > 0 ? (totalPatientsAllDoctors / total_doctors).toFixed(1) : "0";
-      
-      res.json({
-        success: true,
-        total_doctors,
-        total_patients: totalPatientsAllDoctors,
-        avg_patients_per_doctor: avgPatientsPerDoctor,
-        total_new_patients: totalNewPatientsAllDoctors,
-        doctors: analyticsData,
-        page: Number(page),
-        limit: Number(limit),
-        has_more: doctors.length === Number(limit)
-      });
+
+      // 3. Per-doctor rows — paginated. Each doctor's own patient count
+      //    (distinct within that doctor) is fine here because it's per-row data,
+      //    not summed into a global total anymore.
+      const doctorRowsSql = `
+        SELECT
+          dm.doctor_id,
+          dm.doctor_name,
+          COUNT(DISTINCT CASE
+            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+            THEN pm.user_id END) AS total_patients,
+          COUNT(DISTINCT CASE
+            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            THEN pm.user_id END) AS new_patients_last_30,
+          COUNT(DISTINCT CASE
+            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+            THEN pm.user_id END) AS new_patients_last_90,
+          COUNT(DISTINCT CASE
+            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            THEN pm.user_id END) AS new_patients_last_6_months,
+          COUNT(DISTINCT CASE
+            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+            THEN pm.user_id END) AS new_patients_last_year,
+          MAX(pm.createtime) AS last_patient_added
+        FROM doctor_master dm
+        LEFT JOIN patient_master pm ON dm.doctor_id = pm.doctor_id
+        LEFT JOIN user_master um    ON pm.user_id    = um.user_id
+        ${doctorWhere}
+        GROUP BY dm.doctor_id, dm.doctor_name
+        ORDER BY total_patients DESC
+        LIMIT ? OFFSET ?
+      `;
+
+      connection.query(
+        doctorRowsSql,
+        [...doctorParams, Number(limit), Number(offset)],
+        (err3, doctors) => {
+          if (err3) return res.json({ success: false, error: err3.message });
+
+          const getPeriodCount = (doc) => {
+            if (period === "last_90_days")  return doc.new_patients_last_90      || 0;
+            if (period === "last_6_months") return doc.new_patients_last_6_months || 0;
+            if (period === "last_year")     return doc.new_patients_last_year     || 0;
+            return doc.new_patients_last_30 || 0;
+          };
+
+          const analyticsData = doctors.map((doctor) => ({
+            doctor_id:   doctor.doctor_id,
+            doctor_name: doctor.doctor_name,
+            total_patients: doctor.total_patients,
+            new_patients:   getPeriodCount(doctor),
+            growth_percent: "0",
+            trend: "stable",
+            last_patient_added: doctor.last_patient_added
+              ? formatDate(doctor.last_patient_added)
+              : "No patients",
+          }));
+
+          return res.json({
+            success: true,
+            total_doctors,
+            total_patients,           // ← globally deduplicated, matches Demographics
+            avg_patients_per_doctor,  // ← based on deduplicated total
+            total_new_patients,       // ← globally deduplicated, period-aware
+            doctors: analyticsData,
+            page:     Number(page),
+            limit:    Number(limit),
+            has_more: doctors.length === Number(limit),
+          });
+        }
+      );
     });
   });
 };
