@@ -1156,8 +1156,8 @@ const getMyMedicationsHistory = async (request, response) => {
               }
 
               if (item.createtime) {
-                item.date = moment(item.createtime).format("DD MMM YYYY");
-                item.time = moment(item.createtime).format("hh:mm A");
+                item.date = moment(item.createtime).locale("en").format("DD MMM YYYY");
+                item.time = moment(item.createtime).locale("en").format("hh:mm A");
               } else {
                 item.date = "NA";
                 item.time = "NA";
@@ -3944,33 +3944,130 @@ const getDoctors = async (request, response) => {
 //     }
 //   });
 // };
+
+// const getMyDoctors = async (request, response) => {
+//   const { user_id, page = 1, limit = 10 } = request.query;
+//   const pageNum = parseInt(page);
+//   const limitNum = parseInt(limit);
+//   const offset = (pageNum - 1) * limitNum;
+//   if (!user_id) {
+//     return response.status(200).json({
+//       success: false,
+
+//       msg: languageMessage.msg_empty_param,
+//     });
+//   }
+
+//   // Validate user
+
+//   const userQuery =
+//     "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ?";
+
+//   const userValues = [user_id];
+
+//   connection.query(userQuery, userValues, async (err, result) => {
+//     if (err) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.internalServerError,
+
+//         key: err.message,
+//       });
+//     }
+
+//     if (result.length === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userNotFound,
+//       });
+//     }
+
+//     if (result[0]?.active_flag === 0) {
+//       return response.status(200).json({
+//         success: false,
+
+//         msg: languageMessage.userDeleted,
+
+//         active_flag: 0,
+//       });
+//     }
+
+//     if (result[0]?.delete_flag == 1) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.msgUserDeleted,
+//         active_flag: 0,
+//       });
+//     }
+
+//     try {
+//       const Query =
+//         "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0 LIMIT ? OFFSET ?";
+
+//       const Values = [user_id, limitNum, offset];
+
+//       connection.query(Query, Values, async (err, subResult) => {
+//         if (err) {
+//           return response.status(200).json({
+//             success: false,
+
+//             msg: languageMessage.internalServerError,
+
+//             key: err.message,
+//           });
+//         }
+//         return response.status(200).json({
+//           success: true,
+//           msg: languageMessage.dataFound,
+//           dataArray: subResult,
+//            page: pageNum,
+//            limit: limitNum,
+//         });
+//       });
+//     } catch (error) {
+//       return response.status(200).json({
+//         success: false,
+//         msg: languageMessage.internalServerError,
+//         error: error.message,
+//       });
+//     }
+//   });
+// };
+
 const getMyDoctors = async (request, response) => {
-  const { user_id, page = 1, limit = 10 } = request.query;
+  const { user_id, page = 1, limit = 10, language_code } = request.query;
+
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
+
   if (!user_id) {
     return response.status(200).json({
       success: false,
-
       msg: languageMessage.msg_empty_param,
     });
   }
 
+  // language logic (same as FAQ)
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : "en";
+
+  request.setLocale(finalLanguage);
+
   // Validate user
-
   const userQuery =
-    "SELECT mobile, active_flag, otp_verify,delete_flag FROM user_master WHERE user_id = ?";
+    "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
 
-  const userValues = [user_id];
+  connection.query(userQuery, [user_id], async (err, result) => {
 
-  connection.query(userQuery, userValues, async (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.internalServerError,
-
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -3978,17 +4075,14 @@ const getMyDoctors = async (request, response) => {
     if (result.length === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.active_flag === 0) {
       return response.status(200).json({
         success: false,
-
-        msg: languageMessage.userDeleted,
-
+        msg: request.__("user_deactivated"),
         active_flag: 0,
       });
     }
@@ -3996,44 +4090,78 @@ const getMyDoctors = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
 
     try {
-      const Query =
-        "SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, dm.doctor_category_id, dc.category_name AS doctor_category, dm.image, pm.createtime FROM patient_master AS pm LEFT JOIN doctor_master AS dm ON pm.doctor_id = dm.doctor_id LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag=0 LIMIT ? OFFSET ?";
+      const Query = `
+        SELECT 
+          dm.doctor_id,
+          dm.doctor_name,
+          dm.mobile,
+          dm.email,
+          dm.doctor_category_id,
 
-      const Values = [user_id, limitNum, offset];
+          -- Multilingual category
+          COALESCE(dct.category_name, dct_en.category_name) AS doctor_category,
 
-      connection.query(Query, Values, async (err, subResult) => {
+          dm.image,
+          pm.createtime
+
+        FROM patient_master AS pm
+
+        LEFT JOIN doctor_master AS dm 
+          ON pm.doctor_id = dm.doctor_id
+
+        LEFT JOIN doctor_category AS dc 
+          ON dm.doctor_category_id = dc.doctor_category_id
+
+        LEFT JOIN doctor_category_translation dct 
+          ON dc.doctor_category_id = dct.doctor_category_id 
+          AND dct.language_code = ?
+
+        LEFT JOIN doctor_category_translation dct_en 
+          ON dc.doctor_category_id = dct_en.doctor_category_id 
+          AND dct_en.language_code = 'en'
+
+        WHERE pm.user_id = ? 
+        AND pm.delete_flag = 0
+
+        LIMIT ? OFFSET ?
+      `;
+
+      const Values = [finalLanguage, user_id, limitNum, offset];
+
+      connection.query(Query, Values, (err, subResult) => {
         if (err) {
           return response.status(200).json({
             success: false,
-
-            msg: languageMessage.internalServerError,
-
+            msg: request.__("internal_server_error"),
             key: err.message,
           });
         }
+
         return response.status(200).json({
           success: true,
-          msg: languageMessage.dataFound,
+          msg: request.__("data_found"),
           dataArray: subResult,
-           page: pageNum,
-           limit: limitNum,
+          page: pageNum,
+          limit: limitNum,
         });
       });
+
     } catch (error) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
         error: error.message,
       });
     }
   });
 };
+
 //end
 
 const ShareInformation = async (request, response) => {
