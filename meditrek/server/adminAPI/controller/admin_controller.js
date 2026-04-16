@@ -11181,7 +11181,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
 
   const getMedicationDiseaseDashboardAdmin = (req, res) => {
     const {
-      doctor_id,
+      doctor_ids,
       medication = [],
       diseases = [],
       age_group,
@@ -11193,6 +11193,9 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
       limit = 10,
     } = req.body;
 
+    const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+    const ph = hasDoctors ? doctor_ids.map(() => "?").join(", ") : null;
+
     let params = [];
     let totalParams = [];
 
@@ -11201,9 +11204,9 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
     let totalWhere = `WHERE pm.delete_flag = 0`;
-    if (doctor_id) {
-      totalWhere += ` AND pm.doctor_id = ?`;
-      totalParams.push(doctor_id);
+    if (hasDoctors) {
+      totalWhere += ` AND pm.doctor_id IN (${ph})`;
+      totalParams.push(...doctor_ids);
     }
 
     if (gender !== undefined && gender !== null && gender !== "") {
@@ -11248,14 +11251,25 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
   FROM patient_master pm
   ${totalWhere}
 `;
+    if (hasDoctors) {
+      where += ` AND pm.doctor_id IN (${ph})`;
+      params.push(...doctor_ids);
+    }
 
     const patientSql = `
-    SELECT DISTINCT pm.user_id, pm.doctor_id, u.name, u.dob, u.gender, u.diseases
-    FROM patient_master pm
-    JOIN user_master u ON u.user_id = pm.user_id
-    ${where}
-    ORDER BY u.name ASC
-  `;
+      SELECT 
+        pm.user_id,
+        GROUP_CONCAT(DISTINCT pm.doctor_id) as doctor_ids,
+        u.name,
+        u.dob,
+        u.gender,
+        u.diseases
+      FROM patient_master pm
+      JOIN user_master u ON u.user_id = pm.user_id
+      ${where}
+      GROUP BY pm.user_id
+      ORDER BY u.name ASC
+    `;
 
     connection.query(totalSql, totalParams, (err0, totalRes) => {
       if (err0) return res.json({ success: false, msg: err0.message });
@@ -11289,7 +11303,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
 
                 resolve({
                   user_id: p.user_id,
-                  doctor_id: p.doctor_id,
+                  doctor_ids: p.doctor_ids,
                   name: p.name,
                   age: p.dob
                     ? Math.floor(
