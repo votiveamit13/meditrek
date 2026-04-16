@@ -11376,12 +11376,14 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
             connection.query(medSql, [p.user_id], (e, meds) => {
               resolve({
-                user_id: p.user_id,
-                doctor_id: p.doctor_id,
-                name: p.name,
-                diseases,
-                medications: meds || [],
-              });
+              user_id: p.user_id,
+              doctor_id: p.doctor_id,
+              name: p.name,
+              age: p.age,
+              gender: p.gender,
+              diseases,
+              medications: meds || [],
+            });
             });
           });
         });
@@ -11444,6 +11446,57 @@ const paginatedMedicineSummary = medicineSummary.slice(
           const uniquePatients = Object.values(uniqueMap);
           const matchedCount = uniquePatients.length;
 
+          const ageGroups = {
+            "0-18": 0,
+            "19-30": 0,
+            "31-44": 0,
+            "45-64": 0,
+            "65-74": 0,
+            "75-84": 0,
+            "85+": 0,
+          };
+
+          uniquePatients.forEach((p) => {
+            const age = p.age || 0;
+
+            if (age <= 18) ageGroups["0-18"]++;
+            else if (age <= 30) ageGroups["19-30"]++;
+            else if (age <= 44) ageGroups["31-44"]++;
+            else if (age <= 64) ageGroups["45-64"]++;
+            else if (age <= 74) ageGroups["65-74"]++;
+            else if (age <= 84) ageGroups["75-84"]++;
+            else ageGroups["85+"]++;
+          });
+
+          const age_breakdown = Object.keys(ageGroups).map((key) => ({
+            age_group: key,
+            count: ageGroups[key],
+            percentage: matchedCount
+              ? ((ageGroups[key] / matchedCount) * 100).toFixed(2)
+              : "0.00",
+          }));
+
+          const genderMap = {
+            Male: 0,
+            Female: 0,
+            Other: 0,
+            "Not Specified": 0,
+          };
+
+          uniquePatients.forEach((p) => {
+            const g = p.gender || "Not Specified";
+            if (!genderMap[g]) genderMap[g] = 0;
+            genderMap[g]++;
+          });
+
+          const sex_breakdown = Object.keys(genderMap).map((key) => ({
+            gender: key,
+            count: genderMap[key],
+            percentage: matchedCount
+              ? ((genderMap[key] / matchedCount) * 100).toFixed(2)
+              : "0.00",
+          }));
+
           const percentage = totalPatients
             ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
             : "0.00%";
@@ -11490,6 +11543,8 @@ const paginatedMedicineSummary = medicineSummary.slice(
             total_patients: totalPatients,
             matched_patients: matchedCount,
             percentage,
+            //age_breakdown,
+            //sex_breakdown,
             selected_medication_count: Array.isArray(medication)
               ? medication.length
               : 0,
