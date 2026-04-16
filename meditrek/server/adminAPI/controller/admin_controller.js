@@ -10919,7 +10919,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
 
   const getAdminMedicationFull = (req, res) => {
     let {
-      doctor_id,
+      doctor_ids,
       gender,
       age_group,
       medication = [],
@@ -10933,6 +10933,9 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
       patient_limit = 10,
     } = req.body;
 
+    const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+    const ph = hasDoctors ? doctor_ids.map(() => "?").join(", ") : null;
+
     if ((!medication || medication.length === 0) && medicine_name) {
       medication = [medicine_name];
     }
@@ -10945,10 +10948,10 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
 
-    if (doctor_id) {
-      where += ` AND pm.doctor_id = ?`;
-      params.push(doctor_id);
-      totalParams.push(doctor_id);
+    if (hasDoctors) {
+      where += ` AND pm.doctor_id IN (${ph})`;
+      params.push(...doctor_ids);
+      totalParams.push(...doctor_ids);
     }
 
     if (gender !== undefined && gender !== null && gender !== "") {
@@ -10984,8 +10987,8 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
       AND u.user_id IS NOT NULL
   `;
 
-    if (doctor_id) {
-      totalSql += ` AND pm.doctor_id = ?`;
+    if (hasDoctors) {
+      totalSql += ` AND pm.doctor_id IN (${ph})`;
     }
 
     const patientSql = `
@@ -11004,7 +11007,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
     FROM patient_master pm
     JOIN user_master u ON u.user_id = pm.user_id
     ${where}
-    GROUP BY pm.user_id, pm.doctor_id
+    GROUP BY pm.user_id
     ORDER BY u.name ASC
   `;
 
