@@ -9606,6 +9606,7 @@ const getDiseaseDashboardAdmin = (req, res) => {
     gender,
     singleOnly = false,
     combinedOnly = false,
+    includeExtra = false,
     page = 1,
     limit = 10,
     disease_page = 1,
@@ -9618,7 +9619,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
   let params = [];
   let where = `WHERE p.delete_flag = 0 `;
 
-  // Handle multiple doctors
   const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
 
   if (hasDoctors) {
@@ -9644,7 +9644,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
     }
   }
 
-  // Disease filtering
   if (Array.isArray(disease) && disease.length > 0) {
     const countCondition = `
     (
@@ -9653,7 +9652,7 @@ const getDiseaseDashboardAdmin = (req, res) => {
     ) / LENGTH('name:')
     `;
 
-    if (singleOnly) {
+    if (singleOnly && disease.length === 1) {
       const diseaseConditions = disease
         .map(() => `u.diseases LIKE ?`)
         .join(" OR ");
@@ -9669,6 +9668,13 @@ const getDiseaseDashboardAdmin = (req, res) => {
       disease.forEach((d) => params.push(`%${d}%`));
       where += ` AND ${countCondition} = ?`;
       params.push(disease.length);
+    }
+    else if (includeExtra && disease.length >= 2) {
+      const diseaseConditions = disease
+        .map(() => `u.diseases LIKE ?`)
+        .join(" AND ");
+      where += ` AND (${diseaseConditions})`;
+      disease.forEach((d) => params.push(`%${d}%`));
     }
     else {
       const diseaseConditions = disease
@@ -9695,7 +9701,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
       .join(",");
   };
 
-  // Total patients
   const totalSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
@@ -9709,7 +9714,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
 
     const totalPatients = totalRes[0].total;
 
-    // Matched patients
     const matchedSql = `
       SELECT COUNT(DISTINCT p.user_id) as matched
       FROM patient_master p
@@ -9722,7 +9726,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
 
       const matched = matchRes[0].matched;
 
-      // ✅ Disease count (for pagination)
       const diseaseCountSql = `
         SELECT COUNT(*) as total
         FROM (
@@ -9739,7 +9742,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
 
         const totalDiseaseGroups = countRes[0].total;
 
-        // ✅ Disease distribution (paginated)
         const diseaseSql = `
           SELECT u.diseases as name, COUNT(DISTINCT p.user_id) as count
           FROM patient_master p
@@ -9764,7 +9766,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
                 : "0.00",
             }));
 
-            // Age breakdown
             const ageSql = `
               SELECT 
                 CASE 
@@ -9793,7 +9794,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
                 percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00",
               }));
 
-              // Gender breakdown
               const sexSql = `
                 SELECT 
                   CASE 
@@ -9819,7 +9819,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
                   percentage: matched ? ((r.count / matched) * 100).toFixed(2) : "0.00",
                 }));
 
-                // Patient list (paginated)
                 const patientSql = `
                   SELECT DISTINCT
                       u.user_id,
@@ -9850,7 +9849,6 @@ const getDiseaseDashboardAdmin = (req, res) => {
                       p.diseases = cleanDiseaseString(p.diseases);
                     });
 
-                    // Medications
                     const promises = patientRows.map(
                       (patient) =>
                         new Promise((resolve, reject) => {
