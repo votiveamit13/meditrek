@@ -5077,6 +5077,8 @@ const getAllDiseases = (req, res) => {
     SELECT disease_id, disease_name
     FROM disease_master
     WHERE delete_flag = 0
+      AND disease_name IS NOT NULL
+      AND TRIM(disease_name) != ''
     ORDER BY disease_name ASC
   `;
 

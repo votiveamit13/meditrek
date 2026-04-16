@@ -10294,7 +10294,7 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
   // };
 const getPatientDiseasesMedicineListAdmin = (req, res) => {
   const {
-    doctor_ids, // Changed from doctor_id to doctor_ids
+    doctor_ids,
     gender,
     age_group,
     disease = [],
@@ -10912,6 +10912,326 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
             offset + Number(limit),
           ),
         });
+      });
+    });
+  });
+};
+
+const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
+  const {
+    doctor_ids,
+    gender,
+    age_group,
+    disease = [],
+    medication = [],
+    singleOnly = false,
+    combinedOnly = false,
+    includeExtra = false,
+    page = 1,
+    limit = 10,
+    med_page = 1,
+  med_limit = 10,
+  } = req.body;
+
+  let params = [];
+  let whereConditions = [];
+  
+  // Base WHERE clause
+  whereConditions.push(`p.delete_flag = 0`);
+  whereConditions.push(`u.dob IS NOT NULL`);
+  whereConditions.push(`u.dob <= CURDATE()`);
+  
+  const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+
+  if (hasDoctors) {
+    const placeholders = doctor_ids.map(() => "?").join(", ");
+    whereConditions.push(`p.doctor_id IN (${placeholders})`);
+    params.push(...doctor_ids);
+  }
+
+  if (gender !== undefined && gender !== null && gender !== "") {
+    whereConditions.push(`u.gender = ?`);
+    params.push(gender);
+  }
+
+  if (age_group) {
+    if (age_group.includes("+")) {
+      const min = parseInt(age_group.replace("+", ""));
+      whereConditions.push(`TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`);
+      params.push(min);
+    } else if (age_group.includes("-")) {
+      const [min, max] = age_group.split("-").map(Number);
+      whereConditions.push(`TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`);
+      params.push(min, max);
+    } else if (age_group === "60+") {
+      whereConditions.push(`TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= 60`);
+    }
+  }
+
+  // Disease pre-filter
+  if (Array.isArray(disease) && disease.length > 0) {
+    if (singleOnly && disease.length === 1) {
+      whereConditions.push(`u.diseases LIKE ?`);
+      params.push(`%${disease[0]}%`);
+
+    } else if (combinedOnly && disease.length >= 2) {
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      whereConditions.push(`(${conditions})`);
+      disease.forEach(d => params.push(`%${d}%`));
+
+    } else if (includeExtra && disease.length >= 2) {
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
+      whereConditions.push(`(${conditions})`);
+      disease.forEach(d => params.push(`%${d}%`));
+
+    } else {
+      const conditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
+      whereConditions.push(`(${conditions})`);
+      disease.forEach(d => params.push(`%${d}%`));
+    }
+  }
+
+  const where = `WHERE ${whereConditions.join(' AND ')}`;
+
+  // Helpers
+  const parseDiseases = (diseasesStr) => {
+    if (!diseasesStr) return [];
+    try {
+      const parsed = JSON.parse(diseasesStr);
+      return parsed.map((d) => d.name);
+    } catch {
+      const matches = diseasesStr?.match(/name:\s*([^,}]+)/g) || [];
+      return matches.map((m) => m.split(":")[1].trim());
+    }
+  };
+
+  const filterByDiseases = (patients, diseaseList, singleOnlyFlag, combinedOnlyFlag, includeExtraFlag) => {
+    if (!Array.isArray(diseaseList) || diseaseList.length === 0) return patients;
+    
+    const selected = diseaseList.map(d => d.toLowerCase().trim());
+
+    if (singleOnlyFlag && diseaseList.length === 1) {
+      return patients.filter(p => {
+        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+        return dis.length === 1 && selected.includes(dis[0]);
+      });
+    } else if (combinedOnlyFlag && diseaseList.length >= 2) {
+      return patients.filter(p => {
+        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+        return dis.length === selected.length &&
+               selected.every(d => dis.includes(d));
+      });
+    } else if (includeExtraFlag && diseaseList.length >= 2) {
+      return patients.filter(p => {
+        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+        return selected.every(d => dis.includes(d));
+      });
+    } else {
+      return patients.filter(p =>
+        (p.diseases || []).some(d =>
+          selected.includes(d.toLowerCase().trim())
+        )
+      );
+    }
+  };
+
+  const filterByMedications = (patients, medicationList, singleOnlyFlag, combinedOnlyFlag, includeExtraFlag) => {
+    if (!Array.isArray(medicationList) || medicationList.length === 0) return patients;
+
+    const selected = medicationList.map(m => m.toLowerCase().trim());
+
+    return patients.filter(p =>
+      (p.medications || []).some(m =>
+        selected.includes(m?.medicine_name?.toLowerCase().trim())
+      )
+    );
+  };
+
+  // Total patients
+  let totalSql = `
+    SELECT COUNT(DISTINCT p.user_id) as total
+    FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
+    WHERE p.delete_flag = 0
+      AND u.dob IS NOT NULL
+      AND u.dob <= CURDATE()
+  `;
+
+  let totalParams = [];
+
+  if (hasDoctors) {
+    const placeholders = doctor_ids.map(() => "?").join(", ");
+    totalSql += ` AND p.doctor_id IN (${placeholders})`;
+    totalParams.push(...doctor_ids);
+  }
+
+  if (gender !== undefined && gender !== null && gender !== "") {
+    totalSql += ` AND u.gender = ?`;
+    totalParams.push(gender);
+  }
+
+  if (age_group) {
+    if (age_group.includes("+")) {
+      totalSql += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
+      totalParams.push(parseInt(age_group));
+    } else if (age_group.includes("-")) {
+      const [min, max] = age_group.split("-").map(Number);
+      totalSql += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
+      totalParams.push(min, max);
+    }
+  }
+
+  const dataSql = `
+    SELECT DISTINCT
+      p.user_id,
+      p.doctor_id,
+      u.name,
+      TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) AS age,
+      u.gender,
+      u.diseases
+    FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
+    ${where}
+    ORDER BY u.name ASC
+  `;
+
+  connection.query(totalSql, totalParams, (err, totalResult) => {
+    if (err) return res.json({ success: false, msg: err.message });
+
+    const totalPatients = totalResult[0].total;
+
+    connection.query(dataSql, params, (err, patients) => {
+      if (err) return res.json({ success: false, msg: err.message });
+
+      const userIds = patients.map(p => p.user_id);
+
+      // ✅ FIX: prevent SQL crash
+      if (userIds.length === 0) {
+        return res.json({
+          success: true,
+          analytics: {
+            total_patients: totalPatients,
+            matched_patients: 0,
+            percentage: "0%",
+            top_drug: "No data",
+            doctors_count: hasDoctors ? doctor_ids.length : 0,
+          },
+          medicine_distribution: [],
+          top_medicines_graph: [],
+          patients: {
+            data: [],
+            total: 0,
+            page: Number(page),
+            limit: Number(limit),
+            total_pages: 0,
+          }
+        });
+      }
+
+      const medSql = `
+        SELECT DISTINCT 
+          m.user_id,
+          med.medicine_name
+        FROM medication_master m
+        JOIN medicine_master med ON med.medicine_id = m.medicine_id
+        WHERE m.user_id IN (${userIds.map(() => '?').join(',')})
+          AND m.delete_flag = 0
+      `;
+
+      connection.query(medSql, userIds, (err, medications) => {
+        if (err) return res.json({ success: false, msg: err.message });
+
+        const medsByUser = {};
+        medications.forEach(m => {
+          if (!medsByUser[m.user_id]) medsByUser[m.user_id] = [];
+          medsByUser[m.user_id].push(m);
+        });
+
+        let allPatients = patients.map(p => ({
+          ...p,
+          diseases: parseDiseases(p.diseases),
+          medications: medsByUser[p.user_id] || []
+        }));
+
+        let filtered = filterByDiseases(allPatients, disease, singleOnly, combinedOnly, includeExtra);
+        filtered = filterByMedications(filtered, medication, singleOnly, combinedOnly, includeExtra);
+
+        const unique = [...new Map(filtered.map(p => [p.user_id, p])).values()];
+        const matchedPatients = unique.length;
+
+        if (matchedPatients === 0) {
+          return res.json({
+            success: true,
+            analytics: {
+              total_patients: totalPatients,
+              matched_patients: 0,
+              percentage: "0%",
+              top_drug: "No data",
+              doctors_count: hasDoctors ? doctor_ids.length : 0,
+            },
+            medicine_distribution: [],
+            top_medicines_graph: [],
+            patients: {
+              data: [],
+              total: 0,
+              page: Number(page),
+              limit: Number(limit),
+              total_pages: 0,
+            }
+          });
+        }
+
+        const medMap = {};
+        unique.forEach(p => {
+          p.medications.forEach(m => {
+            medMap[m.medicine_name] = (medMap[m.medicine_name] || 0) + 1;
+          });
+        });
+
+        const medicineSummary = Object.keys(medMap)
+  .map(name => ({
+    medicine_name: name,
+    patient_count: medMap[name],
+    percent_matched: matchedPatients
+      ? ((medMap[name] / matchedPatients) * 100).toFixed(2)
+      : "0.00",
+    percent_total: totalPatients
+      ? ((medMap[name] / totalPatients) * 100).toFixed(2)
+      : "0.00",
+  }))
+  .sort((a, b) => b.patient_count - a.patient_count);
+
+  const medOffset = (med_page - 1) * med_limit;
+
+const paginatedMedicineSummary = medicineSummary.slice(
+  medOffset,
+  medOffset + Number(med_limit)
+);
+
+        const topDrug = medicineSummary[0]?.medicine_name || "No data";
+
+        return res.json({
+  success: true,
+  analytics: {
+    total_patients: totalPatients,
+    matched_patients: matchedPatients,
+    percentage: ((matchedPatients / totalPatients) * 100).toFixed(2) + "%",
+    top_drug: topDrug,
+    doctors_count: hasDoctors ? doctor_ids.length : 0,
+  },
+  medicine_distribution: paginatedMedicineSummary,
+  medicine_total: medicineSummary.length,
+
+  top_medicines_graph: medicineSummary.slice(0, 10),
+
+  patients: {
+    data: unique.slice((page - 1) * limit, page * limit),
+    total: matchedPatients,
+    page: Number(page),
+    limit: Number(limit),
+    total_pages: Math.ceil(matchedPatients / limit),
+  }
+});
       });
     });
   });
@@ -12351,5 +12671,6 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
     getPatientAnalyticsCustomTableAdmin,
     getDoctorList,
     editDoctorEmail,
-    getDoctorAnalytics
+    getDoctorAnalytics,
+    getPatientDiseasesMedicineDashboardAdmin
   };
