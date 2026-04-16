@@ -3084,26 +3084,46 @@ ORDER BY
 
 
 
-      const fetchAdverse = `
-        SELECT 
-          a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
-          mm.category_name, s.symptom_name, a.medication_start_date, 
-          a.reaction_date, a.createtime, 
-          um.name AS patient_name 
-        FROM 
-          adverse_reaction_master AS a 
-        JOIN 
-          medicine_master as m ON m.medicine_id = a.medicine_id
-        JOIN 
-          medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
-        JOIN 
-          symptoms_master as s ON s.symptom_id = a.symptom_id 
-        JOIN 
-          user_master um ON um.user_id = a.user_id 
-        WHERE 
-          a.user_id IN (${userIdPlaceholders})
-          AND DATE(a.createtime) BETWEEN ? AND ?`;
+      // const fetchAdverse = `
+      //   SELECT 
+      //     a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+      //     mm.category_name, s.symptom_name, a.medication_start_date, 
+      //     a.reaction_date, a.createtime, 
+      //     um.name AS patient_name 
+      //   FROM 
+      //     adverse_reaction_master AS a 
+      //   JOIN 
+      //     medicine_master as m ON m.medicine_id = a.medicine_id
+      //   JOIN 
+      //     medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+      //   JOIN 
+      //     symptoms_master as s ON s.symptom_id = a.symptom_id 
+      //   JOIN 
+      //     user_master um ON um.user_id = a.user_id 
+      //   WHERE 
+      //     a.user_id IN (${userIdPlaceholders})
+      //     AND DATE(a.createtime) BETWEEN ? AND ?`;
 
+     const fetchAdverse = `
+  SELECT 
+    a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+    mm.category_name, s.symptom_name, a.medication_start_date, 
+    a.reaction_date, a.createtime, 
+    um.name AS patient_name 
+  FROM 
+    adverse_reaction_master AS a 
+  LEFT JOIN 
+    medicine_master as m ON m.medicine_id = a.medicine_id
+  LEFT JOIN 
+    medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+  LEFT JOIN 
+    symptoms_master as s ON s.symptom_id = a.symptom_id 
+  LEFT JOIN 
+    user_master um ON um.user_id = a.user_id 
+  WHERE 
+    a.user_id IN (${userIdPlaceholders})
+    AND a.delete_flag = 0
+    AND (DATE(a.createtime) BETWEEN ? AND ? OR a.createtime IS NULL)`;
       const fetchLabReport = `
         SELECT 
           mrm.medical_report_id, mrm.file, mrm.createtime, mrm.user_id,
