@@ -11247,6 +11247,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
       search,
       singleOnly = false,
       combinedOnly = false,
+      includeExtra = false,
       summary_page = 1,
       summary_limit = 10,
       patient_page = 1,
@@ -11399,7 +11400,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
                 return meds.length === 1 && selectedMeds.includes(meds[0]);
               });
+
             } else if (combinedOnly && medication.length >= 2) {
+              // EXACT MATCH ONLY
               filteredPatients = filteredPatients.filter((p) => {
                 const meds = (p.medications || [])
                   .map((m) => m?.medicine_name?.toLowerCase().trim())
@@ -11410,7 +11413,19 @@ const paginatedMedicineSummary = medicineSummary.slice(
                   selectedMeds.every((m) => meds.includes(m))
                 );
               });
+
+            } else if (includeExtra && medication.length >= 2) {
+              // INCLUDE EXTRA (NEW LOGIC)
+              filteredPatients = filteredPatients.filter((p) => {
+                const meds = (p.medications || [])
+                  .map((m) => m?.medicine_name?.toLowerCase().trim())
+                  .filter(Boolean);
+
+                return selectedMeds.every((m) => meds.includes(m));
+              });
+
             } else {
+              // ANY MATCH
               filteredPatients = filteredPatients.filter((p) =>
                 (p.medications || []).some((m) =>
                   selectedMeds.includes(m?.medicine_name?.toLowerCase().trim()),
@@ -11501,7 +11516,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
   const getMedicationDiseaseDashboardAdmin = (req, res) => {
     const {
-      doctor_id,
+      doctor_ids,
       medication = [],
       diseases = [],
       age_group,
@@ -11509,9 +11524,13 @@ const paginatedMedicineSummary = medicineSummary.slice(
       exclude_disease = [],
       singleOnly = false,
       combinedOnly = false,
+      includeExtra = false,
       page = 1,
       limit = 10,
     } = req.body;
+
+    const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+    const ph = hasDoctors ? doctor_ids.map(() => "?").join(", ") : null;
 
     let params = [];
     let totalParams = [];
@@ -11521,9 +11540,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
     let totalWhere = `WHERE pm.delete_flag = 0`;
-    if (doctor_id) {
-      totalWhere += ` AND pm.doctor_id = ?`;
-      totalParams.push(doctor_id);
+    if (hasDoctors) {
+      totalWhere += ` AND pm.doctor_id IN (${ph})`;
+      totalParams.push(...doctor_ids);
     }
 
     if (gender !== undefined && gender !== null && gender !== "") {
@@ -11568,14 +11587,25 @@ const paginatedMedicineSummary = medicineSummary.slice(
   FROM patient_master pm
   ${totalWhere}
 `;
+    if (hasDoctors) {
+      where += ` AND pm.doctor_id IN (${ph})`;
+      params.push(...doctor_ids);
+    }
 
     const patientSql = `
-    SELECT DISTINCT pm.user_id, pm.doctor_id, u.name, u.dob, u.gender, u.diseases
-    FROM patient_master pm
-    JOIN user_master u ON u.user_id = pm.user_id
-    ${where}
-    ORDER BY u.name ASC
-  `;
+      SELECT 
+        pm.user_id,
+        GROUP_CONCAT(DISTINCT pm.doctor_id) as doctor_ids,
+        u.name,
+        u.dob,
+        u.gender,
+        u.diseases
+      FROM patient_master pm
+      JOIN user_master u ON u.user_id = pm.user_id
+      ${where}
+      GROUP BY pm.user_id
+      ORDER BY u.name ASC
+    `;
 
     connection.query(totalSql, totalParams, (err0, totalRes) => {
       if (err0) return res.json({ success: false, msg: err0.message });
@@ -11609,7 +11639,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
                 resolve({
                   user_id: p.user_id,
-                  doctor_id: p.doctor_id,
+                  doctor_ids: p.doctor_ids,
                   name: p.name,
                   age: p.dob
                     ? Math.floor(
@@ -11651,30 +11681,54 @@ const paginatedMedicineSummary = medicineSummary.slice(
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
+
             return (
-              pDiseases.length === 1 && pDiseases.includes(selectedDiseases[0])
+              pDiseases.length === 1 &&
+              pDiseases.includes(selectedDiseases[0])
             );
           });
+
         } else if (combinedOnly && selectedDiseases.length >= 2) {
+          // EXACT MATCH
           finalPatients = finalPatients.filter((p) => {
             const pDiseases = (p.diseases || "")
               .toLowerCase()
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
+
             return (
-              selectedDiseases.every((d) => pDiseases.includes(d)) &&
-              pDiseases.length === selectedDiseases.length
+              pDiseases.length === selectedDiseases.length &&
+              selectedDiseases.every((d) => pDiseases.includes(d))
             );
           });
-        } else if (selectedDiseases.length > 0) {
+
+        } else if (includeExtra && selectedDiseases.length >= 2) {
+          // INCLUDE EXTRA (NEW)
           finalPatients = finalPatients.filter((p) => {
             const pDiseases = (p.diseases || "")
               .toLowerCase()
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
-            return selectedDiseases.some((d) => pDiseases.includes(d));
+
+            return selectedDiseases.every((d) =>
+              pDiseases.includes(d)
+            );
+          });
+
+        } else if (selectedDiseases.length > 0) {
+          // ANY MATCH
+          finalPatients = finalPatients.filter((p) => {
+            const pDiseases = (p.diseases || "")
+              .toLowerCase()
+              .split(",")
+              .map((d) => d.trim())
+              .filter(Boolean);
+
+            return selectedDiseases.some((d) =>
+              pDiseases.includes(d)
+            );
           });
         }
 
@@ -11686,20 +11740,39 @@ const paginatedMedicineSummary = medicineSummary.slice(
         if (selectedMeds.length > 0) {
           if (singleOnly && selectedMeds.length === 1) {
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return meds.length === 1 && meds.includes(selectedMeds[0]);
             });
+
           } else if (combinedOnly && selectedMeds.length >= 2) {
+            // EXACT MATCH
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return (
                 meds.length === selectedMeds.length &&
                 selectedMeds.every((m) => meds.includes(m))
               );
             });
-          } else {
+
+          } else if (includeExtra && selectedMeds.length >= 2) {
+            // INCLUDE EXTRA (NEW)
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
+              return selectedMeds.every((m) => meds.includes(m));
+            });
+
+          } else {
+            // ANY MATCH
+            finalPatients = finalPatients.filter((p) => {
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return selectedMeds.some((m) => meds.includes(m));
             });
           }
