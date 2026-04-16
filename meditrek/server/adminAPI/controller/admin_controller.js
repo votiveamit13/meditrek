@@ -11860,7 +11860,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
   const getMedicationReportedHealthAdmin = (req, res) => {
     const {
-      doctor_id,
+      doctor_ids,
       medication = [],
       age_group,
       page = 1,
@@ -11868,6 +11868,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
       patient_page = 1,
       patient_limit = 5,
     } = req.body;
+
+    const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+    const ph = hasDoctors ? doctor_ids.map(() => "?").join(", ") : null;
 
     // ================= TOTAL PATIENTS =================
     let totalPatientsSql = `
@@ -11877,9 +11880,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
   `;
     let totalParams = [];
 
-    if (doctor_id) {
-      totalPatientsSql += ` AND p.doctor_id = ?`;
-      totalParams.push(doctor_id);
+    if (hasDoctors) {
+      totalPatientsSql += ` AND p.doctor_id IN (${ph})`;
+      totalParams.push(...doctor_ids);
     }
 
     connection.query(totalPatientsSql, totalParams, (err0, totalRes) => {
@@ -11908,18 +11911,18 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
       let joinParams = [];
 
-      if (doctor_id) {
-        baseJoin += ` AND rsm.doctor_id = ?`;
-        joinParams.push(doctor_id);
+      if (hasDoctors) {
+        baseJoin += ` AND rsm.doctor_id IN (${ph})`;
+        joinParams.push(...doctor_ids);
       }
 
       // ================= WHERE =================
       let where = `WHERE p.delete_flag = 0`;
       let whereParams = [];
 
-      if (doctor_id) {
-        where += ` AND p.doctor_id = ?`;
-        whereParams.push(doctor_id);
+      if (hasDoctors) {
+        where += ` AND p.doctor_id IN (${ph})`;
+        whereParams.push(...doctor_ids);
       }
 
       if (age_group) {
@@ -11950,7 +11953,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
         arm.medicine_id,
         med.medicine_name,
         arm.user_id,
-        p.doctor_id,
+        GROUP_CONCAT(DISTINCT p.doctor_id) as doctor_ids,
         u.name,
         TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
         u.diseases,
@@ -11959,6 +11962,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
         arm.reaction_date
       ${baseJoin}
       ${where}
+      GROUP BY arm.user_id, arm.medicine_id, sm.symptom_name
       ORDER BY med.medicine_name ASC
     `;
 
@@ -12069,7 +12073,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
               .slice(patientOffset, patientOffset + Number(patient_limit))
               .map((p) => ({
                 user_id: p.user_id,
-                doctor_id: p.doctor_id,
+                doctor_ids: p.doctor_ids || [],
                 patient_name: p.name,
                 age: p.age,
                 diseases: p.diseases,
