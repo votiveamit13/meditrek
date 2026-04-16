@@ -11247,6 +11247,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
       search,
       singleOnly = false,
       combinedOnly = false,
+      includeExtra = false,
       summary_page = 1,
       summary_limit = 10,
       patient_page = 1,
@@ -11399,7 +11400,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
                 return meds.length === 1 && selectedMeds.includes(meds[0]);
               });
+
             } else if (combinedOnly && medication.length >= 2) {
+              // EXACT MATCH ONLY
               filteredPatients = filteredPatients.filter((p) => {
                 const meds = (p.medications || [])
                   .map((m) => m?.medicine_name?.toLowerCase().trim())
@@ -11410,7 +11413,19 @@ const paginatedMedicineSummary = medicineSummary.slice(
                   selectedMeds.every((m) => meds.includes(m))
                 );
               });
+
+            } else if (includeExtra && medication.length >= 2) {
+              // INCLUDE EXTRA (NEW LOGIC)
+              filteredPatients = filteredPatients.filter((p) => {
+                const meds = (p.medications || [])
+                  .map((m) => m?.medicine_name?.toLowerCase().trim())
+                  .filter(Boolean);
+
+                return selectedMeds.every((m) => meds.includes(m));
+              });
+
             } else {
+              // ANY MATCH
               filteredPatients = filteredPatients.filter((p) =>
                 (p.medications || []).some((m) =>
                   selectedMeds.includes(m?.medicine_name?.toLowerCase().trim()),
@@ -11509,6 +11524,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
       exclude_disease = [],
       singleOnly = false,
       combinedOnly = false,
+      includeExtra = false,
       page = 1,
       limit = 10,
     } = req.body;
@@ -11665,30 +11681,54 @@ const paginatedMedicineSummary = medicineSummary.slice(
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
+
             return (
-              pDiseases.length === 1 && pDiseases.includes(selectedDiseases[0])
+              pDiseases.length === 1 &&
+              pDiseases.includes(selectedDiseases[0])
             );
           });
+
         } else if (combinedOnly && selectedDiseases.length >= 2) {
+          // EXACT MATCH
           finalPatients = finalPatients.filter((p) => {
             const pDiseases = (p.diseases || "")
               .toLowerCase()
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
+
             return (
-              selectedDiseases.every((d) => pDiseases.includes(d)) &&
-              pDiseases.length === selectedDiseases.length
+              pDiseases.length === selectedDiseases.length &&
+              selectedDiseases.every((d) => pDiseases.includes(d))
             );
           });
-        } else if (selectedDiseases.length > 0) {
+
+        } else if (includeExtra && selectedDiseases.length >= 2) {
+          // INCLUDE EXTRA (NEW)
           finalPatients = finalPatients.filter((p) => {
             const pDiseases = (p.diseases || "")
               .toLowerCase()
               .split(",")
               .map((d) => d.trim())
               .filter(Boolean);
-            return selectedDiseases.some((d) => pDiseases.includes(d));
+
+            return selectedDiseases.every((d) =>
+              pDiseases.includes(d)
+            );
+          });
+
+        } else if (selectedDiseases.length > 0) {
+          // ANY MATCH
+          finalPatients = finalPatients.filter((p) => {
+            const pDiseases = (p.diseases || "")
+              .toLowerCase()
+              .split(",")
+              .map((d) => d.trim())
+              .filter(Boolean);
+
+            return selectedDiseases.some((d) =>
+              pDiseases.includes(d)
+            );
           });
         }
 
@@ -11700,20 +11740,39 @@ const paginatedMedicineSummary = medicineSummary.slice(
         if (selectedMeds.length > 0) {
           if (singleOnly && selectedMeds.length === 1) {
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return meds.length === 1 && meds.includes(selectedMeds[0]);
             });
+
           } else if (combinedOnly && selectedMeds.length >= 2) {
+            // EXACT MATCH
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return (
                 meds.length === selectedMeds.length &&
                 selectedMeds.every((m) => meds.includes(m))
               );
             });
-          } else {
+
+          } else if (includeExtra && selectedMeds.length >= 2) {
+            // INCLUDE EXTRA (NEW)
             finalPatients = finalPatients.filter((p) => {
-              const meds = p.medications.map((m) => m.name.toLowerCase());
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
+              return selectedMeds.every((m) => meds.includes(m));
+            });
+
+          } else {
+            // ANY MATCH
+            finalPatients = finalPatients.filter((p) => {
+              const meds = p.medications.map((m) =>
+                m.name.toLowerCase()
+              );
               return selectedMeds.some((m) => meds.includes(m));
             });
           }
