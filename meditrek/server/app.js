@@ -1,4 +1,18 @@
 const express = require('express');
+const cors = require('cors');
+
+const app = express();
+
+// ✅ Proper CORS config
+const corsOptions = {
+  origin: ['https://meditrekaccess.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 const bodyParser = require('body-parser');
 
@@ -6,7 +20,7 @@ const adminRouter = require('./adminAPI/router/router');
 
 const userRouter = require('./webservice/routes/app_routes');
 
-const cors = require('cors');
+// const cors = require('cors');
 var cron = require('node-cron');
 const { cronJobFunction } = require('./webservice/controller/app_controller');
 
@@ -15,7 +29,7 @@ const { cronJobFunction } = require('./webservice/controller/app_controller');
 
 
 
-const app = express();
+// const app = express();
 const i18n = require('i18n');
 const path = require('path');
 
@@ -30,8 +44,6 @@ i18n.configure({
 });
 
 app.use(i18n.init);
-app.use(cors());
-
 
 
 app.use(express.json());
