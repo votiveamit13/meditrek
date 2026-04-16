@@ -12600,7 +12600,479 @@ const paginatedMedicineSummary = medicineSummary.slice(
       });
     });
   };
+  const getCrossAnalysisAdmin = (req, res) => {
+    const {
+      doctor_ids,
+      diseases = [],
+      measurements = [],
+      medications = [],
+      gender,
+      age_group,
+      // Pagination parameters
+      disease_page = 1,
+      disease_limit = 10,
+      medication_page = 1,
+      medication_limit = 10,
+      measurement_page = 1,
+      measurement_limit = 10,
+      records_page = 1,
+      records_limit = 10
+    } = req.body;
 
+    const parseDiseases = (diseasesStr) => {
+      if (!diseasesStr) return [];
+      try {
+        const parsed = JSON.parse(diseasesStr);
+        return parsed.map(d => d.name);
+      } catch {
+        const matches = diseasesStr?.match(/name:\s*([^,}]+)/g) || [];
+        return matches.map(m => m.split(":")[1].trim());
+      }
+    };
+
+    // Base WHERE clause for patients
+    let baseWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL AND um.dob <= CURDATE()`;
+    let baseParams = [];
+
+    // Doctor filter
+    const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
+    if (hasDoctors) {
+      const ph = doctor_ids.map(() => "?").join(", ");
+      baseWhere += ` AND pm.doctor_id IN (${ph})`;
+      baseParams.push(...doctor_ids);
+    }
+
+    // Gender filter
+    if (gender !== undefined && gender !== null && gender !== "") {
+      baseWhere += ` AND um.gender = ?`;
+      baseParams.push(Number(gender));
+    }
+
+    // Age group filter
+    if (age_group && age_group !== "") {
+      if (age_group.includes("-")) {
+        const [min, max] = age_group.split("-").map(Number);
+        baseWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN ? AND ?`;
+        baseParams.push(min, max);
+      } else if (age_group === "85+") {
+        baseWhere += ` AND TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) >= ?`;
+        baseParams.push(85);
+      }
+    }
+
+    // Get patients with age group calculated in SQL
+    const patientsSql = `
+      SELECT DISTINCT 
+        pm.user_id,
+        um.name,
+        TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) AS age,
+        CASE 
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 0 AND 18 THEN '0-18'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 19 AND 30 THEN '19-30'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 31 AND 44 THEN '31-44'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 45 AND 64 THEN '45-64'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 65 AND 74 THEN '65-74'
+          WHEN TIMESTAMPDIFF(YEAR, um.dob, CURDATE()) BETWEEN 75 AND 84 THEN '75-84'
+          ELSE '85+'
+        END AS age_group,
+        CASE 
+          WHEN um.gender = 1 THEN 'Male'
+          WHEN um.gender = 2 THEN 'Female'
+          WHEN um.gender = 3 THEN 'Other'
+          ELSE 'Not Specified'
+        END AS gender,
+        um.diseases
+      FROM patient_master pm
+      INNER JOIN user_master um ON pm.user_id = um.user_id
+      ${baseWhere}
+    `;
+
+    connection.query(patientsSql, baseParams, async (err, patients) => {
+      if (err) {
+        return res.json({ success: false, error: err.message });
+      }
+
+      if (patients.length === 0) {
+        return res.json({
+          success: true,
+          matched_patients: 0,
+          diseases_selected: diseases.length,
+          measurements_selected: measurements.length,
+          medications_selected: medications.length,
+          disease_overlap: {
+            data: [],
+            total: 0,
+            page: Number(disease_page),
+            limit: Number(disease_limit),
+            total_pages: 0
+          },
+          medication_overlap: {
+            data: [],
+            total: 0,
+            page: Number(medication_page),
+            limit: Number(medication_limit),
+            total_pages: 0
+          },
+          measurement_values: {
+            data: [],
+            total: 0,
+            page: Number(measurement_page),
+            limit: Number(measurement_limit),
+            total_pages: 0
+          },
+          records: {
+            data: [],
+            total: 0,
+            page: Number(records_page),
+            limit: Number(records_limit),
+            total_pages: 0
+          }
+        });
+      }
+
+      const userIds = patients.map(p => p.user_id);
+
+      // Get medications
+      const medSql = `
+        SELECT DISTINCT 
+          m.user_id,
+          med.medicine_name
+        FROM medication_master m
+        INNER JOIN medicine_master med ON med.medicine_id = m.medicine_id
+        WHERE m.user_id IN (${userIds.map(() => '?').join(',')})
+          AND m.delete_flag = 0
+      `;
+      
+      const medicationsData = await new Promise((resolve) => {
+        connection.query(medSql, userIds, (err, results) => {
+          if (err) resolve([]);
+          resolve(results || []);
+        });
+      });
+
+      // Get measurements
+      const measurementSql = `
+        SELECT 
+          user_id,
+          type,
+          systolic_bp,
+          diastolic_bp,
+          fasting_glucose,
+          ppbgs,
+          weight,
+          temperature,
+          date
+        FROM measurement_master
+        WHERE user_id IN (${userIds.map(() => '?').join(',')})
+          AND delete_flag = 0
+      `;
+
+      const measurementsData = await new Promise((resolve) => {
+        connection.query(measurementSql, userIds, (err, results) => {
+          if (err) {
+            console.error("Measurement error:", err);
+            resolve([]);
+          }
+          resolve(results || []);
+        });
+      });
+
+      // Organize data by user
+      const medsByUser = {};
+      medicationsData.forEach(m => {
+        if (!medsByUser[m.user_id]) medsByUser[m.user_id] = [];
+        medsByUser[m.user_id].push(m.medicine_name);
+      });
+
+      // Process measurements by user
+      const measurementsByUser = {};
+      measurementsData.forEach(m => {
+        if (!measurementsByUser[m.user_id]) {
+          measurementsByUser[m.user_id] = {
+            bp: null,
+            fasting_glucose: null,
+            ppbgs: null,
+            weight: null,
+            temperature: null
+          };
+        }
+
+        const typeNum = parseInt(m.type);
+        
+        if (typeNum === 0) { // BP
+          if (m.systolic_bp !== null && m.systolic_bp !== undefined && m.systolic_bp > 0 &&
+              m.diastolic_bp !== null && m.diastolic_bp !== undefined && m.diastolic_bp > 0) {
+            measurementsByUser[m.user_id].bp = {
+              systolic: m.systolic_bp,
+              diastolic: m.diastolic_bp
+            };
+          }
+        } else if (typeNum === 1) { // Fasting Glucose
+          if (m.fasting_glucose !== null && m.fasting_glucose !== undefined && m.fasting_glucose > 0) {
+            measurementsByUser[m.user_id].fasting_glucose = {
+              value: m.fasting_glucose
+            };
+          }
+        } else if (typeNum === 2) { // PPBGS
+          if (m.ppbgs !== null && m.ppbgs !== undefined && m.ppbgs > 0) {
+            measurementsByUser[m.user_id].ppbgs = {
+              value: m.ppbgs
+            };
+          }
+        } else if (typeNum === 3) { // Weight
+          if (m.weight !== null && m.weight !== undefined && m.weight > 0) {
+            measurementsByUser[m.user_id].weight = {
+              value: m.weight
+            };
+          }
+        } else if (typeNum === 4) { // Temperature
+          if (m.temperature !== null && m.temperature !== undefined && m.temperature > 0) {
+            measurementsByUser[m.user_id].temperature = {
+              value: m.temperature
+            };
+          }
+        }
+      });
+
+      // Build complete patient objects
+      let allPatients = patients.map(p => ({
+        user_id: p.user_id,
+        name: p.name,
+        age: p.age,
+        age_group: p.age_group,
+        gender: p.gender,
+        diseases: parseDiseases(p.diseases),
+        medications: medsByUser[p.user_id] || [],
+        measurements: measurementsByUser[p.user_id] || {}
+      }));
+
+      // Apply filters (OR conditions)
+      if (diseases.length > 0) {
+        const selectedDiseases = diseases.map(d => d.toLowerCase().trim());
+        allPatients = allPatients.filter(patient => {
+          const patientDiseases = patient.diseases.map(d => d.toLowerCase().trim());
+          return selectedDiseases.some(sd => patientDiseases.includes(sd));
+        });
+      }
+
+      if (medications.length > 0) {
+        const selectedMeds = medications.map(m => m.toLowerCase().trim());
+        allPatients = allPatients.filter(patient => {
+          const patientMeds = patient.medications.map(m => m.toLowerCase().trim());
+          return selectedMeds.some(sm => patientMeds.includes(sm));
+        });
+      }
+
+      if (measurements.length > 0) {
+        allPatients = allPatients.filter(patient => {
+          return measurements.some(selectedType => {
+            switch(selectedType.toLowerCase()) {
+              case 'bp':
+              case 'blood pressure':
+                return patient.measurements.bp !== null;
+              case 'fasting glucose':
+              case 'fbg':
+                return patient.measurements.fasting_glucose !== null;
+              case 'ppbgs':
+              case 'postprandial':
+                return patient.measurements.ppbgs !== null;
+              case 'weight':
+                return patient.measurements.weight !== null;
+              case 'temperature':
+                return patient.measurements.temperature !== null;
+              default:
+                return false;
+            }
+          });
+        });
+      }
+
+      const matchedPatients = allPatients.length;
+
+      // Disease Overlap (with pagination)
+      const diseaseCount = {};
+      allPatients.forEach(patient => {
+        patient.diseases.forEach(disease => {
+          diseaseCount[disease] = (diseaseCount[disease] || 0) + 1;
+        });
+      });
+
+      let diseaseOverlapArray = Object.keys(diseaseCount)
+        .map(disease => ({
+          disease,
+          count: diseaseCount[disease],
+          percentage: matchedPatients > 0 
+            ? ((diseaseCount[disease] / matchedPatients) * 100).toFixed(1)
+            : "0.0"
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const diseaseTotal = diseaseOverlapArray.length;
+      const diseaseOffset = (Number(disease_page) - 1) * Number(disease_limit);
+      const diseasePaginated = diseaseOverlapArray.slice(diseaseOffset, diseaseOffset + Number(disease_limit));
+
+      // Medication Overlap (with pagination)
+      const medicationCount = {};
+      allPatients.forEach(patient => {
+        patient.medications.forEach(med => {
+          medicationCount[med] = (medicationCount[med] || 0) + 1;
+        });
+      });
+
+      let medicationOverlapArray = Object.keys(medicationCount)
+        .map(med => ({
+          medication: med,
+          count: medicationCount[med],
+          percentage: matchedPatients > 0
+            ? ((medicationCount[med] / matchedPatients) * 100).toFixed(1)
+            : "0.0"
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      const medicationTotal = medicationOverlapArray.length;
+      const medicationOffset = (Number(medication_page) - 1) * Number(medication_limit);
+      const medicationPaginated = medicationOverlapArray.slice(medicationOffset, medicationOffset + Number(medication_limit));
+
+      // Measurement Values (with pagination)
+      let measurementValuesArray = allPatients.map(patient => {
+        let bloodGlucoseValue = 'N/A';
+        
+        if (patient.measurements.fasting_glucose && patient.measurements.fasting_glucose.value > 0) {
+          bloodGlucoseValue = `${patient.measurements.fasting_glucose.value} mmol/L`;
+        } else if (patient.measurements.ppbgs && patient.measurements.ppbgs.value > 0) {
+          bloodGlucoseValue = `${patient.measurements.ppbgs.value} mmol/L`;
+        }
+
+        let ppbgValue = 'N/A';
+        if (patient.measurements.ppbgs && patient.measurements.ppbgs.value > 0) {
+          ppbgValue = `${patient.measurements.ppbgs.value} mmol/L`;
+        }
+
+        return {
+          patient_ref: patient.user_id,
+          age_group: patient.age_group,
+          gender: patient.gender,
+          blood_pressure: patient.measurements.bp 
+            ? `${patient.measurements.bp.systolic}/${patient.measurements.bp.diastolic}`
+            : 'N/A',
+          blood_glucose: bloodGlucoseValue,
+          postprandial_glucose: ppbgValue,
+          weight: patient.measurements.weight && patient.measurements.weight.value > 0
+            ? `${patient.measurements.weight.value} kg`
+            : 'N/A',
+          temperature: patient.measurements.temperature && patient.measurements.temperature.value > 0
+            ? `${patient.measurements.temperature.value}°C`
+            : 'N/A'
+        };
+      });
+
+      const measurementTotal = measurementValuesArray.length;
+      const measurementOffset = (Number(measurement_page) - 1) * Number(measurement_limit);
+      const measurementPaginated = measurementValuesArray.slice(measurementOffset, measurementOffset + Number(measurement_limit));
+
+      // Records (with pagination)
+      let recordsArray = allPatients.map(patient => ({
+        patient_ref: patient.user_id,
+        age_group: patient.age_group,
+        gender: patient.gender,
+        diseases: patient.diseases.join(', '),
+        medications: patient.medications.join(', ')
+      }));
+
+      const recordsTotal = recordsArray.length;
+      const recordsOffset = (Number(records_page) - 1) * Number(records_limit);
+      const recordsPaginated = recordsArray.slice(recordsOffset, recordsOffset + Number(records_limit));
+
+      return res.json({
+        success: true,
+        matched_patients: matchedPatients,
+        diseases_selected: diseases.length,
+        measurements_selected: measurements.length,
+        medications_selected: medications.length,
+        disease_overlap: {
+          data: diseasePaginated,
+          total: diseaseTotal,
+          page: Number(disease_page),
+          limit: Number(disease_limit),
+          total_pages: Math.ceil(diseaseTotal / Number(disease_limit))
+        },
+        medication_overlap: {
+          data: medicationPaginated,
+          total: medicationTotal,
+          page: Number(medication_page),
+          limit: Number(medication_limit),
+          total_pages: Math.ceil(medicationTotal / Number(medication_limit))
+        },
+        measurement_values: {
+          data: measurementPaginated,
+          total: measurementTotal,
+          page: Number(measurement_page),
+          limit: Number(measurement_limit),
+          total_pages: Math.ceil(measurementTotal / Number(measurement_limit))
+        },
+        records: {
+          data: recordsPaginated,
+          total: recordsTotal,
+          page: Number(records_page),
+          limit: Number(records_limit),
+          total_pages: Math.ceil(recordsTotal / Number(records_limit))
+        }
+      });
+    });
+  };
+  const getMeasurementOptions = (req, res) => {
+    const { doctor_ids } = req.body;
+
+    let where = `WHERE delete_flag = 0`;
+    let params = [];
+
+    // Agar doctor filter hai to uske patients ki measurements dikhane hain
+    if (Array.isArray(doctor_ids) && doctor_ids.length > 0) {
+      where += ` AND user_id IN (
+        SELECT DISTINCT user_id FROM patient_master 
+        WHERE doctor_id IN (${doctor_ids.map(() => '?').join(',')}) AND delete_flag = 0
+      )`;
+      params.push(...doctor_ids);
+    }
+
+    const sql = `
+      SELECT DISTINCT type
+      FROM measurement_master
+      ${where}
+      ORDER BY type
+    `;
+
+    connection.query(sql, params, (err, results) => {
+      if (err) {
+        return res.json({ success: false, error: err.message });
+      }
+
+      // Map type to display names
+      const measurementOptions = {
+        0: { value: "bp", label: "Blood Pressure", type: "bp" },
+        1: { value: "fasting_glucose", label: "Fasting Blood Glucose", type: "fasting_glucose" },
+        2: { value: "ppbgs", label: "Postprandial Blood Glucose (PPBG)", type: "ppbgs" },
+        3: { value: "weight", label: "Weight", type: "weight" },
+        4: { value: "temperature", label: "Temperature", type: "temperature" }
+      };
+
+      const options = results
+        .map(r => measurementOptions[r.type])
+        .filter(opt => opt !== undefined);
+
+      return res.json({
+        success: true,
+        options: options,
+        default_options: [
+          { value: "bp", label: "Blood Pressure", type: "bp" },
+          { value: "fasting_glucose", label: "Fasting Blood Glucose", type: "fasting_glucose" },
+          { value: "ppbgs", label: "Postprandial Blood Glucose (PPBG)", type: "ppbgs" },
+          { value: "weight", label: "Weight", type: "weight" },
+          { value: "temperature", label: "Temperature", type: "temperature" }
+        ]
+      });
+    });
+  };
   module.exports = {
     // abhich
 
@@ -12750,5 +13222,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
     getDoctorList,
     editDoctorEmail,
     getDoctorAnalytics,
-    getPatientDiseasesMedicineDashboardAdmin
+    getPatientDiseasesMedicineDashboardAdmin,
+    getCrossAnalysisAdmin,
+    getMeasurementOptions
   };
