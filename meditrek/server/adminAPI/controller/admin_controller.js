@@ -12118,7 +12118,7 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
   const getPatientAnalyticsCustomTableAdmin = (req, res) => {
     const {
-      doctor_id,
+      doctor_ids = [],
       gender,
       age_group,
       disease = [],
@@ -12128,14 +12128,15 @@ const paginatedMedicineSummary = medicineSummary.slice(
       limit = 10,
       singleOnly = false,
       combinedOnly = false,
+      includeExtra = false
     } = req.body;
 
     let baseWhere = `WHERE p.delete_flag = 0`;
     let baseParams = [];
 
-    if (doctor_id) {
-      baseWhere += ` AND p.doctor_id = ?`;
-      baseParams.push(doctor_id);
+    if (Array.isArray(doctor_ids) && doctor_ids.length > 0) {
+      baseWhere += ` AND p.doctor_id IN (${doctor_ids.map(() => "?").join(",")})`;
+      baseParams.push(...doctor_ids);
     }
 
     let where = baseWhere;
@@ -12168,14 +12169,18 @@ const paginatedMedicineSummary = medicineSummary.slice(
         ON sm2.symptom_id = arm2.symptom_id
         AND sm2.delete_flag = 0
       WHERE r2.user_id = u.user_id
-        ${doctor_id ? "AND r2.doctor_id = ?" : ""}
+        ${
+          doctor_ids.length > 0
+            ? `AND r2.doctor_id IN (${doctor_ids.map(() => "?").join(",")})`
+            : ""
+        }
         AND r2.share_type = 0
         AND r2.delete_flag = 0
         AND FIND_IN_SET('4', r2.information_type)
         AND sm2.symptom_name IN (${symptoms.map(() => "?").join(",")})
     )`;
 
-      if (doctor_id) params.push(doctor_id);
+      if (doctor_ids.length > 0) params.push(...doctor_ids);
       params.push(...symptoms);
     }
 
@@ -12210,7 +12215,11 @@ const paginatedMedicineSummary = medicineSummary.slice(
             ON sm2.symptom_id = arm2.symptom_id
             AND sm2.delete_flag = 0
           WHERE r2.user_id = u.user_id
-            ${doctor_id ? "AND r2.doctor_id = ?" : ""}
+            ${
+              doctor_ids.length > 0
+                ? `AND r2.doctor_id IN (${doctor_ids.map(() => "?").join(",")})`
+                : ""
+            }
             AND r2.share_type = 0
             AND r2.delete_flag = 0
             AND FIND_IN_SET('4', r2.information_type)
@@ -12234,7 +12243,11 @@ const paginatedMedicineSummary = medicineSummary.slice(
             ON tm.medication_id = m.medication_id
             AND tm.delete_flag = 0
           WHERE r.user_id = u.user_id
-            ${doctor_id ? "AND r.doctor_id = ?" : ""}
+            ${
+              doctor_ids.length > 0
+                ? `AND r.doctor_id IN (${doctor_ids.map(() => "?").join(",")})`
+                : ""
+            }
             AND r.share_type = 0
             AND r.delete_flag = 0
             AND FIND_IN_SET('1', r.information_type)
@@ -12249,8 +12262,10 @@ const paginatedMedicineSummary = medicineSummary.slice(
 
       //  dynamic params
       let extraParams = [];
-      if (doctor_id) extraParams.push(doctor_id); // reported_symptoms
-      if (doctor_id) extraParams.push(doctor_id); // medications
+      if (doctor_ids.length > 0) {
+        extraParams.push(...doctor_ids); // reported_symptoms
+        extraParams.push(...doctor_ids); // medications
+      }
 
       connection.query(dataSql, [...extraParams, ...params], (err2, users) => {
         if (err2) {
@@ -12306,10 +12321,14 @@ const paginatedMedicineSummary = medicineSummary.slice(
               const syms = (p.reported_symptoms || []).map((s) =>
                 s.toLowerCase().trim(),
               );
-              return (
-                syms.length === selectedSymptoms.length &&
-                selectedSymptoms.every((s) => syms.includes(s))
-              );
+              if (includeExtra) {
+                return selectedSymptoms.every((s) => syms.includes(s));
+              } else {
+                return (
+                  syms.length === selectedSymptoms.length &&
+                  selectedSymptoms.every((s) => syms.includes(s))
+                );
+              }
             });
           } else {
             matchedPatients = matchedPatients.filter((p) =>
@@ -12330,10 +12349,14 @@ const paginatedMedicineSummary = medicineSummary.slice(
           } else if (combinedOnly && disease.length >= 2) {
             matchedPatients = matchedPatients.filter((p) => {
               const dis = (p.diseases || []).map((d) => d.toLowerCase().trim());
-              return (
-                dis.length === selectedDiseases.length &&
-                selectedDiseases.every((d) => dis.includes(d))
-              );
+              if (includeExtra) {
+                return selectedDiseases.every((d) => dis.includes(d));
+              } else {
+                return (
+                  dis.length === selectedDiseases.length &&
+                  selectedDiseases.every((d) => dis.includes(d))
+                );
+              }
             });
           } else {
             matchedPatients = matchedPatients.filter((p) =>
@@ -12358,10 +12381,14 @@ const paginatedMedicineSummary = medicineSummary.slice(
               const meds = (p.medications || [])
                 .map((m) => m?.name?.toLowerCase().trim())
                 .filter(Boolean);
-              return (
-                meds.length === selectedMeds.length &&
-                selectedMeds.every((m) => meds.includes(m))
-              );
+              if (includeExtra) {
+                return selectedMeds.every((m) => meds.includes(m));
+              } else {
+                return (
+                  meds.length === selectedMeds.length &&
+                  selectedMeds.every((m) => meds.includes(m))
+                );
+              }
             });
           } else {
             matchedPatients = matchedPatients.filter((p) =>
