@@ -11541,8 +11541,8 @@ const paginatedMedicineSummary = medicineSummary.slice(
             total_patients: totalPatients,
             matched_patients: matchedCount,
             percentage,
-            //age_breakdown,
-            //sex_breakdown,
+            age_breakdown,
+            sex_breakdown,
             selected_medication_count: Array.isArray(medication)
               ? medication.length
               : 0,
