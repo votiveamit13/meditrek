@@ -236,7 +236,7 @@ const signUp = async (req, res) => {
 
         if (existingUser.length > 0 && existingUser[0].otp_verify === 0) {
 
-            await query("UPDATE user_master SET otp=?, updatetime=NOW() WHERE user_id=?", [otp, existingUser[0].user_id]);
+            await query("UPDATE user_master SET otp=?, current_language=?, updatetime=NOW() WHERE user_id=?", [otp, finalLanguage, existingUser[0].user_id]);
 
             await mailer(email, "Meditrek Access", "Your OTP for Verification", name, "https://meditrekaccess.com/meditrek/server/uploads/meditrek_logo.png", otp);
 
@@ -274,11 +274,11 @@ const signUp = async (req, res) => {
 
             `INSERT INTO user_master 
 
-      (f_name, l_name, name, mobile, email, password, otp, user_type, player_id, device_type, createtime, updatetime, login_type, signup_step, user_unique_id, diseases, dob, otp_verify)
+      (f_name, l_name, name, mobile, email, password, otp, user_type, player_id, device_type, createtime, updatetime, login_type, signup_step, user_unique_id, diseases, dob, otp_verify, current_language)
 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
 
-            [f_name, l_name, name, mobile, email, hashedPassword, otp, 1, player_id, deviceTypeId, formattedDate, formattedDate, 0, 0, user_unique_id, diseases, date]
+            [f_name, l_name, name, mobile, email, hashedPassword, otp, 1, player_id, deviceTypeId, formattedDate, formattedDate, 0, 0, user_unique_id, diseases, date, finalLanguage]
 
         );
 
