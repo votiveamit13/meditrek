@@ -301,7 +301,6 @@ const subAdminLogin = async (req, res) => {
 
 // };
 const verifyLoginOtp = async (req, res) => {
-
   const { email, otp } = req.body;
 
   if (otpStore[email] != otp) {
@@ -312,14 +311,26 @@ const verifyLoginOtp = async (req, res) => {
   }
 
   const sql = `
-  SELECT doctor_id FROM doctor_master
-  WHERE email = ?
+    SELECT doctor_id FROM doctor_master
+    WHERE email = ?
   `;
 
   connection.query(sql, [email], (err, result) => {
+    if (err || !result || result.length === 0) {
+      return res.status(200).json({ success: false, msg: "Doctor not found" });
+    }
 
-    const payload = { subject: result[0].doctor_id };
+    const doctor_id = result[0].doctor_id;
 
+    connection.query(
+      `UPDATE doctor_master SET last_login = NOW() WHERE doctor_id = ?`,
+      [doctor_id],
+      (updateErr) => {
+        if (updateErr) console.error("Failed to update last_login:", updateErr);
+      }
+    );
+
+    const payload = { subject: doctor_id };
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "7d" });
 
     delete otpStore[email];
@@ -329,9 +340,7 @@ const verifyLoginOtp = async (req, res) => {
       msg: "Login successful",
       token: token
     });
-
   });
-
 };
 //--------------------------get prophile--------------
 const getProfile = async (req, res) => {

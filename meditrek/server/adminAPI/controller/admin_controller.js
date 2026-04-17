@@ -12609,37 +12609,38 @@ const paginatedMedicineSummary = medicineSummary.slice(
         //    (distinct within that doctor) is fine here because it's per-row data,
         //    not summed into a global total anymore.
         const doctorRowsSql = `
-        SELECT
-          dm.doctor_id,
-          dm.doctor_name,
-          COUNT(DISTINCT CASE
-            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
-            THEN pm.user_id END) AS total_patients,
-          COUNT(DISTINCT CASE
-            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
-              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            THEN pm.user_id END) AS new_patients_last_30,
-          COUNT(DISTINCT CASE
-            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
-              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-            THEN pm.user_id END) AS new_patients_last_90,
-          COUNT(DISTINCT CASE
-            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
-              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-            THEN pm.user_id END) AS new_patients_last_6_months,
-          COUNT(DISTINCT CASE
-            WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
-              AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-            THEN pm.user_id END) AS new_patients_last_year,
-          MAX(pm.createtime) AS last_patient_added
-        FROM doctor_master dm
-        LEFT JOIN patient_master pm ON dm.doctor_id = pm.doctor_id
-        LEFT JOIN user_master um    ON pm.user_id    = um.user_id
-        ${doctorWhere}
-        GROUP BY dm.doctor_id, dm.doctor_name
-        ORDER BY total_patients DESC
-        LIMIT ? OFFSET ?
-      `;
+  SELECT
+    dm.doctor_id,
+    dm.doctor_name,
+    dm.last_login,                          -- ← ADD THIS
+    COUNT(DISTINCT CASE
+      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      THEN pm.user_id END) AS total_patients,
+    COUNT(DISTINCT CASE
+      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+        AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      THEN pm.user_id END) AS new_patients_last_30,
+    COUNT(DISTINCT CASE
+      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+        AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+      THEN pm.user_id END) AS new_patients_last_90,
+    COUNT(DISTINCT CASE
+      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+        AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      THEN pm.user_id END) AS new_patients_last_6_months,
+    COUNT(DISTINCT CASE
+      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+        AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+      THEN pm.user_id END) AS new_patients_last_year,
+    MAX(pm.createtime) AS last_patient_added
+  FROM doctor_master dm
+  LEFT JOIN patient_master pm ON dm.doctor_id = pm.doctor_id
+  LEFT JOIN user_master um    ON pm.user_id    = um.user_id
+  ${doctorWhere}
+  GROUP BY dm.doctor_id, dm.doctor_name, dm.last_login   -- ← ADD dm.last_login here too
+  ORDER BY total_patients DESC
+  LIMIT ? OFFSET ?
+`;
 
         connection.query(
           doctorRowsSql,
@@ -12661,6 +12662,9 @@ const paginatedMedicineSummary = medicineSummary.slice(
               new_patients: getPeriodCount(doctor),
               growth_percent: "0",
               trend: "stable",
+              last_login: doctor.last_login 
+    ? formatDate(doctor.last_login)
+    : "Never logged in",
               last_patient_added: doctor.last_patient_added
                 ? formatDate(doctor.last_patient_added)
                 : "No patients",
