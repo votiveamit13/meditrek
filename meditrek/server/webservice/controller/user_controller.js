@@ -278,7 +278,7 @@ const signUp = async (req, res) => {
 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
 
-            [f_name, l_name, name, mobile, email, hashedPassword, otp, 1, player_id, deviceTypeId, formattedDate, formattedDate, 0, 0, user_unique_id, diseases, date, finalLanguage]
+            [f_name, l_name, name, mobile, email, hashedPassword, otp, 1, player_id, deviceTypeId, formattedDate, formattedDate, 0, 0, user_unique_id, diseases, date, 'en']
 
         );
 
@@ -666,7 +666,17 @@ const userOtpVerify = async (req, res) => {
 
 
 
-        await query("UPDATE user_master SET otp=NULL, otp_verify=1, profile_complete=1 WHERE user_id=?", [user_id]);
+        //await query("UPDATE user_master SET otp=NULL, otp_verify=1, profile_complete=1 WHERE user_id=?", [user_id]);
+        await query(
+            `UPDATE user_master 
+            SET otp = NULL, 
+                otp_verify = 1, 
+                profile_complete = 1,
+                current_language = ?, 
+                updatetime = ?
+            WHERE user_id = ?`,
+            [finalLanguage, formattedDate, user_id]
+        );
 
 
 
@@ -3065,6 +3075,14 @@ const verifyUserLoginOtp = async (req, res) => {
                 msg: res.__('invalid_otp')
             });
         }
+
+        // SAVE LANGUAGE HERE
+        await query(
+            `UPDATE user_master 
+            SET current_language = ?, updatetime = ? 
+            WHERE user_id = ?`,
+            [finalLanguage, formattedDate, user.user_id]
+        );
 
         // Generate token
         const token = jwt.sign(
