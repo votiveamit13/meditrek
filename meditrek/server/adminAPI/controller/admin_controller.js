@@ -12662,12 +12662,8 @@ const paginatedMedicineSummary = medicineSummary.slice(
               new_patients: getPeriodCount(doctor),
               growth_percent: "0",
               trend: "stable",
-              last_login: doctor.last_login 
-    ? formatDate(doctor.last_login)
-    : "Never logged in",
-              last_patient_added: doctor.last_patient_added
-                ? formatDate(doctor.last_patient_added)
-                : "No patients",
+              last_login: doctor.last_login || null,
+              last_patient_added: doctor.last_patient_added || null,
             }));
 
             return res.json({
