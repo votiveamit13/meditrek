@@ -3814,15 +3814,26 @@ const getDoctors = async (request, response) => {
         const excludedDoctorIds = docRes.map((row) => row.doctor_id);
 
         let doctorQuery = `
-                    SELECT dm.doctor_id, dm.doctor_name, dm.mobile, dm.email, 
-                           dm.doctor_category_id, dc.category_name AS doctor_category, 
-                           dm.image, dm.createtime 
-                    FROM doctor_master AS dm 
-                    LEFT JOIN doctor_category AS dc ON dm.doctor_category_id = dc.doctor_category_id 
-                    WHERE dm.delete_flag = 0 AND dm.approve_status = 1 AND dm.active_flag = 1 
-                `;
+          SELECT 
+              dm.doctor_id, 
+              dm.doctor_name, 
+              dm.mobile, 
+              dm.email, 
+              dm.doctor_category_id, 
+              dct.category_name AS doctor_category, 
+              dm.image, 
+              dm.createtime 
+          FROM doctor_master AS dm 
+          LEFT JOIN doctor_category_translation AS dct 
+              ON dm.doctor_category_id = dct.doctor_category_id 
+              AND dct.language_code = ?
+          WHERE 
+              dm.delete_flag = 0 
+              AND dm.approve_status = 1 
+              AND dm.active_flag = 1
+      `;
 
-        let queryParams = [];
+        let queryParams = [finalLanguage];
 
         if (excludedDoctorIds.length > 0) {
           // Exclude doctors already linked to the user
