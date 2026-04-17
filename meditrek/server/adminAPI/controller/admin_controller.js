@@ -10928,13 +10928,13 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     page = 1,
     limit = 10,
     med_page = 1,
-  med_limit = 10,
+    med_limit = 10,
   } = req.body;
 
   let params = [];
   let whereConditions = [];
   
-  // Base WHERE clause
+  // Base WHERE clause for data query (includes all filters)
   whereConditions.push(`p.delete_flag = 0`);
   whereConditions.push(`u.dob IS NOT NULL`);
   whereConditions.push(`u.dob <= CURDATE()`);
@@ -10947,11 +10947,13 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     params.push(...doctor_ids);
   }
 
+  // Apply gender filter to data query
   if (gender !== undefined && gender !== null && gender !== "") {
     whereConditions.push(`u.gender = ?`);
     params.push(gender);
   }
 
+  // Apply age filter to data query
   if (age_group) {
     if (age_group.includes("+")) {
       const min = parseInt(age_group.replace("+", ""));
@@ -10966,7 +10968,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     }
   }
 
-  // Disease pre-filter
+  // Apply disease filters to data query
   if (Array.isArray(disease) && disease.length > 0) {
     if (singleOnly && disease.length === 1) {
       whereConditions.push(`u.diseases LIKE ?`);
@@ -11003,37 +11005,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     }
   };
 
-  const filterByDiseases = (patients, diseaseList, singleOnlyFlag, combinedOnlyFlag, includeExtraFlag) => {
-    if (!Array.isArray(diseaseList) || diseaseList.length === 0) return patients;
-    
-    const selected = diseaseList.map(d => d.toLowerCase().trim());
-
-    if (singleOnlyFlag && diseaseList.length === 1) {
-      return patients.filter(p => {
-        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-        return dis.length === 1 && selected.includes(dis[0]);
-      });
-    } else if (combinedOnlyFlag && diseaseList.length >= 2) {
-      return patients.filter(p => {
-        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-        return dis.length === selected.length &&
-               selected.every(d => dis.includes(d));
-      });
-    } else if (includeExtraFlag && diseaseList.length >= 2) {
-      return patients.filter(p => {
-        const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
-        return selected.every(d => dis.includes(d));
-      });
-    } else {
-      return patients.filter(p =>
-        (p.diseases || []).some(d =>
-          selected.includes(d.toLowerCase().trim())
-        )
-      );
-    }
-  };
-
-  const filterByMedications = (patients, medicationList, singleOnlyFlag, combinedOnlyFlag, includeExtraFlag) => {
+  const filterByMedications = (patients, medicationList) => {
     if (!Array.isArray(medicationList) || medicationList.length === 0) return patients;
 
     const selected = medicationList.map(m => m.toLowerCase().trim());
@@ -11045,8 +11017,8 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     );
   };
 
-  // Total patients
-  let totalSql = `
+  // ✅ QUERY FOR TOTAL PATIENTS (ABSOLUTE) - ONLY doctor filter, NO age/gender/disease
+  let absoluteTotalSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
@@ -11055,30 +11027,16 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
       AND u.dob <= CURDATE()
   `;
 
-  let totalParams = [];
+  let absoluteTotalParams = [];
 
+  // Only apply doctor filter to absolute total
   if (hasDoctors) {
     const placeholders = doctor_ids.map(() => "?").join(", ");
-    totalSql += ` AND p.doctor_id IN (${placeholders})`;
-    totalParams.push(...doctor_ids);
+    absoluteTotalSql += ` AND p.doctor_id IN (${placeholders})`;
+    absoluteTotalParams.push(...doctor_ids);
   }
 
-  if (gender !== undefined && gender !== null && gender !== "") {
-    totalSql += ` AND u.gender = ?`;
-    totalParams.push(gender);
-  }
-
-  if (age_group) {
-    if (age_group.includes("+")) {
-      totalSql += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
-      totalParams.push(parseInt(age_group));
-    } else if (age_group.includes("-")) {
-      const [min, max] = age_group.split("-").map(Number);
-      totalSql += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
-      totalParams.push(min, max);
-    }
-  }
-
+  // Main data query (includes disease, age, gender filters)
   const dataSql = `
     SELECT DISTINCT
       p.user_id,
@@ -11093,17 +11051,18 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     ORDER BY u.name ASC
   `;
 
-  connection.query(totalSql, totalParams, (err, totalResult) => {
+  // Get absolute total patients (only affected by doctor filter)
+  connection.query(absoluteTotalSql, absoluteTotalParams, (err, absoluteTotalResult) => {
     if (err) return res.json({ success: false, msg: err.message });
 
-    const totalPatients = totalResult[0].total;
+    const totalPatients = absoluteTotalResult[0].total;
 
+    // Get filtered data (affected by disease, age, gender)
     connection.query(dataSql, params, (err, patients) => {
       if (err) return res.json({ success: false, msg: err.message });
 
       const userIds = patients.map(p => p.user_id);
 
-      // ✅ FIX: prevent SQL crash
       if (userIds.length === 0) {
         return res.json({
           success: true,
@@ -11151,8 +11110,32 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
           medications: medsByUser[p.user_id] || []
         }));
 
-        let filtered = filterByDiseases(allPatients, disease, singleOnly, combinedOnly, includeExtra);
-        filtered = filterByMedications(filtered, medication, singleOnly, combinedOnly, includeExtra);
+        // Apply medication filter
+        let filtered = filterByMedications(allPatients, medication);
+        
+        // Note: Disease, age, gender are already filtered in SQL query
+        // Only need to apply the exact disease matching logic (singleOnly, combinedOnly, includeExtra)
+        if (Array.isArray(disease) && disease.length > 0) {
+          const selected = disease.map(d => d.toLowerCase().trim());
+          
+          if (singleOnly && disease.length === 1) {
+            filtered = filtered.filter(p => {
+              const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+              return dis.length === 1 && selected.includes(dis[0]);
+            });
+          } else if (combinedOnly && disease.length >= 2) {
+            filtered = filtered.filter(p => {
+              const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+              return dis.length === selected.length && selected.every(d => dis.includes(d));
+            });
+          } else if (includeExtra && disease.length >= 2) {
+            filtered = filtered.filter(p => {
+              const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
+              return selected.every(d => dis.includes(d));
+            });
+          }
+          // For normal OR condition, SQL already handled it
+        }
 
         const unique = [...new Map(filtered.map(p => [p.user_id, p])).values()];
         const matchedPatients = unique.length;
@@ -11187,49 +11170,48 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
         });
 
         const medicineSummary = Object.keys(medMap)
-  .map(name => ({
-    medicine_name: name,
-    patient_count: medMap[name],
-    percent_matched: matchedPatients
-      ? ((medMap[name] / matchedPatients) * 100).toFixed(2)
-      : "0.00",
-    percent_total: totalPatients
-      ? ((medMap[name] / totalPatients) * 100).toFixed(2)
-      : "0.00",
-  }))
-  .sort((a, b) => b.patient_count - a.patient_count);
+          .map(name => ({
+            medicine_name: name,
+            patient_count: medMap[name],
+            percent_matched: matchedPatients
+              ? ((medMap[name] / matchedPatients) * 100).toFixed(2)
+              : "0.00",
+            percent_total: totalPatients
+              ? ((medMap[name] / totalPatients) * 100).toFixed(2)
+              : "0.00",
+          }))
+          .sort((a, b) => b.patient_count - a.patient_count);
 
-  const medOffset = (med_page - 1) * med_limit;
-
-const paginatedMedicineSummary = medicineSummary.slice(
-  medOffset,
-  medOffset + Number(med_limit)
-);
+        const medOffset = (med_page - 1) * med_limit;
+        const paginatedMedicineSummary = medicineSummary.slice(
+          medOffset,
+          medOffset + Number(med_limit)
+        );
 
         const topDrug = medicineSummary[0]?.medicine_name || "No data";
 
         return res.json({
-  success: true,
-  analytics: {
-    total_patients: totalPatients,
-    matched_patients: matchedPatients,
-    percentage: ((matchedPatients / totalPatients) * 100).toFixed(2) + "%",
-    top_drug: topDrug,
-    doctors_count: hasDoctors ? doctor_ids.length : 0,
-  },
-  medicine_distribution: paginatedMedicineSummary,
-  medicine_total: medicineSummary.length,
-
-  top_medicines_graph: medicineSummary.slice(0, 10),
-
-  patients: {
-    data: unique.slice((page - 1) * limit, page * limit),
-    total: matchedPatients,
-    page: Number(page),
-    limit: Number(limit),
-    total_pages: Math.ceil(matchedPatients / limit),
-  }
-});
+          success: true,
+          analytics: {
+            total_patients: totalPatients,
+            matched_patients: matchedPatients,
+            percentage: totalPatients > 0 
+              ? ((matchedPatients / totalPatients) * 100).toFixed(2) + "%"
+              : "0%",
+            top_drug: topDrug,
+            doctors_count: hasDoctors ? doctor_ids.length : 0,
+          },
+          medicine_distribution: paginatedMedicineSummary,
+          medicine_total: medicineSummary.length,
+          top_medicines_graph: medicineSummary.slice(0, 10),
+          patients: {
+            data: unique.slice((page - 1) * limit, page * limit),
+            total: matchedPatients,
+            page: Number(page),
+            limit: Number(limit),
+            total_pages: Math.ceil(matchedPatients / limit),
+          }
+        });
       });
     });
   });
