@@ -3757,7 +3757,7 @@ const getAdverseReactionById = async (request, response) => {
 //Get Doctors
 
 const getDoctors = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   if (!user_id) {
     return response.status(200).json({
@@ -3766,13 +3766,19 @@ const getDoctors = async (request, response) => {
     });
   }
 
+  const finalLanguage = language_code && language_code.trim() !== ""
+    ? language_code
+    : await getUserLanguage({ user_id });
+
+    request.setLocale(finalLanguage);
+
   const userQuery =
     "SELECT mobile, active_flag, otp_verify, delete_flag FROM user_master WHERE user_id = ?";
   connection.query(userQuery, [user_id], (err, result) => {
     if (err) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
         key: err.message,
       });
     }
@@ -3780,14 +3786,14 @@ const getDoctors = async (request, response) => {
     if (result.length === 0) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
     if (result[0]?.active_flag === 0 || result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
@@ -3799,7 +3805,7 @@ const getDoctors = async (request, response) => {
         if (docErr) {
           return response.status(200).json({
             success: false,
-            msg: languageMessage.internalServerError,
+            msg: request.__("internal_server_error"),
             error: docErr.message,
           });
         }
@@ -3829,7 +3835,7 @@ const getDoctors = async (request, response) => {
           if (err) {
             return response.status(200).json({
               success: false,
-              msg: languageMessage.internalServerError,
+              msg: request.__("internal_server_error"),
               key: err.message,
             });
           }
@@ -3838,8 +3844,8 @@ const getDoctors = async (request, response) => {
             success: true,
             msg:
               subResult.length > 0
-                ? languageMessage.dataFound
-                : languageMessage.dataNotFound,
+                ? request.__("data_found")
+                : request.__("data_not_found"),
             dataArray: subResult,
           });
         });
@@ -3847,7 +3853,7 @@ const getDoctors = async (request, response) => {
     } catch (error) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
         error: error.message,
       });
     }
