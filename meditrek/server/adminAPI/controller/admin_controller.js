@@ -12948,7 +12948,11 @@ const paginatedMedicineSummary = medicineSummary.slice(
       if (measurements.length > 0) {
         allPatients = allPatients.filter(patient => {
           return measurements.some(selectedType => {
-            switch(selectedType.toLowerCase()) {
+            const type = typeof selectedType === "string"
+              ? selectedType.toLowerCase()
+              : selectedType?.value?.toLowerCase?.() || "";
+
+            switch(type) {
               case 'bp':
               case 'blood pressure':
                 return patient.measurements.bp !== null;
