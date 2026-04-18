@@ -13319,6 +13319,77 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
       });
     });
   };
+
+   const getSettings = async (request, response) => {
+  try {
+    const sql = "SELECT `key`, `value` FROM settings";
+
+    connection.query(sql, (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      let settings = {};
+
+      result.forEach((row) => {
+        settings[row.key] = row.value;
+      });
+
+      return response.status(200).json({
+        success: true,
+        data: settings,
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+const updateSetting = async (request, response) => {
+  try {
+    const { key, value } = request.body;
+
+    if (!key) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "key",
+      });
+    }
+
+    const sql = "UPDATE settings SET value = ? WHERE `key` = ?";
+
+    connection.query(sql, [value, key], (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      return response.status(200).json({
+        success: true,
+        msg: "Setting updated successfully",
+      });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
   module.exports = {
     // abhich
 
@@ -13473,5 +13544,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     getMeasurementOptions,
     editUserEmail,
     deleteDiseaseBulk,
-    deleteSymptomsBulk
+    deleteSymptomsBulk,
+    getSettings,
+    updateSetting
   };
