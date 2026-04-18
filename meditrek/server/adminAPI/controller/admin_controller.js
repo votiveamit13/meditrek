@@ -3161,6 +3161,78 @@ const deleteDisease = async (request, response) => {
     });
   }
 };
+const deleteDiseaseBulk = async (request, response) => {
+  try {
+    const { disease_ids } = request.body;
+
+    // 1. Validation
+    if (!disease_ids || !Array.isArray(disease_ids) || disease_ids.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: "Please provide disease IDs to delete"
+      });
+    }
+
+    // 2. Check valid diseases
+    const checkSql = `
+      SELECT disease_id 
+      FROM disease_master 
+      WHERE disease_id IN (?) AND delete_flag = 0
+    `;
+
+    connection.query(checkSql, [disease_ids], (err, results) => {
+      if (err) {
+        console.error("Check error:", err);
+        return response.status(200).json({
+          success: false,
+          msg: "Database error while checking diseases",
+          error: err.message
+        });
+      }
+
+      if (results.length === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: "No valid diseases found to delete"
+        });
+      }
+
+      // 3. Bulk delete (soft delete)
+      const deleteSql = `
+        UPDATE disease_master 
+        SET delete_flag = 1, updatetime = ? 
+        WHERE disease_id IN (?) AND delete_flag = 0
+      `;
+
+      const updatetime = new Date();
+
+      connection.query(deleteSql, [updatetime, disease_ids], (err, deleteResult) => {
+        if (err) {
+          console.error("Delete error:", err);
+          return response.status(200).json({
+            success: false,
+            msg: "Database error while deleting diseases",
+            error: err.message
+          });
+        }
+
+        return response.status(200).json({
+          success: true,
+          msg: `${deleteResult.affectedRows} disease(s) deleted successfully`
+        });
+      });
+    });
+
+  } catch (error) {
+    console.error("Catch error:", error);
+    return response.status(200).json({
+      success: false,
+      msg: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
 
 // const getAllSymptoms = async (request, response) => {
 //   try {
@@ -3741,6 +3813,73 @@ const deleteSymptom = async (request, response) => {
           .json({ success: true, msg: languageMessages.symptomDeleted });
       });
     });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      error: error.message,
+    });
+  }
+};
+
+const deleteSymptomsBulk = async (request, response) => {
+  try {
+    const { symptom_ids } = request.body; // array
+
+    // 1. Validation
+    if (!symptom_ids || !Array.isArray(symptom_ids) || symptom_ids.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.missingFields,
+      });
+    }
+
+    // 2. Check existing symptoms
+    const checkSql = `
+      SELECT symptom_id 
+      FROM symptoms_master 
+      WHERE symptom_id IN (?) AND delete_flag = 0
+    `;
+
+    connection.query(checkSql, [symptom_ids], (err, results) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: err.message,
+        });
+      }
+
+      if (results.length === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.symptomNotFound,
+        });
+      }
+
+      // 3. Bulk delete
+      const deleteSql = `
+        UPDATE symptoms_master 
+        SET delete_flag = 1 
+        WHERE symptom_id IN (?)
+      `;
+
+      connection.query(deleteSql, [symptom_ids], (err) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        return response.status(200).json({
+          success: true,
+          msg: "Symptoms deleted successfully",
+        });
+      });
+    });
+
   } catch (error) {
     return response.status(200).json({
       success: false,
@@ -13332,5 +13471,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     getPatientDiseasesMedicineDashboardAdmin,
     getCrossAnalysisAdmin,
     getMeasurementOptions,
-    editUserEmail
+    editUserEmail,
+    deleteDiseaseBulk,
+    deleteSymptomsBulk
   };
