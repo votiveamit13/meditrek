@@ -622,6 +622,45 @@ const deleteUser = (req, res) => {
     });
   });
 };
+const editUserEmail = (req, res) => {
+  const { user_id, email } = req.body;
+
+  // validation
+  if (!user_id || !email) {
+    return res.json({
+      success: false,
+      msg: "Please send user_id and email",
+    });
+  }
+
+  const sql = `
+    UPDATE user_master
+    SET email = ?
+    WHERE user_id = ? AND delete_flag = 0
+  `;
+
+  connection.query(sql, [email, user_id], (err, result) => {
+    if (err) {
+      return res.json({
+        success: false,
+        msg: "Database error",
+        error: err.message,
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.json({
+        success: false,
+        msg: "User not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      msg: "User email updated successfully",
+    });
+  });
+};
 
 // const ViewUserDetails = async (request, response) => {
 //   const { user_id } = request.params;
@@ -13292,5 +13331,6 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     getDoctorAnalytics,
     getPatientDiseasesMedicineDashboardAdmin,
     getCrossAnalysisAdmin,
-    getMeasurementOptions
+    getMeasurementOptions,
+    editUserEmail
   };
