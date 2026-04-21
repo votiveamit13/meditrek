@@ -8323,18 +8323,10 @@ const getMedicines = async (request, response) => {
       });
     }
 
-    // If no search text is passed, return no data
-    if (!text || text.trim() === "") {
-      return response.status(200).json({
-        success: true,
-        msg: languageMessage.dataNotFound,
-        dataArray: "NA",
-      });
-    }
-
     const checkUser =
       "SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
-    connection.query(checkUser, [user_id], async (err, res) => {
+
+    connection.query(checkUser, [user_id], (err, res) => {
       if (err) {
         return response.status(200).json({
           success: false,
@@ -8342,11 +8334,14 @@ const getMedicines = async (request, response) => {
           error: err.message,
         });
       }
+
       if (res.length === 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessage.userNotFound });
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.userNotFound,
+        });
       }
+
       if (res[0].active_flag == 0) {
         return response.status(200).json({
           success: false,
@@ -8355,27 +8350,24 @@ const getMedicines = async (request, response) => {
         });
       }
 
-      //      Search only medicines starting with text
-      // const whereClause = `WHERE delete_flag = 0 AND medicine_name LIKE ?`;
-      // const params = [`${text}%`, limit, offset];
-      const whereClause = `
-            WHERE 
-              delete_flag = 0 
-              AND medicine_name LIKE ? 
-              AND (
-                (user_id = 0 AND added_by = 0)        
-                OR 
-                (user_id = ? AND added_by = 1)        
-              )
-          `;
-      const params = [`${text}%`, user_id, limit, offset];
+      const searchText = text ? text.trim() : "";
+
       const getQuery = `
-                SELECT medicine_id, medicine_name, description, createtime 
-                FROM medicine_master 
-                ${whereClause}
-                ORDER BY medicine_name ASC
-                LIMIT ? OFFSET ?
-            `;
+        SELECT medicine_id, medicine_name, description, createtime 
+        FROM medicine_master 
+        WHERE 
+          delete_flag = 0 
+          AND medicine_name LIKE ?
+          AND (
+            (COALESCE(user_id,0) = 0 AND COALESCE(added_by,0) = 0)
+            OR
+            (user_id = ? AND added_by = 1)
+          )
+        ORDER BY medicine_name ASC
+        LIMIT ? OFFSET ?
+      `;
+
+      const params = [`${searchText}%`, user_id, limit, offset];
 
       connection.query(getQuery, params, (err1, res1) => {
         if (err1) {
