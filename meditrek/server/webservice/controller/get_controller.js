@@ -2374,7 +2374,7 @@ const getTemperature = async (request, response) => {
 //Get Custom Measurement
 
 const getCustomMeasurement = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   if (!user_id) {
     return response.status(200).json({
@@ -2384,6 +2384,11 @@ const getCustomMeasurement = async (request, response) => {
     });
   }
 
+  const finalLanguage = language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
   // Validate user
 
   const userQuery =
@@ -2396,7 +2401,7 @@ const getCustomMeasurement = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
 
         key: err.message,
       });
@@ -2406,7 +2411,7 @@ const getCustomMeasurement = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.userNotFound,
+        msg: request.__("user_not_found"),
       });
     }
 
@@ -2414,7 +2419,7 @@ const getCustomMeasurement = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.userDeleted,
+        msg: request.__("user_deactivated"),
 
         active_flag: 0,
       });
@@ -2423,23 +2428,45 @@ const getCustomMeasurement = async (request, response) => {
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
-        msg: languageMessage.msgUserDeleted,
+        msg: request.__("your_account_is_not_registered_with_us"),
         active_flag: 0,
       });
     }
 
     try {
-      const Query =
-        "SELECT mm.measurement_id, mm.symptom, sm.symptom_name, mm.symptom_range, mm.createtime FROM measurement_master AS mm LEFT JOIN symptoms_master AS sm ON mm.symptom = sm.symptom_id WHERE mm.user_id = ? AND mm.type = 5 AND mm.delete_flag=0";
+      const Query = `
+        SELECT 
+          mm.measurement_id,
+          mm.symptom,
+          COALESCE(st_lang.symptom_name, st_en.symptom_name, sm.symptom_name) AS symptom_name,
+          mm.symptom_range,
+          mm.createtime
+        FROM measurement_master AS mm
 
-      const Values = [user_id];
+        LEFT JOIN symptoms_master AS sm 
+          ON mm.symptom = sm.symptom_id
+
+        LEFT JOIN symptoms_translation AS st_lang
+          ON sm.symptom_id = st_lang.symptom_id
+          AND st_lang.language_code = ?
+
+        LEFT JOIN symptoms_translation AS st_en
+          ON sm.symptom_id = st_en.symptom_id
+          AND st_en.language_code = 'en'
+
+        WHERE mm.user_id = ? 
+          AND mm.type = 5 
+          AND mm.delete_flag = 0
+      `;
+
+      const Values = [finalLanguage, user_id];
 
       connection.query(Query, Values, async (err, subResult) => {
         if (err) {
           return response.status(200).json({
             success: false,
 
-            msg: languageMessage.internalServerError,
+            msg: request.__("internal_server_error"),
 
             key: err.message,
           });
@@ -2447,7 +2474,7 @@ const getCustomMeasurement = async (request, response) => {
 
         return response.status(200).json({
           success: true,
-          msg: languageMessage.dataFound,
+          msg: request.__("data_found"),
           dataArray: subResult,
         });
       });
@@ -2455,7 +2482,7 @@ const getCustomMeasurement = async (request, response) => {
       return response.status(200).json({
         success: false,
 
-        msg: languageMessage.internalServerError,
+        msg: request.__("internal_server_error"),
 
         error: error.message,
       });
