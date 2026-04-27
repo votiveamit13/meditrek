@@ -8820,67 +8820,108 @@ const saveLanguages = (req, res) => {
 //   );
 // };
 const getUserLanguages = (req, res) => {
-  const languageMap = {
-    en: "English",
-    es: "Español",
-    fr: "Français",
-    ar: "العربية",
-    it: "Italiano",
-    de: "Deutsch",
-    pt: "Português",
-  };
-  const { admin_id, user_id } = req.query;
+  try {
+    const languageMap = {
+      en: "English",
+      es: "Español",
+      fr: "Français",
+      ar: "العربية",
+      it: "Italiano",
+      de: "Deutsch",
+      pt: "Português",
+    };
+    const { admin_id, user_id } = req.query;
 
-  if (!admin_id || !user_id) {
-    return res.json({ success: false, msg: "admin_id & user_id required" });
-  }
+    if (!admin_id || !user_id) {
+      return res.status(200).json({ 
+        success: false, 
+        msg: "admin_id & user_id required" 
+      });
+    }
 
-  // Step 1: Get admin languages
-  connection.query(
-    `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
-      FROM admin_selected_languages asl
-      JOIN languages_master lm ON lm.id = asl.language_id
-      WHERE asl.admin_id = ?
-      ORDER BY lm.is_default DESC`,
-    [admin_id],
-    (err, rows) => {
-      if (err) {
-        return res.json({ success: false, error: err.message });
-      }
+    // Step 1: Get admin languages
+    connection.query(
+      `SELECT lm.id, lm.language_name, lm.language_code, lm.is_default
+        FROM admin_selected_languages asl
+        JOIN languages_master lm ON lm.id = asl.language_id
+        WHERE asl.admin_id = ?
+        ORDER BY lm.is_default DESC`,
+      [admin_id],
+      (err, rows) => {
+        if (err) {
+          console.error('Error fetching admin languages:', err);
+          return res.status(200).json({ 
+            success: false, 
+            msg: "Error fetching languages",
+            error: err.message 
+          });
+        }
 
-      // Step 2: Get user's current language
-      connection.query(
-        "SELECT current_language FROM user_master WHERE user_id = ?",
-        [user_id],
-        (err2, userData) => {
-          if (err2) {
-            return res.json({ success: false, error: err2.message });
-          }
+        // Validate rows result
+        if (!rows || !Array.isArray(rows)) {
+          console.error('Invalid rows result:', rows);
+          return res.status(200).json({ 
+            success: false, 
+            msg: "Invalid response from database" 
+          });
+        }
 
-          const userLang = userData[0]?.current_language;
+        // Step 2: Get user's current language
+        connection.query(
+          "SELECT current_language FROM user_master WHERE user_id = ? AND delete_flag = 0",
+          [user_id],
+          (err2, userData) => {
+            if (err2) {
+              console.error('Error fetching user data:', err2);
+              return res.status(200).json({ 
+                success: false, 
+                msg: "Error fetching user language",
+                error: err2.message 
+              });
+            }
 
-          const defaultLang = rows.find((r) => r.is_default == 1);
+            // Validate userData result
+            if (!userData || !Array.isArray(userData)) {
+              console.error('Invalid userData result:', userData);
+              return res.status(200).json({ 
+                success: false, 
+                msg: "Invalid user data response" 
+              });
+            }
 
-          res.json({
-            success: true,
-            data: {
-              current_language: userLang || defaultLang?.language_code,
-              // language: rows.map(r => ({
-              //   id: r.id,
-              //   language_name: r.language_name,
-              //   language_code: r.language_code
-              // }))
+            // Extract user language safely
+            const userLang = userData.length > 0 ? userData[0].current_language : null;
+
+            // Find default language
+            const defaultLang = rows.find((r) => r.is_default == 1);
+
+            // Ensure we always send valid JSON
+            const responseData = {
+              current_language: userLang || defaultLang?.language_code || "en",
               language: rows.map((r) => ({
                 id: r.id,
                 language_name: languageMap[r.language_code] || r.language_name,
                 language_code: r.language_code,
               })),
-            },
-          });
-        },
-      );
-    },
-  );
+            };
+
+            res.status(200).json({
+              success: true,
+              msg: "Languages fetched successfully",
+              data: responseData,
+            });
+          },
+        );
+      },
+    );
+  } catch (error) {
+    console.error('Caught error in getUserLanguages:', error);
+    return res.status(500).json({ 
+      success: false, 
+      msg: "Internal server error",
+      error: error.message 
+    });
+  }
 };
 
 // const updateUserLanguage = (req, res) => {
