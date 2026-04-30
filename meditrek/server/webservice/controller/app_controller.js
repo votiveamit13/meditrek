@@ -5101,22 +5101,22 @@ const homepage = async (request, response) => {
           const userTZ = userTimezone;
 
           // medication "today" in its own timezone
-          const medToday = moment().tz(medTZ).format("YYYY-MM-DD");
+          // const medToday = moment().tz(medTZ).format("YYYY-MM-DD");
 
           // interpret as wall time in med timezone
-          const medMoment = moment.tz(
-              `${medToday} ${raw}`,
-              "YYYY-MM-DD HH:mm:ss",
-              medTZ
-          );
+          // const medMoment = moment.tz(
+          //     `${medToday} ${raw}`,
+          //     "YYYY-MM-DD HH:mm:ss",
+          //     medTZ
+          // );
 
           // convert to user's current timezone
-          const userMoment = medMoment.clone().tz(userTZ);
+          // const userMoment = medMoment.clone().tz(userTZ);
           // Interpret raw_time as local wall-clock time (NO timezone conversion)
-          // const userMoment = moment(
-          //   `${todayDate} ${raw}`,
-          //   "YYYY-MM-DD HH:mm:ss",
-          // );
+          const userMoment = moment(
+            `${todayDate} ${raw}`,
+            "YYYY-MM-DD HH:mm:ss",
+          );
 
           return {
             ...med,
