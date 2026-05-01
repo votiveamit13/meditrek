@@ -5110,10 +5110,15 @@ const homepage = async (request, response) => {
           // convert to user's current timezone
           // const userMoment = medMoment.clone().tz(userTZ);
           // Interpret raw_time as local wall-clock time (NO timezone conversion)
-          const userMoment = moment(
-            `${todayDate} ${raw}`,
-            "YYYY-MM-DD HH:mm:ss",
-          );
+          // const userMoment = moment(
+          //   `${todayDate} ${raw}`,
+          //   "YYYY-MM-DD HH:mm:ss",
+          // );
+          const userMoment = moment.tz(
+  `${todayDate} ${raw}`,
+  "YYYY-MM-DD HH:mm:ss",
+  userTimezone
+);
 
           return {
             ...med,
@@ -5159,9 +5164,9 @@ const homepage = async (request, response) => {
         });
 
         const upcomingCount = categorizedMeds.filter((med) => {
-  const diff = med.time_moment.diff(now, "minutes");
-  return diff >= 0; // only future
-}).length;
+          const diff = med.time_moment.diff(now, "minutes");
+          return diff >= 0; // only future
+        }).length;
 
         const finalResponse = categorizedMeds.map((med) => {
           const { time_moment, ...rest } = med;
