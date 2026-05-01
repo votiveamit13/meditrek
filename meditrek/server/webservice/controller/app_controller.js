@@ -5159,9 +5159,9 @@ const homepage = async (request, response) => {
         });
 
         const upcomingCount = categorizedMeds.filter((med) => {
-          const diff = med.time_moment.diff(now, "minutes");
-          return diff >= -CURRENT_TIME_WINDOW;
-        }).length;
+  const diff = med.time_moment.diff(now, "minutes");
+  return diff >= 0; // only future
+}).length;
 
         const finalResponse = categorizedMeds.map((med) => {
           const { time_moment, ...rest } = med;
