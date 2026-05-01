@@ -4940,7 +4940,7 @@ const removePlayerId = async (request, response) => {
 //   }
 // };
 const homepage = async (request, response) => {
-  const { user_id ,page = 1, limit = 10 } = request.query;
+  const { user_id } = request.query;
 
   try {
     if (!user_id) {
@@ -4958,7 +4958,6 @@ const homepage = async (request, response) => {
             WHERE user_id = ? AND delete_flag = 0
         `;
 
-        const offset = (parseInt(page) - 1) * parseInt(limit);
     connection.query(checkUser, [user_id], async (err, userRes) => {
       if (err) {
         return response.status(200).json({
@@ -5050,12 +5049,10 @@ const homepage = async (request, response) => {
                           AND mam.status = 2 
                           AND DATE(mam.createtime) = ?
                     )
-                ORDER BY ts.time ASC 
-                LIMIT ? OFFSET ?
+                ORDER BY ts.time ASC
             `;
 
-      const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate, parseInt(limit),
-  parseInt(offset),];
+      const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate];
 
       connection.query(getMedicationQuery, values, async (err, meds) => {
         if (err) {
@@ -5143,7 +5140,7 @@ const homepage = async (request, response) => {
           if (aDiff < 0 && bDiff > 0) return 1;
           return a.time_moment - b.time_moment;
         });
-
+    
         const upcomingCount = categorizedMeds.filter((med) => {
           const diff = med.time_moment.diff(now, "minutes");
           return diff >= -CURRENT_TIME_WINDOW;
@@ -5159,8 +5156,6 @@ const homepage = async (request, response) => {
           msg: languageMessage.dataFound,
           current_time: currentTime,
           upcoming_total: upcomingCount,
-          page: parseInt(page),
-          limit: parseInt(limit),
           dataArray: finalResponse,
         });
       });
