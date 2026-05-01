@@ -5123,24 +5123,41 @@ const homepage = async (request, response) => {
           };
         });
 
-        const CURRENT_TIME_WINDOW = 5; // minutes
+        // const CURRENT_TIME_WINDOW = 5; // minutes
 
+        // categorizedMeds.sort((a, b) => {
+        //   const aDiff = a.time_moment.diff(now, "minutes");
+        //   const bDiff = b.time_moment.diff(now, "minutes");
+
+        //   const aCurrent = Math.abs(aDiff) <= CURRENT_TIME_WINDOW;
+        //   const bCurrent = Math.abs(bDiff) <= CURRENT_TIME_WINDOW;
+
+        //   if (aCurrent && !bCurrent) return -1;
+        //   if (!aCurrent && bCurrent) return 1;
+        //   if (aCurrent && bCurrent) return Math.abs(aDiff) - Math.abs(bDiff);
+
+        //   if (aDiff > 0 && bDiff < 0) return -1;
+        //   if (aDiff < 0 && bDiff > 0) return 1;
+        //   return a.time_moment - b.time_moment;
+        // });
         categorizedMeds.sort((a, b) => {
           const aDiff = a.time_moment.diff(now, "minutes");
           const bDiff = b.time_moment.diff(now, "minutes");
 
-          const aCurrent = Math.abs(aDiff) <= CURRENT_TIME_WINDOW;
-          const bCurrent = Math.abs(bDiff) <= CURRENT_TIME_WINDOW;
+          const aFuture = aDiff >= 0;
+          const bFuture = bDiff >= 0;
 
-          if (aCurrent && !bCurrent) return -1;
-          if (!aCurrent && bCurrent) return 1;
-          if (aCurrent && bCurrent) return Math.abs(aDiff) - Math.abs(bDiff);
+          // 🥇 Future medicines always come first
+          if (aFuture && !bFuture) return -1;
+          if (!aFuture && bFuture) return 1;
 
-          if (aDiff > 0 && bDiff < 0) return -1;
-          if (aDiff < 0 && bDiff > 0) return 1;
+          // 🥈 If both future → nearest one first (NEXT medicine first)
+          if (aFuture && bFuture) return aDiff - bDiff;
+
+          // 🥉 If both past → keep chronological order
           return a.time_moment - b.time_moment;
         });
-    
+
         const upcomingCount = categorizedMeds.filter((med) => {
           const diff = med.time_moment.diff(now, "minutes");
           return diff >= -CURRENT_TIME_WINDOW;
