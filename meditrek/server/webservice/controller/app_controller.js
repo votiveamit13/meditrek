@@ -5115,10 +5115,10 @@ const homepage = async (request, response) => {
           //   "YYYY-MM-DD HH:mm:ss",
           // );
           const userMoment = moment.tz(
-  `${todayDate} ${raw}`,
-  "YYYY-MM-DD HH:mm:ss",
-  userTimezone
-);
+            `${todayDate} ${raw}`,
+            "YYYY-MM-DD HH:mm:ss",
+            userTimezone
+          );
 
           return {
             ...med,
@@ -5145,27 +5145,31 @@ const homepage = async (request, response) => {
         //   if (aDiff < 0 && bDiff > 0) return 1;
         //   return a.time_moment - b.time_moment;
         // });
+        const GRACE_PERIOD = 60; // minutes
+
         categorizedMeds.sort((a, b) => {
           const aDiff = a.time_moment.diff(now, "minutes");
           const bDiff = b.time_moment.diff(now, "minutes");
 
-          const aFuture = aDiff >= 0;
-          const bFuture = bDiff >= 0;
+          const aActive = aDiff >= -GRACE_PERIOD;
+          const bActive = bDiff >= -GRACE_PERIOD;
 
-          // 🥇 Future medicines always come first
-          if (aFuture && !bFuture) return -1;
-          if (!aFuture && bFuture) return 1;
+          // 🥇 Active meds first (future + recent past)
+          if (aActive && !bActive) return -1;
+          if (!aActive && bActive) return 1;
 
-          // 🥈 If both future → nearest one first (NEXT medicine first)
-          if (aFuture && bFuture) return aDiff - bDiff;
+          // 🥈 Among active → closest to now first
+          if (aActive && bActive) {
+            return Math.abs(aDiff) - Math.abs(bDiff);
+          }
 
-          // 🥉 If both past → keep chronological order
+          // 🥉 Old past → chronological
           return a.time_moment - b.time_moment;
         });
 
         const upcomingCount = categorizedMeds.filter((med) => {
           const diff = med.time_moment.diff(now, "minutes");
-          return diff >= 0; // only future
+          return diff >= -GRACE_PERIOD;
         }).length;
 
         const finalResponse = categorizedMeds.map((med) => {
