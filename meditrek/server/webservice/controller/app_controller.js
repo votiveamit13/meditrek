@@ -5145,34 +5145,75 @@ const homepage = async (request, response) => {
         //   if (aDiff < 0 && bDiff > 0) return 1;
         //   return a.time_moment - b.time_moment;
         // });
-        const GRACE_PERIOD = 60; // minutes
+        // const GRACE_PERIOD = 60; // minutes
 
-        categorizedMeds.sort((a, b) => {
-          const aDiff = a.time_moment.diff(now, "minutes");
-          const bDiff = b.time_moment.diff(now, "minutes");
+        // categorizedMeds.sort((a, b) => {
+        //   const aDiff = a.time_moment.diff(now, "minutes");
+        //   const bDiff = b.time_moment.diff(now, "minutes");
 
-          const aActive = aDiff >= -GRACE_PERIOD;
-          const bActive = bDiff >= -GRACE_PERIOD;
+        //   const aActive = aDiff >= -GRACE_PERIOD;
+        //   const bActive = bDiff >= -GRACE_PERIOD;
 
-          // 🥇 Active meds first (future + recent past)
-          if (aActive && !bActive) return -1;
-          if (!aActive && bActive) return 1;
+        //   // 🥇 Active meds first (future + recent past)
+        //   if (aActive && !bActive) return -1;
+        //   if (!aActive && bActive) return 1;
 
-          // 🥈 Among active → closest to now first
-          if (aActive && bActive) {
-            return Math.abs(aDiff) - Math.abs(bDiff);
-          }
+        //   // 🥈 Among active → closest to now first
+        //   if (aActive && bActive) {
+        //     return Math.abs(aDiff) - Math.abs(bDiff);
+        //   }
 
-          // 🥉 Old past → chronological
-          return a.time_moment - b.time_moment;
-        });
+        //   // 🥉 Old past → chronological
+        //   return a.time_moment - b.time_moment;
+        // });
 
-        const upcomingCount = categorizedMeds.filter((med) => {
-          const diff = med.time_moment.diff(now, "minutes");
-          return diff >= -GRACE_PERIOD;
-        }).length;
+        // Step 1: sort by actual time first
+categorizedMeds.sort((a, b) => a.time_moment - b.time_moment);
 
-        const finalResponse = categorizedMeds.map((med) => {
+// Step 2: find active index (last past medicine)
+let activeIndex = -1;
+
+for (let i = 0; i < categorizedMeds.length; i++) {
+  if (categorizedMeds[i].time_moment.isSameOrBefore(now)) {
+    activeIndex = i;
+  } else {
+    break;
+  }
+}
+
+// Step 3: rearrange order
+let finalOrdered = [];
+
+if (activeIndex !== -1) {
+  // 🟢 Active medicine (last past)
+  finalOrdered.push(categorizedMeds[activeIndex]);
+
+  // 🟡 Future medicines
+  finalOrdered.push(...categorizedMeds.slice(activeIndex + 1));
+
+  // 🔴 Older past medicines
+  finalOrdered.push(...categorizedMeds.slice(0, activeIndex));
+} else {
+  // If no past → all future
+  finalOrdered = categorizedMeds;
+}
+
+        // const upcomingCount = categorizedMeds.filter((med) => {
+        //   const diff = med.time_moment.diff(now, "minutes");
+        //   return diff >= -GRACE_PERIOD;
+        // }).length;
+
+        const upcomingCount = finalOrdered.filter((med) => {
+  const diff = med.time_moment.diff(now, "minutes");
+  return diff >= 0;
+}).length;
+
+        // const finalResponse = categorizedMeds.map((med) => {
+        //   const { time_moment, ...rest } = med;
+        //   return rest;
+        // });
+
+        const finalResponse = finalOrdered.map((med) => {
           const { time_moment, ...rest } = med;
           return rest;
         });
