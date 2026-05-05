@@ -623,23 +623,46 @@ const deleteUser = (req, res) => {
   });
 };
 const editUserEmail = (req, res) => {
-  const { user_id, email } = req.body;
+  const { user_id, email, mobile } = req.body;
 
   // validation
-  if (!user_id || !email) {
+  if (!user_id) {
     return res.json({
       success: false,
-      msg: "Please send user_id and email",
+      msg: "Please send user_id",
     });
+  }
+
+  // at least one field required
+  if (!email && !mobile) {
+    return res.json({
+      success: false,
+      msg: "Please provide email or mobile to update",
+    });
+  }
+
+  let fields = [];
+  let values = [];
+
+  if (email) {
+    fields.push("email = ?");
+    values.push(email);
+  }
+
+  if (mobile) {
+    fields.push("mobile = ?");
+    values.push(mobile);
   }
 
   const sql = `
     UPDATE user_master
-    SET email = ?
+    SET ${fields.join(", ")}
     WHERE user_id = ? AND delete_flag = 0
   `;
 
-  connection.query(sql, [email, user_id], (err, result) => {
+  values.push(user_id);
+
+  connection.query(sql, values, (err, result) => {
     if (err) {
       return res.json({
         success: false,
@@ -657,7 +680,7 @@ const editUserEmail = (req, res) => {
 
     return res.json({
       success: true,
-      msg: "User email updated successfully",
+      msg: "User updated successfully",
     });
   });
 };
