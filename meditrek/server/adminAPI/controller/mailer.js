@@ -2678,7 +2678,7 @@ async function sendOtpEmail(toEmail, userName, otp) {
           <table width="100%" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
 
             <!-- Header -->
-            <tr style="background:#1DDEC4;">
+            <tr>
               <td align="center" style="padding:25px;">
                <img 
                     src="${app_logo}" 
