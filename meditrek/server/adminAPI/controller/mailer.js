@@ -1960,7 +1960,7 @@ async function mailerApproveDoctor( adminEmail, app_name, title, doctor_name, em
 
                 <p>You can now log in to your account and start using our platform.</p>
 
-                <a href="https://meditrekaccess.com/meditrek/sub_admin/meditrek/sub_admin/login" class="button">Login Now</a>
+                <a href="https://meditrekaccess.com/meditrek/HCP_Panel/meditrek/Access/login/Meditrek_access/" class="button">Login Now</a>
 
                 <p>If you have any questions, feel free to contact us.</p>
 
