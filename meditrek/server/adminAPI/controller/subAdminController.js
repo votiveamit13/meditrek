@@ -5102,16 +5102,23 @@ const getNotificationHistory = (req, res) => {
 // analytics api
 
 const getAllDiseases = (req, res) => {
+
   const sql = `
-    SELECT disease_id, disease_name
-    FROM disease_master
-    WHERE delete_flag = 0
-      AND disease_name IS NOT NULL
-      AND TRIM(disease_name) != ''
-    ORDER BY disease_name ASC
+    SELECT 
+      dm.disease_id,
+      dt.disease_name
+    FROM disease_master dm
+    LEFT JOIN disease_translation dt
+      ON dm.disease_id = dt.disease_id
+      AND dt.language_code = 'en'
+    WHERE dm.delete_flag = 0
+      AND dt.disease_name IS NOT NULL
+      AND TRIM(dt.disease_name) != ''
+    ORDER BY dt.disease_name ASC
   `;
 
   connection.query(sql, (err, result) => {
+
     if (err) {
       return res.json({
         success: false,
@@ -5124,7 +5131,9 @@ const getAllDiseases = (req, res) => {
       total: result.length,
       diseases: result
     });
+
   });
+
 };
 const getDocterAllDiseases = (req, res) => {
   const { doctor_id } = req.query;
