@@ -5143,7 +5143,7 @@ const getDocterAllDiseases = (req, res) => {
   }
 
   const sql = `
-    SELECT DISTINCT dm.disease_id, dm.disease_name
+    SELECT DISTINCT dm.disease_id, dt.disease_name
     FROM patient_master pm
 
     JOIN user_master um 
