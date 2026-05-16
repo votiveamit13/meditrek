@@ -640,7 +640,7 @@ function mailBodyForgotPasswordData(postData) {
   
                                                   <p style="text-align: center;">
   
-                                              <a href='https://meditrekaccess.com/meditrek/sub_admin/meditrek/sub_admin/reset-password?doctor_id=${postData.doctor_id}' target="_blank" style="display: inline-block; background-color: #1ddec4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                                              <a href='https://meditrekaccess.com/meditrek/HCP_Panel/meditrek/Access/login/Meditrek_access/reset-password?doctor_id=${postData.doctor_id}' target="_blank" style="display: inline-block; background-color: #1ddec4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
   
                                                   Reset Password
   
