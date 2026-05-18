@@ -46,7 +46,7 @@ async function mailer(
 
 //   const mailFrom = "support@meditrekaccess.com";
 
-  const reset_url = `https://meditrekaccess.com/meditrek/admin/meditrek/admin/reset-password?user_id=${user_id}`;
+  const reset_url = `https://meditrekaccess.com/meditrek/admin/staging/reset-password?user_id=${user_id}`;
 
 
 
@@ -294,7 +294,7 @@ async function ActivateDeactivatemailer(
 
   const reset_url =
 
-    "https://meditrekaccess.com/meditrek/admin/meditrek/admin/reset-password";
+    "https://meditrekaccess.com/meditrek/admin/staging/reset-password";
 
 
 
@@ -2526,7 +2526,7 @@ async function sendDoctorEmail(toEmail, doctorName, password) {
 
   const app_logo = "https://meditrekaccess.com/meditrek/server/uploads/td_logo.png";
 
-  const loginUrl = "https://meditrekaccess.com/doctor/login";
+  const loginUrl = "https://meditrekaccess.com/meditrek/HCP_Panel/meditrek/Access/login/Meditrek_access";
 
 
 
