@@ -2452,11 +2452,13 @@ const getTabularMedication = async (request, response) => {
   const { from_date, to_date } = request.query;
 
   try {
-    // Validate parameters
+    // =========================
+    // Validate Parameters
+    // =========================
     if (!from_date) {
       return response.status(200).json({
         success: false,
-        msg: languageMessages.msg_empty_param,
+        msg: languageMessages.msg_empty_param || "from_date is required",
         key: "from_date",
       });
     }
@@ -2464,34 +2466,101 @@ const getTabularMedication = async (request, response) => {
     if (!to_date) {
       return response.status(200).json({
         success: false,
-        msg: languageMessages.msg_empty_param,
+        msg: languageMessages.msg_empty_param || "to_date is required",
         key: "to_date",
       });
     }
 
-    // Get medication data
+    // =========================
+    // Main Query
+    // =========================
     const medication_array = await new Promise((resolve, reject) => {
+
       const sqlSelect = `
         SELECT 
-          m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, m.schedule, m.weekday,
-          m.current_quantity, DATE_FORMAT(CONVERT_TZ(tm.time, '+00:00', '+05:30'), '%h:%i %p') AS reminder_time,
-          m.remainder_quantity, tm.taken_status, m.pause_status, m.remaining_quantity,
-          m.instruction, m.status, m.updatetime, m.createtime,
-          a.medicine_name, a.description, um.name
+          m.medication_id,
+          m.user_id,
+          m.medicine_id,
+          m.dosage,
+          m.type,
+          m.schedule,
+          m.weekday,
+          m.current_quantity,
+          TIME_FORMAT(tm.time, '%h:%i %p') AS reminder_time,
+          m.remainder_quantity,
+          tm.taken_status,
+          m.pause_status,
+          m.remaining_quantity,
+          m.instruction,
+          m.status,
+          m.updatetime,
+          m.createtime,
+
+          a.medicine_name,
+          a.description,
+
+          um.name,
+
+          COALESCE(ma.medicine_ontime_count, 0) AS medicine_ontime_count,
+          COALESCE(ma.medicine_late_count, 0) AS medicine_late_count,
+          COALESCE(ma.medicine_nottaken_count, 0) AS medicine_nottaken_count
+
         FROM medication_master m
-        JOIN medicine_master a ON a.medicine_id = m.medicine_id
-        JOIN user_master um ON um.user_id = m.user_id
-        JOIN time_slots_master tm ON tm.medication_id = m.medication_id
-        WHERE m.delete_flag = 0 AND tm.delete_flag = 0
+
+        JOIN medicine_master a 
+          ON a.medicine_id = m.medicine_id
+
+        JOIN user_master um 
+          ON um.user_id = m.user_id
+
+        JOIN time_slots_master tm 
+          ON tm.medication_id = m.medication_id
+
+        LEFT JOIN (
+          SELECT
+            medicine_id,
+
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) 
+              AS medicine_ontime_count,
+
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) 
+              AS medicine_late_count,
+
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) 
+              AS medicine_nottaken_count
+
+          FROM medicine_average_master
+          WHERE delete_flag = 0
+          GROUP BY medicine_id
+
+        ) ma ON ma.medicine_id = m.medicine_id
+
+        WHERE 
+          m.delete_flag = 0
+          AND tm.delete_flag = 0
           AND DATE(m.createtime) BETWEEN ? AND ?
+
         ORDER BY m.createtime DESC
       `;
-      connection.query(sqlSelect, [from_date, to_date], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
+
+      connection.query(
+        sqlSelect,
+        [from_date, to_date],
+        (err, result) => {
+
+          if (err) {
+            console.log("SQL ERROR:", err);
+            return reject(err);
+          }
+
+          resolve(result);
+        }
+      );
     });
 
+    // =========================
+    // No Data Found
+    // =========================
     if (!medication_array || medication_array.length === 0) {
       return response.status(200).json({
         success: true,
@@ -2500,79 +2569,132 @@ const getTabularMedication = async (request, response) => {
       });
     }
 
-    // Prepare user array with counts
-    const user_arr = [];
-    let s_no = 0;
+    // =========================
+    // Type Labels
+    // =========================
+    const typeLabels = {
+      1: "Tablet",
+      2: "Capsule",
+      3: "Lozenge",
+      4: "Cream",
+      5: "Drops",
+      6: "Foam",
+      7: "Gel",
+      8: "Inhaler",
+      9: "Injection",
+      10: "Ointment",
+      11: "Patch",
+      12: "Powder",
+      13: "Spray",
+      14: "Suppository",
+      15: "Syrup",
+      16: "Granule",
+      17: "Lotion",
+      18: "Other",
+    };
 
-    for (const data of medication_array) {
-      s_no++;
+    // =========================
+    // Final Response Array
+    // =========================
+    const user_arr = medication_array.map((data, index) => {
 
-      // Fetch ontime, late, and not taken counts
-      const counts = await getMedicineCounts(data.medicine_id);
-      const ontimeCount = counts.medicine_ontime_count || 0;
-      const lateCount = counts.medicine_late_count || 0;
-      const notTakenCount = counts.medicine_nottaken_count || 0;
+      return {
+        s_no: index + 1,
 
-      // Map type label
-      const typeLabels = {
-        1: "Tablet", 2: "Capsule", 3: "Lozenge", 4: "Cream", 5: "Drops",
-        6: "Foam", 7: "Gel", 8: "Inhaler", 9: "Injection", 10: "Ointment",
-        11: "Patch", 12: "Powder", 13: "Spray", 14: "Suppository",
-        15: "Syrup", 16: "Granule", 17: "Lotion", 18: "Other",
-      };
-
-      // Push formatted data into array
-      user_arr.push({
-        s_no,
         medication_id: data.medication_id,
+
         user_id: data.user_id,
+
         patient_name: data.name,
+
         medicine_id: data.medicine_id,
+
         medicine_name: data.medicine_name,
+
         medicine_description: data.description,
+
         dosage: data.dosage,
+
         type: data.type,
+
         type_label: typeLabels[data.type] || "Unknown",
+
         schedule: data.schedule,
+
         schedule_label:
           data.schedule === 0
             ? "Daily"
             : data.schedule === 1
             ? "Weekly"
             : "Monthly",
+
         weekday: data.weekday,
+
         current_quantity: data.current_quantity,
+
         reminder_time: data.reminder_time,
+
         remind_quantity: data.remainder_quantity,
+
         remaining_quantity: data.remaining_quantity,
+
         instruction: data.instruction,
-        ontime_count: ontimeCount,
-        late_count: lateCount,
-        not_taken_count: notTakenCount,
+
+        ontime_count: data.medicine_ontime_count,
+
+        late_count: data.medicine_late_count,
+
+        not_taken_count: data.medicine_nottaken_count,
+
         status: data.status,
-        status_label: data.status === 1 ? "Active" : "Inactive",
+
+        status_label:
+          data.status === 1
+            ? "Active"
+            : "Inactive",
+
         pause_status: data.pause_status,
-        pause_status_label: data.pause_status === 1 ? "Paused" : "Running",
+
+        pause_status_label:
+          data.pause_status === 1
+            ? "Paused"
+            : "Running",
+
         taken_status: data.taken_status,
-        taken_status_label: data.taken_status === 1 ? "Not Taken" : "Taken",
-        createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+
+        taken_status_label:
+          data.taken_status === 1
+            ? "Not Taken"
+            : "Taken",
+
+        createtime: data.createtime
+          ? moment(data.createtime).format("DD-MM-YYYY hh:mm A")
+          : "N/A",
+
         updatetime: data.updatetime
           ? moment(data.updatetime).format("DD-MM-YYYY hh:mm A")
           : "N/A",
-      });
-    }
+      };
+    });
 
-    // ✅ Send final response
+    // =========================
+    // Success Response
+    // =========================
     return response.status(200).json({
       success: true,
       msg: languageMessages.msgDataFound || "Data found successfully",
       medication_arr: user_arr,
     });
+
   } catch (error) {
-    console.error("Error in getTabularMedication:", error);
+
+    console.log("getTabularMedication ERROR:", error);
+
     return response.status(500).json({
       success: false,
-      msg: languageMessages.internalServerError || "Internal Server Error",
+      msg:
+        languageMessages.internalServerError ||
+        "Internal Server Error",
       error: error.message,
     });
   }
