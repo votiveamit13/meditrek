@@ -870,17 +870,23 @@ const deleteAccount = async (request, response) => {
 
             }
 
-            const newUserQuery = `
+        //     const newUserQuery = `
 
-            UPDATE user_master 
+        //     UPDATE user_master 
 
-            SET delete_reason = ?, delete_flag = 1 
+        //     SET delete_reason = ?, delete_flag = 1 
 
-            WHERE user_id = ?
+        //     WHERE user_id = ?
 
-        `;
+        // `;
 
-            connection.query(newUserQuery, [reason, user_id], async (err, result) => {
+        const newUserQuery = `
+    DELETE FROM user_master
+    WHERE user_id = ?
+`;
+
+            // connection.query(newUserQuery, [reason, user_id], async (err, result) => {
+            connection.query(newUserQuery, [user_id], async (err, result) => {
 
                 if (err) {
 

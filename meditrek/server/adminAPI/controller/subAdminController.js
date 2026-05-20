@@ -8511,7 +8511,11 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
     combinedOnly = false,
     includeExtra = false,
     page = 1,
-    limit = 10
+    limit = 10,
+    therapy_page = 1,
+    therapy_limit = 10,
+    drilldown_page = 1,
+    drilldown_limit = 10,
   } = req.body;
 
   if (!doctor_id) {
@@ -8519,8 +8523,9 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
   }
 
   const offset = (Number(page) - 1) * Number(limit);
+  const therapyOffset = (Number(therapy_page) - 1) * Number(therapy_limit);
+  const drilldownOffset = (Number(drilldown_page) - 1) * Number(drilldown_limit);
 
-  // ── BASE WHERE (gender + age only — no disease/medication here yet) ──
   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
 
@@ -8541,43 +8546,31 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
     }
   }
 
-  // ── SQL DISEASE PRE-FILTER (broad LIKE only — exact logic handled in JS) ──
-  // This narrows rows fetched from DB for performance.
-  // countCondition is intentionally removed — JS handles singleOnly/combinedOnly exactly.
   if (Array.isArray(disease) && disease.length > 0) {
     if (singleOnly && disease.length === 1) {
-      // Pre-filter: must contain this disease (JS will enforce dis.length === 1)
       where += ` AND u.diseases LIKE ?`;
       params.push(`%${disease[0]}%`);
-
     } else if (combinedOnly && disease.length >= 2) {
-      // Pre-filter: must contain ALL selected (JS will enforce exact count)
       const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
       where += ` AND (${conditions})`;
       disease.forEach(d => params.push(`%${d}%`));
-
     } else if (includeExtra && disease.length >= 2) {
-      // Pre-filter: must contain ALL selected (extras allowed — JS confirms)
       const conditions = disease.map(() => `u.diseases LIKE ?`).join(" AND ");
       where += ` AND (${conditions})`;
       disease.forEach(d => params.push(`%${d}%`));
-
     } else {
-      // Default: contains ANY selected disease
       const conditions = disease.map(() => `u.diseases LIKE ?`).join(" OR ");
       where += ` AND (${conditions})`;
       disease.forEach(d => params.push(`%${d}%`));
     }
   }
 
-  // ── TOTAL: all patients under this doctor (no filters) ──
   const totalSql = `
     SELECT COUNT(DISTINCT p.user_id) AS total
     FROM patient_master p
     WHERE p.doctor_id = ? AND p.delete_flag = 0
   `;
 
-  // ── PATIENT LIST: fetch user_id + name + raw diseases string ──
   const patientSql = `
     SELECT DISTINCT u.user_id, u.name, u.diseases,
     IFNULL(TIMESTAMPDIFF(YEAR, u.dob, CURDATE()), 0) AS age,
@@ -8598,7 +8591,6 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
       if (errP) return res.json({ success: false, msg: "Patient query failed" });
 
       const promises = patients.map(patient => new Promise((resolve, reject) => {
-
         let parsedDiseases = [];
         try {
           const parsed = JSON.parse(patient.diseases);
@@ -8609,13 +8601,15 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
           const matches = patient.diseases?.match(/name:\s*([^,}\n]+)/g) || [];
           parsedDiseases = matches.map(m => m.split(":")[1]?.trim()).filter(Boolean);
         }
+
         patient.diseases = parsedDiseases;
         patient.age = patient.age ?? 0;
-  patient.gender =
-    patient.gender == 1 ? "Male" :
-    patient.gender == 2 ? "Female" :
-    patient.gender == 3 ? "Other" :
-    "Not Specified";
+        patient.gender =
+          patient.gender == 1 ? "Male" :
+          patient.gender == 2 ? "Female" :
+          patient.gender == 3 ? "Other" :
+          "Not Specified";
+
         const shareSql = `
           SELECT information_type, createtime
           FROM report_share_master
@@ -8649,7 +8643,7 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
 
           connection.query(medSql, [patient.user_id, latest.createtime], (err2, meds) => {
             if (err2) return reject(err2);
-            patient.medications = meds.map(m => m.medicine_name); // string[]
+            patient.medications = meds.map(m => m.medicine_name);
             resolve(patient);
           });
         });
@@ -8657,10 +8651,9 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
 
       Promise.all(promises)
         .then(enriched => {
-
-          // ── STEP 1: medication_name search ──────────────────
           let filteredPatients = enriched;
 
+          // ── STEP 1: medication_name search ──
           if (medication_name && medication_name.trim() !== "") {
             filteredPatients = filteredPatients.filter(p =>
               p.medications.some(m =>
@@ -8669,8 +8662,7 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
             );
           }
 
-          // ── STEP 2: medication[] filter ─────────────────────
-          // (patients must have specific medications)
+          // ── STEP 2: medication[] filter ──
           if (Array.isArray(medication) && medication.length > 0) {
             const selectedMeds = medication.map(m => m.toLowerCase().trim());
             filteredPatients = filteredPatients.filter(p =>
@@ -8682,19 +8674,16 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
             );
           }
 
-          // ── STEP 3: disease filter — exact same logic as custom table ──
+          // ── STEP 3: disease filter ──
           if (Array.isArray(disease) && disease.length > 0) {
             const selected = disease.map(d => d.toLowerCase().trim());
 
             if (singleOnly && disease.length === 1) {
-              // Patient has ONLY this one disease, nothing else
               filteredPatients = filteredPatients.filter(p => {
                 const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
                 return dis.length === 1 && selected.includes(dis[0]);
               });
-
             } else if (combinedOnly && disease.length >= 2) {
-              // Patient has EXACTLY the selected diseases — no more, no less
               filteredPatients = filteredPatients.filter(p => {
                 const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
                 return (
@@ -8702,16 +8691,12 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
                   selected.every(d => dis.includes(d))
                 );
               });
-
             } else if (includeExtra && disease.length >= 2) {
-              // Patient has ALL selected diseases — extras allowed
               filteredPatients = filteredPatients.filter(p => {
                 const dis = (p.diseases || []).map(d => d.toLowerCase().trim());
                 return selected.every(d => dis.includes(d));
               });
-
             } else {
-              // Default: patient has ANY of the selected diseases
               filteredPatients = filteredPatients.filter(p =>
                 (p.diseases || []).some(d =>
                   selected.includes(d.toLowerCase().trim())
@@ -8720,15 +8705,15 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
             }
           }
 
-          // ── STEP 4: build medicine count map ────────────────
+          const matchedCount = filteredPatients.length;
+
+          // ── STEP 4: drug distribution (individual medicines) ──
           const map = {};
           filteredPatients.forEach(p => {
             p.medications.forEach(med => {
               map[med] = (map[med] || 0) + 1;
             });
           });
-
-          const matchedCount = filteredPatients.length;
 
           let summary = Object.keys(map).map(name => ({
             medicine_name: name,
@@ -8743,12 +8728,33 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
 
           summary.sort((a, b) => b.patient_count - a.patient_count);
 
-          // ── STEP 5: exclude_medication ───────────────────────
+          // ── STEP 4b: therapy distribution (combo per patient) ──
+          const therapyMap = {};
+          filteredPatients.forEach(p => {
+            const combo = p.medications.length > 0
+              ? [...p.medications].sort().join(", ")
+              : "No Medication";
+            therapyMap[combo] = (therapyMap[combo] || 0) + 1;
+          });
+
+          const allTherapy = Object.entries(therapyMap)
+            .sort((a, b) => b[1] - a[1])
+            .map(([combo, count]) => ({
+              medicine_name: combo,
+              patient_count: count,
+              percent_matched: matchedCount
+                ? ((count / matchedCount) * 100).toFixed(2)
+                : "0.00",
+              percent_total: totalAllPatients
+                ? ((count / totalAllPatients) * 100).toFixed(2)
+                : "0.00"
+            }));
+
+          // ── STEP 5: exclude_medication ──
           const excludeSet = new Set(
             (exclude_medication || []).map(m => m.toLowerCase().trim())
           );
 
-          // top_drug = #1 drug from share-filtered summary, respecting exclusions
           const top_drug = summary.find(
             s => !excludeSet.has(s.medicine_name.toLowerCase().trim())
           )?.medicine_name || "";
@@ -8759,14 +8765,15 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
             );
           }
 
-          // ── STEP 6: graph + pagination ───────────────────────
+          // ── STEP 6: separate pagination for all three ──
           const graph = summary.slice(0, 10).map(d => ({
             name: d.medicine_name,
             count: d.patient_count
           }));
 
           const paginatedSummary = summary.slice(offset, offset + Number(limit));
-          const paginatedDrilldown = filteredPatients.slice(offset, offset + Number(limit));
+          const paginatedTherapy = allTherapy.slice(therapyOffset, therapyOffset + Number(therapy_limit));
+          const paginatedDrilldown = filteredPatients.slice(drilldownOffset, drilldownOffset + Number(drilldown_limit));
 
           return res.json({
             success: true,
@@ -8776,9 +8783,15 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
               ? ((matchedCount / totalAllPatients) * 100).toFixed(2) + "%"
               : "0%",
             top_drug,
+            // Drug Distribution
             summary: paginatedSummary,
+            summary_total: summary.length,
+            // Therapy Distribution
+            therapy_distribution: paginatedTherapy,
+            therapy_total: allTherapy.length,
+            // Drilldown
+            drilldown: paginatedDrilldown,
             graph,
-            drilldown: paginatedDrilldown
           });
         })
         .catch(err => res.json({ success: false, msg: err.message }));
@@ -9525,13 +9538,15 @@ const getSubadminMedicationFull = (req, res) => {
     medication = [],
     medicine_name,
     search,
-     singleOnly = false,
-  combinedOnly = false,
-  includeExtra = false,
+    singleOnly = false,
+    combinedOnly = false,
+    includeExtra = false,
     summary_page = 1,
     summary_limit = 10,
+    therapy_page = 1,
+    therapy_limit = 10,
     patient_page = 1,
-    patient_limit = 10
+    patient_limit = 10,
   } = req.body;
 
   if (!doctor_id) return res.json({ success: false, msg: "doctor_id required" });
@@ -9543,8 +9558,9 @@ const getSubadminMedicationFull = (req, res) => {
   let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
 
-  const summaryOffset = (summary_page - 1) * summary_limit;
-  const patientOffset = (patient_page - 1) * patient_limit;
+  const summaryOffset = (Number(summary_page) - 1) * Number(summary_limit);
+  const therapyOffset = (Number(therapy_page) - 1) * Number(therapy_limit);
+  const patientOffset = (Number(patient_page) - 1) * Number(patient_limit);
 
   if (gender !== undefined && gender !== null && gender !== "") {
     where += ` AND u.gender = ?`;
@@ -9596,14 +9612,18 @@ const getSubadminMedicationFull = (req, res) => {
         selected_medication_count: 0,
         demographics: [],
         details: [],
+        // Drug Distribution (individual)
         summary: [],
+        summary_total: 0,
+        // Therapy Distribution (combos)
+        therapy_distribution: [],
+        therapy_total: 0,
         graph: [],
-        drilldown: []
+        patient_total: 0,
       });
     }
 
     const promises = patients.map(patient => new Promise((resolve, reject) => {
-
       let parsedDiseases = [];
 
       if (patient.diseases && typeof patient.diseases === "string") {
@@ -9614,12 +9634,10 @@ const getSubadminMedicationFull = (req, res) => {
             let obj = {};
             parts.forEach(p => {
               const [key, val] = p.split(":");
-              obj[key.trim()] = val.trim();
+              obj[key.trim()] = val?.trim();
             });
             return obj;
-          } catch {
-            return null;
-          }
+          } catch { return null; }
         }).filter(Boolean);
       }
 
@@ -9656,14 +9674,10 @@ const getSubadminMedicationFull = (req, res) => {
 
         connection.query(medSql, [patient.user_id, shareTime], (err2, meds) => {
           if (err2) return reject(err2);
-
           resolve({
             ...patient,
             diseases: parsedDiseases,
-            medications: meds.map(m => ({
-              id: m.medicine_id,
-              name: m.medicine_name
-            }))
+            medications: meds.map(m => ({ id: m.medicine_id, name: m.medicine_name }))
           });
         });
       });
@@ -9671,62 +9685,39 @@ const getSubadminMedicationFull = (req, res) => {
 
     Promise.all(promises)
       .then(finalPatients => {
-
         let matchedPatients = finalPatients;
 
-       if (Array.isArray(medication) && medication.length > 0) {
+        if (Array.isArray(medication) && medication.length > 0) {
+          const selectedMeds = medication.map(m => m.toLowerCase().trim());
 
-      const selectedMeds = medication.map(m => m.toLowerCase().trim());
-
-      // ✅ SINGLE ONLY 
-      if (singleOnly && medication.length === 1) {
-        matchedPatients = finalPatients.filter(p => {
-          const meds = (p.medications || []).map(m => m.name.toLowerCase().trim());
-          return meds.length === 1 && selectedMeds.includes(meds[0]);
-        });
-      }
-
-      // ✅ COMBINED ONLY 
-      else if (combinedOnly && medication.length >= 2) {
-        matchedPatients = finalPatients.filter(p => {
-          const meds = (p.medications || [])
-            .map(m => m.name.toLowerCase().trim())
-            .sort();
-
-          return (
-            meds.length === selectedMeds.length &&
-            selectedMeds.every(m => meds.includes(m))
-          );
-        });
-      }
-       else if (includeExtra && medication.length >= 2) {
-          matchedPatients = matchedPatients.filter(p => {
-            const meds = (p.medications || [])
-              .map(m => m.name.toLowerCase().trim());
-
-            return selectedMeds.every(m => meds.includes(m));
-          });
+          if (singleOnly && medication.length === 1) {
+            matchedPatients = finalPatients.filter(p => {
+              const meds = (p.medications || []).map(m => m.name.toLowerCase().trim());
+              return meds.length === 1 && selectedMeds.includes(meds[0]);
+            });
+          } else if (combinedOnly && medication.length >= 2) {
+            matchedPatients = finalPatients.filter(p => {
+              const meds = (p.medications || []).map(m => m.name.toLowerCase().trim()).sort();
+              return meds.length === selectedMeds.length && selectedMeds.every(m => meds.includes(m));
+            });
+          } else if (includeExtra && medication.length >= 2) {
+            matchedPatients = finalPatients.filter(p => {
+              const meds = (p.medications || []).map(m => m.name.toLowerCase().trim());
+              return selectedMeds.every(m => meds.includes(m));
+            });
+          } else {
+            matchedPatients = finalPatients.filter(p =>
+              (p.medications || []).some(m => selectedMeds.includes(m.name.toLowerCase().trim()))
+            );
+          }
         }
-
-
-      // ✅ DEFAULT 
-      else {
-        matchedPatients = finalPatients.filter(p =>
-          (p.medications || []).some(m =>
-            selectedMeds.includes(m.name.toLowerCase().trim())
-          )
-        );
-      }
-    }
 
         const totalPatients = finalPatients.length;
         const matchedCount = matchedPatients.length;
-
         const percentage = totalPatients
           ? ((matchedCount / totalPatients) * 100).toFixed(2) + "%"
           : "0.00%";
 
-        // 
         const totalMedSql = `
           SELECT COUNT(DISTINCT a.medicine_id) AS total
           FROM report_share_master r
@@ -9746,18 +9737,11 @@ const getSubadminMedicationFull = (req, res) => {
         connection.query(totalMedSql, [doctor_id], (err2, totalRes) => {
           if (err2) return res.json({ success: false, msg: err2.message });
 
-          let selectedMedCount = 0;
+          const selectedMedCount = Array.isArray(medication) && medication.length > 0
+            ? medication.length
+            : totalRes[0].total;
 
-          //
-          if (Array.isArray(medication) && medication.length > 0) {
-            selectedMedCount = medication.length;
-
-          } else {
-            
-            selectedMedCount = totalRes[0].total;
-          }
-
-          
+          // ── Demographics ──
           const getAgeGroup = (age) => {
             if (age <= 18) return "0-18";
             if (age <= 30) return "19-30";
@@ -9769,85 +9753,77 @@ const getSubadminMedicationFull = (req, res) => {
           };
 
           const demoMap = {};
-
           matchedPatients.forEach(u => {
             const ageGroup = getAgeGroup(u.age);
             const key = `${ageGroup}-${u.gender}`;
-
-            if (!demoMap[key]) {
-              demoMap[key] = {
-                age_group: ageGroup,
-                gender: u.gender,
-                count: 0
-              };
-            }
-
+            if (!demoMap[key]) demoMap[key] = { age_group: ageGroup, gender: u.gender, count: 0 };
             demoMap[key].count += 1;
-          }); 
+          });
 
           const demographics = Object.values(demoMap).map(d => ({
             ...d,
             percentage: totalPatients ? ((d.count / totalPatients) * 100).toFixed(2) : "0.00"
           }));
 
-          // const medMap = {};
-          // matchedPatients.forEach(u => {
-          //   (u.medications || []).forEach(m => {
-          //     if (!medMap[m.name]) medMap[m.name] = 0;
-          //     medMap[m.name] += 1;
-          //   });
-          // });
-          const medMap = {};
-
-        matchedPatients.forEach(u => {
-          const meds = (u.medications || [])
-            .map(m => m.name.trim())
-            .sort(); // important for same combo
-
-          const key = meds.length ? meds.join(",") : "No Medication";
-
-          if (!medMap[key]) medMap[key] = 0;
-          medMap[key] += 1;
-        });
-
-          const summaryArray = Object.keys(medMap).map(name => ({
-            medicine_name: name,
-            patient_count: medMap[name],
-            percentage: totalPatients
-              ? ((medMap[name] / totalPatients) * 100).toFixed(2) + "%"
-              : "0.00%"
-          }))
-          .sort((a, b) => b.patient_count - a.patient_count);;
-
-          const graph = Object.keys(medMap).map(name => ({
-            name,
-            count: medMap[name]
-          }));
-
-          const drilldown = [];
+          // ── Drug Distribution (individual medicines) ──
+          const drugMap = {};
           matchedPatients.forEach(u => {
             (u.medications || []).forEach(m => {
-              drilldown.push({
-                user_id: u.user_id,
-                name: u.name,
-                medicine_name: m.name
-              });
+              const name = m.name.trim();
+              drugMap[name] = (drugMap[name] || 0) + 1;
             });
           });
+
+          const allDrugSummary = Object.keys(drugMap)
+            .map(name => ({
+              medicine_name: name,
+              patient_count: drugMap[name],
+              percentage: matchedCount
+                ? ((drugMap[name] / matchedCount) * 100).toFixed(2) + "%"
+                : "0.00%",
+            }))
+            .sort((a, b) => b.patient_count - a.patient_count);
+
+          // ── Therapy Distribution (combos per patient) ──
+          const therapyMap = {};
+          matchedPatients.forEach(u => {
+            const meds = (u.medications || []).map(m => m.name.trim()).sort();
+            const combo = meds.length > 0 ? meds.join(", ") : "No Medication";
+            therapyMap[combo] = (therapyMap[combo] || 0) + 1;
+          });
+
+          const allTherapySummary = Object.entries(therapyMap)
+            .sort((a, b) => b[1] - a[1])
+            .map(([combo, count]) => ({
+              medicine_name: combo,
+              patient_count: count,
+              percentage: matchedCount
+                ? ((count / matchedCount) * 100).toFixed(2) + "%"
+                : "0.00%",
+            }));
+
+          const graph = allDrugSummary.slice(0, 10).map(d => ({
+            name: d.medicine_name,
+            count: d.patient_count
+          }));
 
           return res.json({
             success: true,
             total_patients: totalPatients,
             matched_patients: matchedCount,
             percentage,
-            selected_medication_count: selectedMedCount, 
-            summary_total: summaryArray.length,
-            patient_total: matchedPatients.length,
+            selected_medication_count: selectedMedCount,
             demographics,
+            // Drug Distribution (individual) — paginated
+            summary: allDrugSummary.slice(summaryOffset, summaryOffset + Number(summary_limit)),
+            summary_total: allDrugSummary.length,
+            // Therapy Distribution (combos) — paginated
+            therapy_distribution: allTherapySummary.slice(therapyOffset, therapyOffset + Number(therapy_limit)),
+            therapy_total: allTherapySummary.length,
+            // Patients — paginated
             details: matchedPatients.slice(patientOffset, patientOffset + Number(patient_limit)),
-            summary: summaryArray.slice(summaryOffset, summaryOffset + Number(summary_limit)),
+            patient_total: matchedCount,
             graph,
-            drilldown: drilldown.slice(patientOffset, patientOffset + Number(patient_limit))
           });
         });
       })
