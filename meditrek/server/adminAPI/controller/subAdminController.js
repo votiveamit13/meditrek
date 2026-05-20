@@ -2449,16 +2449,24 @@ const getMedicineCounts = (medicine_id) => {
 
 // API: Get tabular medication list   - old api upto - 20-11-2025
 const getTabularMedication = async (request, response) => {
-  const { from_date, to_date } = request.query;
+
+  const {
+    from_date,
+    to_date,
+    page = 1,
+    limit = 10,
+  } = request.query;
 
   try {
+
     // =========================
     // Validate Parameters
     // =========================
+
     if (!from_date) {
       return response.status(200).json({
         success: false,
-        msg: languageMessages.msg_empty_param || "from_date is required",
+        msg: languageMessages.msg_empty_param || "from_date required",
         key: "from_date",
       });
     }
@@ -2466,14 +2474,59 @@ const getTabularMedication = async (request, response) => {
     if (!to_date) {
       return response.status(200).json({
         success: false,
-        msg: languageMessages.msg_empty_param || "to_date is required",
+        msg: languageMessages.msg_empty_param || "to_date required",
         key: "to_date",
       });
     }
 
     // =========================
-    // Main Query
+    // Pagination Logic
     // =========================
+
+    const pageNumber = parseInt(page) || 1;
+    const pageLimit = parseInt(limit) || 10;
+
+    const offset = (pageNumber - 1) * pageLimit;
+
+    // =========================
+    // Total Count Query
+    // =========================
+
+    const totalRecords = await new Promise((resolve, reject) => {
+
+      const countSql = `
+        SELECT COUNT(*) AS total
+
+        FROM medication_master m
+
+        JOIN time_slots_master tm
+          ON tm.medication_id = m.medication_id
+
+        WHERE
+          m.delete_flag = 0
+          AND tm.delete_flag = 0
+          AND DATE(m.createtime) BETWEEN ? AND ?
+      `;
+
+      connection.query(
+        countSql,
+        [from_date, to_date],
+        (err, result) => {
+
+          if (err) {
+            console.log("COUNT SQL ERROR:", err);
+            return reject(err);
+          }
+
+          resolve(result[0].total || 0);
+        }
+      );
+    });
+
+    // =========================
+    // Main Data Query
+    // =========================
+
     const medication_array = await new Promise((resolve, reject) => {
 
       const sqlSelect = `
@@ -2486,7 +2539,9 @@ const getTabularMedication = async (request, response) => {
           m.schedule,
           m.weekday,
           m.current_quantity,
+
           TIME_FORMAT(tm.time, '%h:%i %p') AS reminder_time,
+
           m.remainder_quantity,
           tm.taken_status,
           m.pause_status,
@@ -2502,54 +2557,60 @@ const getTabularMedication = async (request, response) => {
           um.name,
 
           COALESCE(ma.medicine_ontime_count, 0) AS medicine_ontime_count,
+
           COALESCE(ma.medicine_late_count, 0) AS medicine_late_count,
+
           COALESCE(ma.medicine_nottaken_count, 0) AS medicine_nottaken_count
 
         FROM medication_master m
 
-        JOIN medicine_master a 
+        JOIN medicine_master a
           ON a.medicine_id = m.medicine_id
 
-        JOIN user_master um 
+        JOIN user_master um
           ON um.user_id = m.user_id
 
-        JOIN time_slots_master tm 
+        JOIN time_slots_master tm
           ON tm.medication_id = m.medication_id
 
         LEFT JOIN (
           SELECT
             medicine_id,
 
-            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) 
+            SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END)
               AS medicine_ontime_count,
 
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) 
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END)
               AS medicine_late_count,
 
-            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) 
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END)
               AS medicine_nottaken_count
 
           FROM medicine_average_master
+
           WHERE delete_flag = 0
+
           GROUP BY medicine_id
 
         ) ma ON ma.medicine_id = m.medicine_id
 
-        WHERE 
+        WHERE
           m.delete_flag = 0
           AND tm.delete_flag = 0
           AND DATE(m.createtime) BETWEEN ? AND ?
 
         ORDER BY m.createtime DESC
+
+        LIMIT ?, ?
       `;
 
       connection.query(
         sqlSelect,
-        [from_date, to_date],
+        [from_date, to_date, offset, pageLimit],
         (err, result) => {
 
           if (err) {
-            console.log("SQL ERROR:", err);
+            console.log("MAIN SQL ERROR:", err);
             return reject(err);
           }
 
@@ -2561,17 +2622,26 @@ const getTabularMedication = async (request, response) => {
     // =========================
     // No Data Found
     // =========================
+
     if (!medication_array || medication_array.length === 0) {
+
       return response.status(200).json({
         success: true,
         msg: languageMessages.msgNoDataFound || "No data found",
         medication_arr: [],
+        pagination: {
+          current_page: pageNumber,
+          total_pages: 0,
+          total_records: 0,
+          limit: pageLimit,
+        }
       });
     }
 
     // =========================
     // Type Labels
     // =========================
+
     const typeLabels = {
       1: "Tablet",
       2: "Capsule",
@@ -2594,12 +2664,14 @@ const getTabularMedication = async (request, response) => {
     };
 
     // =========================
-    // Final Response Array
+    // Final Data Array
     // =========================
+
     const user_arr = medication_array.map((data, index) => {
 
       return {
-        s_no: index + 1,
+
+        s_no: offset + index + 1,
 
         medication_id: data.medication_id,
 
@@ -2678,17 +2750,43 @@ const getTabularMedication = async (request, response) => {
     });
 
     // =========================
-    // Success Response
+    // Final Response
     // =========================
+
     return response.status(200).json({
+
       success: true,
-      msg: languageMessages.msgDataFound || "Data found successfully",
+
+      msg:
+        languageMessages.msgDataFound ||
+        "Data found successfully",
+
       medication_arr: user_arr,
+
+      pagination: {
+
+        current_page: pageNumber,
+
+        total_pages: Math.ceil(totalRecords / pageLimit),
+
+        total_records: totalRecords,
+
+        limit: pageLimit,
+
+        has_next_page:
+          pageNumber < Math.ceil(totalRecords / pageLimit),
+
+        has_previous_page:
+          pageNumber > 1,
+      }
     });
 
   } catch (error) {
 
-    console.log("getTabularMedication ERROR:", error);
+    console.log(
+      "getTabularMedication ERROR:",
+      error
+    );
 
     return response.status(500).json({
       success: false,
