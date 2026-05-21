@@ -310,10 +310,14 @@ const verifyLoginOtp = async (req, res) => {
     });
   }
 
-  const sql = `
-    SELECT doctor_id FROM doctor_master
-    WHERE email = ?
-  `;
+const sql = `
+  SELECT doctor_id
+  FROM doctor_master
+  WHERE email = ?
+  AND delete_flag = 0
+  AND active_flag = 1
+  AND approve_status = 1
+`;
 
   connection.query(sql, [email], (err, result) => {
     if (err || !result || result.length === 0) {
