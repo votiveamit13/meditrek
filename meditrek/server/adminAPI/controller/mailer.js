@@ -2731,9 +2731,9 @@ async function sendOtpEmail(toEmail, userName, otp) {
             </tr>
 
             <!-- Footer -->
-            <tr style="background:#F68519;">
+            <tr style="background:#1DDEC4;">
               <td align="center" style="padding:15px; color:#fff; font-size:14px;">
-                © 2025 ${app_name} | All rights reserved.
+                © 2026 ${app_name} | All rights reserved.
               </td>
             </tr>
 
