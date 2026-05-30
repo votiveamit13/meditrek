@@ -5157,6 +5157,21 @@ const sendNotificationAll = (req, res) => {
     // );
 
     // await sendPush(playerIds, title, message);
+
+    const doctorData = await new Promise((resolve, reject) => {
+  connection.query(
+    "SELECT doctor_name FROM doctor_master WHERE doctor_id = ?",
+    [doctor_id],
+    (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows?.[0] || null);
+    }
+  );
+});
+
+const doctorName = doctorData?.doctor_name || "Doctor";
+
+const finalTitle = `[${doctorName}] ${title}`;
     for (const r of result) {
       await new Promise(resolve => {
             getNotificationArrSingle(
@@ -5164,7 +5179,11 @@ const sendNotificationAll = (req, res) => {
               r.user_id,
               "General",
               "0",
-              title, title, title, title, title,
+              finalTitle,
+              finalTitle,
+              finalTitle,
+              finalTitle,
+              finalTitle,
               message, message, message, message, message,
               {},
               {},
@@ -5242,6 +5261,21 @@ const sendNotificationUsers = (req, res) => {
     // );
 
     // await sendPush(playerIds, title, message);
+        const doctorData = await new Promise((resolve, reject) => {
+  connection.query(
+    "SELECT doctor_name FROM doctor_master WHERE doctor_id = ?",
+    [doctor_id],
+    (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows?.[0] || null);
+    }
+  );
+});
+
+const doctorName = doctorData?.doctor_name || "Doctor";
+
+const finalTitle = `[${doctorName}] ${title}`;
+
     for (const r of result) {
         await new Promise(resolve => {
           getNotificationArrSingle(
@@ -5249,7 +5283,7 @@ const sendNotificationUsers = (req, res) => {
             r.user_id,         
             "General",          
             "0",
-            title, title, title, title, title,
+            finalTitle, finalTitle, finalTitle, finalTitle, finalTitle,
             message, message, message, message, message,
             {},
             {},
