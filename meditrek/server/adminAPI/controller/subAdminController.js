@@ -5171,7 +5171,7 @@ const sendNotificationAll = (req, res) => {
 
 const doctorName = doctorData?.doctor_name || "Doctor";
 
-const finalTitle = `[${doctorName}] ${title}`;
+const finalTitle = `${doctorName}: ${title}`;
     for (const r of result) {
       await new Promise(resolve => {
             getNotificationArrSingle(
@@ -5274,7 +5274,7 @@ const sendNotificationUsers = (req, res) => {
 
 const doctorName = doctorData?.doctor_name || "Doctor";
 
-const finalTitle = `[${doctorName}] ${title}`;
+const finalTitle = `${doctorName}: ${title}`;
 
     for (const r of result) {
         await new Promise(resolve => {
