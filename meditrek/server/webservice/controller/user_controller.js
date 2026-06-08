@@ -5132,7 +5132,7 @@ const updateUserLanguage = (req, res) => {
 const getMeasurementUnits = async (req, res) => {
     try {
 
-        const { type, lang_code } = req.body;
+        const { user_id, type, lang_code } = req.body;
 
         // Set Language
         const finalLanguage =
@@ -5143,6 +5143,13 @@ const getMeasurementUnits = async (req, res) => {
         req.setLocale(finalLanguage);
 
         // Validation
+        if (!user_id) {
+            return res.json({
+                success: false,
+                msg: req.__("user_not_found")
+            });
+        }
+
         if (!type) {
             return res.json({
                 success: false,
@@ -5157,47 +5164,58 @@ const getMeasurementUnits = async (req, res) => {
             });
         }
 
-        // Get Measurement Units
+        const query = util.promisify(connection.query).bind(connection);
+
+        // Get Measurement Units with Selected Value
         const sql = `
             SELECT
-                measurement_unit_id,
-                unit_code
-            FROM measurement_units_master
+                mum.measurement_unit_id,
+                mum.unit_code,
+                CASE
+                    WHEN ump.measurement_unit_id IS NULL THEN 0
+                    ELSE 1
+                END AS is_selected
+            FROM measurement_units_master mum
+            LEFT JOIN user_measurement_preferences ump
+                ON mum.measurement_unit_id = ump.measurement_unit_id
+                AND ump.user_id = ?
+                AND ump.type = ?
+                AND ump.delete_flag = 0
             WHERE
-                type = ?
-                AND active_flag = 1
-                AND delete_flag = 0
-            ORDER BY measurement_unit_id ASC
+                mum.type = ?
+                AND mum.active_flag = 1
+                AND mum.delete_flag = 0
+            ORDER BY mum.measurement_unit_id ASC
         `;
 
-        const query = util.promisify(connection.query).bind(connection);
-        const result = await query(sql, [type]);
+        const result = await query(sql, [user_id, type, type]);
 
-        // Unit Translation Mapping
+        // Translation Mapping
         const unitMap = {
-    kg: {
-        unit_name: "kilogram",
-        unit_code: "kilogram_short"
-    },
-    lb: {
-        unit_name: "pound",
-        unit_code: "pound_short"
-    },
-    c: {
-        unit_name: "celsius",
-        unit_code: "celsius_short"
-    },
-    f: {
-        unit_name: "fahrenheit",
-        unit_code: "fahrenheit_short"
-    }
-};
+            kg: {
+                unit_name: "kilogram",
+                unit_code: "kilogram_short"
+            },
+            lb: {
+                unit_name: "pound",
+                unit_code: "pound_short"
+            },
+            c: {
+                unit_name: "celsius",
+                unit_code: "celsius_short"
+            },
+            f: {
+                unit_name: "fahrenheit",
+                unit_code: "fahrenheit_short"
+            }
+        };
 
-const data = result.map(item => ({
-    measurement_unit_id: item.measurement_unit_id,
-    unit_code: req.__(unitMap[item.unit_code].unit_code),
-    unit_name: req.__(unitMap[item.unit_code].unit_name)
-}));
+        const data = result.map(item => ({
+            measurement_unit_id: item.measurement_unit_id,
+            unit_code: req.__(unitMap[item.unit_code].unit_code),
+            unit_name: req.__(unitMap[item.unit_code].unit_name),
+            is_selected: item.is_selected
+        }));
 
         return res.json({
             success: true,
