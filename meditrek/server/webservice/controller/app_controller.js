@@ -1947,10 +1947,16 @@ const addPPBGS = async (request, response) => {
 const addWeightMeasurement = async (request, response) => {
   const { user_id, weight, language_code } = request.body;
 
-  if (!user_id || !weight) {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param });
+  if (
+    !user_id ||
+    weight === undefined ||
+    weight === null ||
+    weight === ""
+  ) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
   }
 
   const finalLanguage =
@@ -1961,16 +1967,17 @@ const addWeightMeasurement = async (request, response) => {
   request.setLocale(finalLanguage);
 
   const userQuery =
-    "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
+    "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
 
   connection.query(userQuery, [user_id], (err, result) => {
     if (err || result.length === 0 || result[0].active_flag === 0) {
-      return response
-        .status(200)
-        .json({ success: false, msg: request.__("user_not_found") });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_not_found"),
+      });
     }
 
-    if (result[0]?.delete_flag == 1) {
+    if (result[0].delete_flag == 1) {
       return response.status(200).json({
         success: false,
         msg: request.__("your_account_is_not_registered_with_us"),
@@ -1978,38 +1985,136 @@ const addWeightMeasurement = async (request, response) => {
       });
     }
 
-    const insertQuery = `INSERT INTO measurement_master (user_id, type, weight) VALUES (?, 3, ?)`;
+    const getUnitQuery = `
+      SELECT
+        ump.measurement_unit_id,
+        mum.unit_code
+      FROM user_measurement_preferences ump
+      INNER JOIN measurement_units_master mum
+        ON ump.measurement_unit_id = mum.measurement_unit_id
+      WHERE
+        ump.user_id = ?
+        AND ump.type = 'weight'
+        AND ump.delete_flag = 0
+      LIMIT 1
+    `;
 
-    connection.query(insertQuery, [user_id, weight], async (err) => {
-      if (err)
-        return response.status(200).json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          error: err.message,
-        });
+    connection.query(
+      getUnitQuery,
+      [user_id],
+      async (err, unitResult) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+          });
+        }
 
-      const userDataArray = await getUserDetails(user_id);
+        let finalWeight = parseFloat(weight);
 
-      return response.status(200).json({
-        success: true,
-        msg: request.__("weight_added_successfully"),
-        userDataArray: userDataArray,
-      });
-    });
+        // Default Unit
+        let unitCode = "kg";
+
+        if (unitResult.length > 0) {
+          unitCode = unitResult[0].unit_code.toLowerCase();
+        } else {
+          // Create default KG preference
+
+          const insertPreferenceQuery = `
+            INSERT INTO user_measurement_preferences
+            (
+              user_id,
+              type,
+              measurement_unit_id,
+              active_flag,
+              delete_flag
+            )
+            VALUES
+            (
+              ?, 'weight', 1, 1, 0
+            )
+          `;
+
+          try {
+            await new Promise((resolve, reject) => {
+              connection.query(
+                insertPreferenceQuery,
+                [user_id],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          } catch (error) {
+            return response.status(200).json({
+              success: false,
+              msg: request.__("internal_server_error"),
+            });
+          }
+        }
+
+        // Convert LB to KG
+        if (unitCode === "lb") {
+          finalWeight = finalWeight / 2.20462;
+        }
+
+        const insertQuery = `
+          INSERT INTO measurement_master
+          (
+            user_id,
+            type,
+            weight
+          )
+          VALUES
+          (
+            ?, 3, ?
+          )
+        `;
+
+        connection.query(
+          insertQuery,
+          [user_id, finalWeight],
+          async (err) => {
+            if (err) {
+              return response.status(200).json({
+                success: false,
+                msg: request.__("internal_server_error"),
+                error: err.message,
+              });
+            }
+
+            const userDataArray = await getUserDetails(user_id);
+
+            return response.status(200).json({
+              success: true,
+              msg: request.__("weight_added_successfully"),
+              userDataArray: userDataArray,
+            });
+          }
+        );
+      }
+    );
   });
 };
+
 
 //end
 
 //Add Temprature
-
 const addTemperature = async (request, response) => {
   const { user_id, temperature, language_code } = request.body;
 
-  if (!user_id || !temperature) {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param });
+  if (
+    !user_id ||
+    temperature === undefined ||
+    temperature === null ||
+    temperature === ""
+  ) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
   }
 
   const finalLanguage =
@@ -2020,16 +2125,17 @@ const addTemperature = async (request, response) => {
   request.setLocale(finalLanguage);
 
   const userQuery =
-    "SELECT active_flag,delete_flag FROM user_master WHERE user_id = ? ";
+    "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ?";
 
   connection.query(userQuery, [user_id], (err, result) => {
     if (err || result.length === 0 || result[0].active_flag === 0) {
-      return response
-        .status(200)
-        .json({ success: false, msg: request.__("user_not_found") });
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_not_found"),
+      });
     }
 
-    if (result[0]?.delete_flag == 1) {
+    if (result[0].delete_flag == 1) {
       return response.status(200).json({
         success: false,
         msg: request.__("your_account_is_not_registered_with_us"),
@@ -2037,23 +2143,116 @@ const addTemperature = async (request, response) => {
       });
     }
 
-    const insertQuery = `INSERT INTO measurement_master (user_id, type, temperature) VALUES (?, 4, ?)`;
+    const getUnitQuery = `
+      SELECT
+        ump.measurement_unit_id,
+        mum.unit_code
+      FROM user_measurement_preferences ump
+      INNER JOIN measurement_units_master mum
+        ON ump.measurement_unit_id = mum.measurement_unit_id
+      WHERE
+        ump.user_id = ?
+        AND ump.type = 'temperature'
+        AND ump.delete_flag = 0
+      LIMIT 1
+    `;
 
-    connection.query(insertQuery, [user_id, temperature], (err) => {
-      if (err)
-        return response.status(200).json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          error: err.message,
-        });
+    connection.query(
+      getUnitQuery,
+      [user_id],
+      async (err, unitResult) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+          });
+        }
 
-      return response.status(200).json({
-        success: true,
-        msg: request.__("temperature_added_successfully"),
-      });
-    });
+        let finalTemperature = parseFloat(temperature);
+
+        // Default Unit
+        let unitCode = "c";
+
+        if (unitResult.length > 0) {
+          unitCode = unitResult[0].unit_code.toLowerCase();
+        } else {
+          // Create default Celsius preference
+
+          const insertPreferenceQuery = `
+            INSERT INTO user_measurement_preferences
+            (
+              user_id,
+              type,
+              measurement_unit_id,
+              active_flag,
+              delete_flag
+            )
+            VALUES
+            (
+              ?, 'temperature', 3, 1, 0
+            )
+          `;
+
+          try {
+            await new Promise((resolve, reject) => {
+              connection.query(
+                insertPreferenceQuery,
+                [user_id],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          } catch (error) {
+            return response.status(200).json({
+              success: false,
+              msg: request.__("internal_server_error"),
+            });
+          }
+        }
+
+        // Convert Fahrenheit to Celsius
+        if (unitCode === "f") {
+          finalTemperature = (finalTemperature - 32) * 5 / 9;
+        }
+
+        const insertQuery = `
+          INSERT INTO measurement_master
+          (
+            user_id,
+            type,
+            temperature
+          )
+          VALUES
+          (
+            ?, 4, ?
+          )
+        `;
+
+        connection.query(
+          insertQuery,
+          [user_id, finalTemperature],
+          (err) => {
+            if (err) {
+              return response.status(200).json({
+                success: false,
+                msg: request.__("internal_server_error"),
+                error: err.message,
+              });
+            }
+
+            return response.status(200).json({
+              success: true,
+              msg: request.__("temperature_added_successfully"),
+            });
+          }
+        );
+      }
+    );
   });
 };
+
 
 //end
 
