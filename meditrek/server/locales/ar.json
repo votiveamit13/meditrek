@@ -59,5 +59,6 @@
   "measurement_type_required": "نوع القياس مطلوب",
   "invalid_measurement_type": "نوع القياس غير صالح",
   "language_code_required": "رمز اللغة مطلوب",
-  "measurement_units_found": "تم العثور على وحدات القياس"
+  "measurement_units_found": "تم العثور على وحدات القياس",
+  "measurement_unit_updated_successfully": "تم تحديث وحدة القياس بنجاح"
 }

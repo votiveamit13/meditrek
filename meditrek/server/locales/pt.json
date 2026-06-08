@@ -60,5 +60,6 @@
   "measurement_type_required": "O tipo de medição é obrigatório",
   "invalid_measurement_type": "Tipo de medição inválido",
   "language_code_required": "O código do idioma é obrigatório",
-  "measurement_units_found": "Unidades de medida encontradas"
+  "measurement_units_found": "Unidades de medida encontradas",
+  "measurement_unit_updated_successfully": "Unidade de medida atualizada com sucesso"
 }

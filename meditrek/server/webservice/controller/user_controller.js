@@ -5233,6 +5233,163 @@ const getMeasurementUnits = async (req, res) => {
     }
 };
 
+const updateMeasurementUnit = async (req, res) => {
+    try {
+
+        const { user_id, type, measurement_unit_id, lang_code } = req.body;
+
+        // Set Language
+        const finalLanguage =
+            lang_code && lang_code.trim() !== ""
+                ? lang_code
+                : "en";
+
+        req.setLocale(finalLanguage);
+
+        // Validation
+        if (!user_id) {
+            return res.json({
+                success: false,
+                msg: req.__("user_not_found")
+            });
+        }
+
+        if (!type) {
+            return res.json({
+                success: false,
+                msg: req.__("measurement_type_required")
+            });
+        }
+
+        if (!measurement_unit_id) {
+            return res.json({
+                success: false,
+                msg: req.__("measurement_unit_required")
+            });
+        }
+
+        if (!["weight", "temperature"].includes(type)) {
+            return res.json({
+                success: false,
+                msg: req.__("invalid_measurement_type")
+            });
+        }
+
+        const query = util.promisify(connection.query).bind(connection);
+
+        // Check User Exists
+        const checkUserSql = `
+            SELECT user_id
+            FROM user_master
+            WHERE
+                user_id = ?
+                AND delete_flag = 0
+        `;
+
+        const checkUser = await query(checkUserSql, [user_id]);
+
+        if (checkUser.length === 0) {
+            return res.json({
+                success: false,
+                msg: req.__("user_not_found")
+            });
+        }
+
+        // Verify Selected Unit
+        const checkUnitSql = `
+            SELECT measurement_unit_id
+            FROM measurement_units_master
+            WHERE
+                measurement_unit_id = ?
+                AND type = ?
+                AND active_flag = 1
+                AND delete_flag = 0
+        `;
+
+        const checkUnit = await query(checkUnitSql, [
+            measurement_unit_id,
+            type
+        ]);
+
+        if (checkUnit.length === 0) {
+            return res.json({
+                success: false,
+                msg: req.__("invalid_measurement_unit")
+            });
+        }
+
+        // Check Existing Preference
+        const checkPreferenceSql = `
+            SELECT preference_id
+            FROM user_measurement_preferences
+            WHERE
+                user_id = ?
+                AND type = ?
+                AND delete_flag = 0
+        `;
+
+        const checkPreference = await query(checkPreferenceSql, [
+            user_id,
+            type
+        ]);
+
+        if (checkPreference.length > 0) {
+
+            const updateSql = `
+                UPDATE user_measurement_preferences
+                SET
+                    measurement_unit_id = ?,
+                    updatetime = NOW()
+                WHERE
+                    user_id = ?
+                    AND type = ?
+                    AND delete_flag = 0
+            `;
+
+            await query(updateSql, [
+                measurement_unit_id,
+                user_id,
+                type
+            ]);
+
+        } else {
+
+            const insertSql = `
+                INSERT INTO user_measurement_preferences
+                (
+                    user_id,
+                    type,
+                    measurement_unit_id
+                )
+                VALUES
+                (
+                    ?, ?, ?
+                )
+            `;
+
+            await query(insertSql, [
+                user_id,
+                type,
+                measurement_unit_id
+            ]);
+        }
+
+        return res.json({
+            success: true,
+            msg: req.__("measurement_unit_updated_successfully")
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        return res.json({
+            success: false,
+            msg: req.__("internal_server_error")
+        });
+    }
+};
+
+
 
 module.exports = {
 
@@ -5274,6 +5431,7 @@ module.exports = {
     updateTimezone,
     getUserLanguages,
     getLanguages,
-    getMeasurementUnits
+    getMeasurementUnits,
+    updateMeasurementUnit
 
 }
