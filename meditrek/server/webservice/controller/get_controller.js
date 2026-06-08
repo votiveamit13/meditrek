@@ -5696,26 +5696,17 @@ function calcAverage(records) {
 //   });
 // };
 const getTemperatureDataStats = async (request, response) => {
-  const { user_id, type, language_code,page = 1, limit = 10  } = request.query;
+  const { user_id, type, language_code, page = 1, limit = 10 } = request.query;
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
-  const timezone =
-    request.headers["x-timezone"] || request.query.timezone || "UTC";
+  const timezone = request.headers["x-timezone"] || request.query.timezone || "UTC";
 
   if (!user_id) {
-    return response.status(200).json({
-      success: false,
-      msg: languageMessage.msg_empty_param,
-      key: "user_id",
-    });
+    return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
   }
   if (!type) {
-    return response.status(200).json({
-      success: false,
-      msg: languageMessage.msg_empty_param,
-      key: "type",
-    });
+    return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "type" });
   }
 
   const finalLanguage =
@@ -5725,15 +5716,12 @@ const getTemperatureDataStats = async (request, response) => {
 
   request.setLocale(finalLanguage);
 
-  const userQuery =
-    "SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+  const userQuery = `SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+
   connection.query(userQuery, [user_id], (err, result) => {
     if (err || result.length === 0 || result[0].active_flag === 0) {
-      return response
-        .status(200)
-        .json({ success: false, msg: request.__("user_not_found") });
+      return response.status(200).json({ success: false, msg: request.__("user_not_found") });
     }
-
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
@@ -5742,145 +5730,105 @@ const getTemperatureDataStats = async (request, response) => {
       });
     }
 
-    // SQL Queries
-    const weeklyQuery = `
-            SELECT createtime, temperature, measurement_id
-            FROM measurement_master 
-            WHERE user_id = ? AND type = 4 AND delete_flag = 0
-            AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
-            ORDER BY createtime DESC
-        `;
+    // ✅ FETCH USER'S PREFERRED TEMPERATURE UNIT
+    const unitQuery = `
+      SELECT mum.unit_code
+      FROM user_measurement_preferences ump
+      INNER JOIN measurement_units_master mum
+        ON ump.measurement_unit_id = mum.measurement_unit_id
+      WHERE ump.user_id = ?
+        AND ump.type = 'temperature'
+        AND ump.delete_flag = 0
+      LIMIT 1
+    `;
 
-    const monthlyQuery = `
-            SELECT createtime, temperature, measurement_id
-            FROM measurement_master 
-            WHERE user_id = ? AND type = 4 AND delete_flag = 0
-            AND MONTH(createtime) = MONTH(CURDATE()) 
-            AND YEAR(createtime) = YEAR(CURDATE())
-            ORDER BY createtime DESC
-        `;
+    connection.query(unitQuery, [user_id], (err, unitResult) => {
+      if (err) {
+        return response.status(200).json({ success: false, msg: request.__("internal_server_error") });
+      }
 
-    const yearlyQuery = `
-            SELECT createtime, temperature, measurement_id
-            FROM measurement_master 
-            WHERE user_id = ? AND type = 4 AND delete_flag = 0
-            AND YEAR(createtime) = YEAR(CURDATE())
-            ORDER BY createtime DESC
-        `;
+      // Default to celsius; convert to fahrenheit if user prefers f
+      const unitCode = unitResult.length > 0 ? unitResult[0].unit_code.toLowerCase() : "c";
+      const convertTemp = (celsius) =>
+        unitCode === "f"
+          ? parseFloat(((celsius * 9) / 5 + 32).toFixed(2))
+          : parseFloat(celsius);
 
-    const todayQuery = `
-            SELECT createtime, temperature, measurement_id
-            FROM measurement_master
-            WHERE user_id = ? AND type = 4 AND delete_flag = 0
-            ORDER BY createtime DESC
-        `;
+      // ── QUERIES ──────────────────────────────────────────────
+      const todayQuery = `
+        SELECT createtime, temperature, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 4 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+      const weeklyQuery = `
+        SELECT createtime, temperature, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 4 AND delete_flag = 0
+          AND YEARWEEK(createtime, 1) = YEARWEEK(CURDATE(), 1)
+        ORDER BY createtime DESC
+      `;
+      const monthlyQuery = `
+        SELECT createtime, temperature, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 4 AND delete_flag = 0
+          AND MONTH(createtime) = MONTH(CURDATE())
+          AND YEAR(createtime) = YEAR(CURDATE())
+        ORDER BY createtime DESC
+      `;
+      const yearlyQuery = `
+        SELECT createtime, temperature, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 4 AND delete_flag = 0
+          AND YEAR(createtime) = YEAR(CURDATE())
+        ORDER BY createtime DESC
+      `;
 
-    // Fetch today's data
-    connection.query(todayQuery, [user_id], (err, todayResult) => {
-      if (err)
-        return response.status(200).json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          error: err.message,
-        });
+      // ── TODAY ────────────────────────────────────────────────
+      connection.query(todayQuery, [user_id], (err, todayResult) => {
+        if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
 
-      const todayData = todayResult.map((row) => ({
-        measurement_id: row.measurement_id,
-        temperature: row.temperature ?? 0,
-        //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-        //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
-        date: moment
-          .utc(row.createtime)
-          .tz(timezone)
-          .locale(finalLanguage)
-          .format("MMMM DD, YYYY"),
+        const todayData = todayResult.map((row) => ({
+          measurement_id: row.measurement_id,
+          temperature: convertTemp(row.temperature ?? 0),   // ✅ converted
+          unit_code: unitCode,                              // ✅ included
+          date: moment.utc(row.createtime).tz(timezone).locale(finalLanguage).format("MMMM DD, YYYY"),
+          time: moment.utc(row.createtime).tz(timezone).locale(finalLanguage).format("hh:mm A"),
+        }));
 
-        time: moment
-          .utc(row.createtime)
-          .tz(timezone)
-          .locale(finalLanguage)
-          .format("hh:mm A"),
-      }));
+        // ── WEEKLY ───────────────────────────────────────────────
+        connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
+          if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
 
-      // Weekly data
-      connection.query(weeklyQuery, [user_id], (err, weeklyResult) => {
-        if (err)
-          return response.status(200).json({
-            success: false,
-            msg: request.__("internal_server_error"),
-            error: err.message,
-          });
+          // ── MONTHLY ──────────────────────────────────────────────
+          connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
+            if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
 
-        // Monthly data
-        connection.query(monthlyQuery, [user_id], (err, monthlyResult) => {
-          if (err)
-            return response.status(200).json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              error: err.message,
-            });
+            // ── YEARLY ───────────────────────────────────────────────
+            connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
+              if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
 
-          // Yearly data
-          connection.query(yearlyQuery, [user_id], (err, yearlyResult) => {
-            if (err)
-              return response.status(200).json({
-                success: false,
-                msg: request.__("internal_server_error"),
-                error: err.message,
-              });
+              // ✅ Pass convertTemp into transform helpers
+              const weeklyData  = transformWeeklyTemperatureData(weeklyResult || [], timezone, finalLanguage, convertTemp);
+              const monthlyData = transformMonthlyTemperatureData(monthlyResult || [], convertTemp);
+              const yearlyData  = transformYearlyTemperatureData(yearlyResult || [], finalLanguage, convertTemp);
 
-            // Transform data for graphs
-            const weeklyData = transformWeeklyTemperatureData(
-              weeklyResult || [],
-              timezone,
-              finalLanguage,
-            );
-            const monthlyData = transformMonthlyTemperatureData(
-              monthlyResult || [],
-            );
-            const yearlyData = transformYearlyTemperatureData(
-              yearlyResult || [],
-              finalLanguage,
-            );
+              let filteredData = {};
+              if (type == 1)      filteredData.weekly  = weeklyData;
+              else if (type == 2) filteredData.monthly = monthlyData;
+              else if (type == 3) filteredData.yearly  = yearlyData;
+              else filteredData = { weekly: weeklyData, monthly: monthlyData, yearly: yearlyData };
 
-            let filteredData = {};
+              const paginateArray = (arr) => Array.isArray(arr) ? arr.slice(offset, offset + limitNum) : arr;
 
-            if (type == 1) filteredData.weekly = weeklyData;
-            else if (type == 2) filteredData.monthly = monthlyData;
-            else if (type == 3) filteredData.yearly = yearlyData;
-            else {
-              filteredData = {
-                weekly: weeklyData,
-                monthly: monthlyData,
-                yearly: yearlyData,
-              };
-            }
+              if (filteredData.weekly?.records)  filteredData.weekly.records  = paginateArray(filteredData.weekly.records);
+              if (filteredData.monthly?.records) filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+              if (filteredData.yearly?.records)  filteredData.yearly.records  = paginateArray(filteredData.yearly.records);
 
-            // APPLY PAGINATION
-            const paginateArray = (arr) => {
-              if (!Array.isArray(arr)) return arr;
-              return arr.slice(offset, offset + limitNum);
-            };
+              filteredData.today     = paginateArray(todayData);
+              filteredData.unit_code = unitCode;   // ✅ top-level unit for the frontend
 
-            if (filteredData.weekly?.records) {
-              filteredData.weekly.records = paginateArray(filteredData.weekly.records);
-            }
-
-            if (filteredData.monthly?.records) {
-              filteredData.monthly.records = paginateArray(filteredData.monthly.records);
-            }
-
-            if (filteredData.yearly?.records) {
-              filteredData.yearly.records = paginateArray(filteredData.yearly.records);
-            }
-
-            filteredData.today = paginateArray(todayData);
-
-            return response.status(200).json({
-              success: true,
-              data: filteredData,
-               page: pageNum,
-               limit: limitNum,
+              return response.status(200).json({ success: true, data: filteredData, page: pageNum, limit: limitNum });
             });
           });
         });
@@ -7361,28 +7309,17 @@ function calcPPBGSAverage(records) {
 //   });
 // };
 const getWeightMeasurementDataStats = async (request, response) => {
-  const { user_id, type, language_code ,page = 1, limit = 10  } = request.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    const offset = (pageNum - 1) * limitNum;
-  // ✅ Read device timezone (fallback to UTC)
-  const timezone =
-    request.headers["x-timezone"] || request.query.timezone || "UTC";
+  const { user_id, type, language_code, page = 1, limit = 10 } = request.query;
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
+  const timezone = request.headers["x-timezone"] || request.query.timezone || "UTC";
 
   if (!user_id) {
-    return response.status(200).json({
-      success: false,
-      msg: languageMessage.msg_empty_param,
-      key: "user_id",
-    });
+    return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
   }
-
   if (!type) {
-    return response.status(200).json({
-      success: false,
-      msg: languageMessage.msg_empty_param,
-      key: "type",
-    });
+    return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "type" });
   }
 
   const finalLanguage =
@@ -7392,20 +7329,12 @@ const getWeightMeasurementDataStats = async (request, response) => {
 
   request.setLocale(finalLanguage);
 
-  const userQuery = `
-        SELECT active_flag, delete_flag
-        FROM user_master
-        WHERE user_id = ? AND delete_flag = 0
-    `;
+  const userQuery = `SELECT active_flag, delete_flag FROM user_master WHERE user_id = ? AND delete_flag = 0`;
 
   connection.query(userQuery, [user_id], (err, result) => {
     if (err || result.length === 0 || result[0].active_flag === 0) {
-      return response.status(200).json({
-        success: false,
-        msg: request.__("user_not_found"),
-      });
+      return response.status(200).json({ success: false, msg: request.__("user_not_found") });
     }
-
     if (result[0]?.delete_flag == 1) {
       return response.status(200).json({
         success: false,
@@ -7414,217 +7343,100 @@ const getWeightMeasurementDataStats = async (request, response) => {
       });
     }
 
-    /* -------------------------------------------------
-           ✅ TIME RANGES (DEVICE TZ → UTC)
-        ------------------------------------------------- */
+    // ✅ FETCH USER'S PREFERRED WEIGHT UNIT
+    const unitQuery = `
+      SELECT mum.unit_code
+      FROM user_measurement_preferences ump
+      INNER JOIN measurement_units_master mum
+        ON ump.measurement_unit_id = mum.measurement_unit_id
+      WHERE ump.user_id = ?
+        AND ump.type = 'weight'
+        AND ump.delete_flag = 0
+      LIMIT 1
+    `;
 
-    const todayStartUTC = moment()
-      .tz(timezone)
-      .startOf("day")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-    const todayEndUTC = moment()
-      .tz(timezone)
-      .endOf("day")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-
-    const weekStartUTC = moment()
-      .tz(timezone)
-      .startOf("week")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-    const weekEndUTC = moment()
-      .tz(timezone)
-      .endOf("week")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-
-    const monthStartUTC = moment()
-      .tz(timezone)
-      .startOf("month")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-    const monthEndUTC = moment()
-      .tz(timezone)
-      .endOf("month")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-
-    const yearStartUTC = moment()
-      .tz(timezone)
-      .startOf("year")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-    const yearEndUTC = moment()
-      .tz(timezone)
-      .endOf("year")
-      .utc()
-      .format("YYYY-MM-DD HH:mm:ss");
-
-    /* -------------------------------------------------
-           ✅ QUERIES (UTC SAFE)
-        ------------------------------------------------- */
-
-    const todayQuery = `
-            SELECT createtime, weight, measurement_id
-            FROM measurement_master
-            WHERE user_id = ?
-              AND type = 3
-              AND delete_flag = 0
-            ORDER BY createtime DESC
-        `;
-
-    const weeklyQuery = `
-            SELECT createtime, weight, measurement_id
-            FROM measurement_master
-            WHERE user_id = ?
-              AND type = 3
-              AND delete_flag = 0
-              AND createtime BETWEEN ? AND ?
-            ORDER BY createtime DESC
-        `;
-
-    const monthlyQuery = weeklyQuery;
-    const yearlyQuery = weeklyQuery;
-
-    /* -------------------------------------------------
-           ✅ TODAY DATA (UTC → DEVICE TIME)
-        ------------------------------------------------- */
-
-    connection.query(todayQuery, [user_id], (err, todayResult) => {
+    connection.query(unitQuery, [user_id], (err, unitResult) => {
       if (err) {
-        return response.status(200).json({
-          success: false,
-          msg: request.__("internal_server_error"),
-          error: err.message,
-        });
+        return response.status(200).json({ success: false, msg: request.__("internal_server_error") });
       }
 
-      const todayData = todayResult.map((row) => ({
-        measurement_id: row.measurement_id,
-        weight: row.weight,
-        //date: moment.utc(row.createtime).tz(timezone).format("MMMM DD, YYYY"),
-        //time: moment.utc(row.createtime).tz(timezone).format("hh:mm A")
-        date: moment
-          .utc(row.createtime)
-          .tz(timezone)
-          .locale(finalLanguage)
-          .format("MMMM DD, YYYY"),
+      // Default to kg; convert to lb if user prefers lb
+      const unitCode = unitResult.length > 0 ? unitResult[0].unit_code.toLowerCase() : "kg";
+      const convertWeight = (kg) => unitCode === "lb" ? parseFloat((kg * 2.20462).toFixed(2)) : parseFloat(kg);
 
-        time: moment
-          .utc(row.createtime)
-          .tz(timezone)
-          .locale(finalLanguage)
-          .format("hh:mm A"),
-      }));
+      // ── TIME RANGES ──────────────────────────────────────────
+      const todayStartUTC = moment().tz(timezone).startOf("day").utc().format("YYYY-MM-DD HH:mm:ss");
+      const todayEndUTC   = moment().tz(timezone).endOf("day").utc().format("YYYY-MM-DD HH:mm:ss");
+      const weekStartUTC  = moment().tz(timezone).startOf("week").utc().format("YYYY-MM-DD HH:mm:ss");
+      const weekEndUTC    = moment().tz(timezone).endOf("week").utc().format("YYYY-MM-DD HH:mm:ss");
+      const monthStartUTC = moment().tz(timezone).startOf("month").utc().format("YYYY-MM-DD HH:mm:ss");
+      const monthEndUTC   = moment().tz(timezone).endOf("month").utc().format("YYYY-MM-DD HH:mm:ss");
+      const yearStartUTC  = moment().tz(timezone).startOf("year").utc().format("YYYY-MM-DD HH:mm:ss");
+      const yearEndUTC    = moment().tz(timezone).endOf("year").utc().format("YYYY-MM-DD HH:mm:ss");
 
-      /* -------------------------------------------------
-                   ✅ WEEKLY
-                ------------------------------------------------- */
-      connection.query(
-        weeklyQuery,
-        [user_id, weekStartUTC, weekEndUTC],
-        (err, weeklyResult) => {
-          if (err) {
-            return response.status(200).json({
-              success: false,
-              msg: request.__("internal_server_error"),
-              error: err.message,
+      const todayQuery = `
+        SELECT createtime, weight, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 3 AND delete_flag = 0
+        ORDER BY createtime DESC
+      `;
+      const rangeQuery = `
+        SELECT createtime, weight, measurement_id
+        FROM measurement_master
+        WHERE user_id = ? AND type = 3 AND delete_flag = 0
+          AND createtime BETWEEN ? AND ?
+        ORDER BY createtime DESC
+      `;
+
+      // ── TODAY ────────────────────────────────────────────────
+      connection.query(todayQuery, [user_id], (err, todayResult) => {
+        if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
+
+        const todayData = todayResult.map((row) => ({
+          measurement_id: row.measurement_id,
+          weight: convertWeight(row.weight),     // ✅ converted
+          unit_code: unitCode,                   // ✅ included
+          date: moment.utc(row.createtime).tz(timezone).locale(finalLanguage).format("MMMM DD, YYYY"),
+          time: moment.utc(row.createtime).tz(timezone).locale(finalLanguage).format("hh:mm A"),
+        }));
+
+        // ── WEEKLY ───────────────────────────────────────────────
+        connection.query(rangeQuery, [user_id, weekStartUTC, weekEndUTC], (err, weeklyResult) => {
+          if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
+
+          // ── MONTHLY ──────────────────────────────────────────────
+          connection.query(rangeQuery, [user_id, monthStartUTC, monthEndUTC], (err, monthlyResult) => {
+            if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
+
+            // ── YEARLY ───────────────────────────────────────────────
+            connection.query(rangeQuery, [user_id, yearStartUTC, yearEndUTC], (err, yearlyResult) => {
+              if (err) return response.status(200).json({ success: false, msg: request.__("internal_server_error"), error: err.message });
+
+              // ✅ Pass convertWeight into transform helpers
+              const weeklyData  = transformWeeklyWeightData(weeklyResult, timezone, finalLanguage, convertWeight);
+              const monthlyData = transformMonthlyWeightData(monthlyResult, convertWeight);
+              const yearlyData  = transformYearlyWeightData(yearlyResult, finalLanguage, convertWeight);
+
+              let filteredData = {};
+              if (type == 1)      filteredData.weekly  = weeklyData;
+              else if (type == 2) filteredData.monthly = monthlyData;
+              else if (type == 3) filteredData.yearly  = yearlyData;
+              else filteredData = { weekly: weeklyData, monthly: monthlyData, yearly: yearlyData };
+
+              const paginateArray = (arr) => Array.isArray(arr) ? arr.slice(offset, offset + limitNum) : arr;
+
+              if (filteredData.weekly?.records)  filteredData.weekly.records  = paginateArray(filteredData.weekly.records);
+              if (filteredData.monthly?.records) filteredData.monthly.records = paginateArray(filteredData.monthly.records);
+              if (filteredData.yearly?.records)  filteredData.yearly.records  = paginateArray(filteredData.yearly.records);
+
+              filteredData.today    = paginateArray(todayData);
+              filteredData.unit_code = unitCode;   // ✅ top-level unit for the frontend
+
+              return response.status(200).json({ success: true, data: filteredData, page: pageNum, limit: limitNum });
             });
-          }
-
-          /* -------------------------------------------------
-                           ✅ MONTHLY
-                        ------------------------------------------------- */
-          connection.query(
-            monthlyQuery,
-            [user_id, monthStartUTC, monthEndUTC],
-            (err, monthlyResult) => {
-              if (err) {
-                return response.status(200).json({
-                  success: false,
-                  msg: request.__("internal_server_error"),
-                  error: err.message,
-                });
-              }
-
-              /* -------------------------------------------------
-                                   ✅ YEARLY
-                                ------------------------------------------------- */
-              connection.query(
-                yearlyQuery,
-                [user_id, yearStartUTC, yearEndUTC],
-                (err, yearlyResult) => {
-                  if (err) {
-                    return response.status(200).json({
-                      success: false,
-                      msg: request.__("internal_server_error"),
-                      error: err.message,
-                    });
-                  }
-
-                  // Existing transformers
-                  const weeklyData = transformWeeklyWeightData(
-                    weeklyResult,
-                    timezone,
-                    finalLanguage,
-                  );
-                  const monthlyData = transformMonthlyWeightData(monthlyResult);
-                  const yearlyData = transformYearlyWeightData(
-                    yearlyResult,
-                    finalLanguage,
-                  );
-
-                  let filteredData = {};
-
-                  if (type == 1) {
-                    filteredData.weekly = weeklyData;
-                  } else if (type == 2) {
-                    filteredData.monthly = monthlyData;
-                  } else if (type == 3) {
-                    filteredData.yearly = yearlyData;
-                  } else {
-                    filteredData = {
-                      weekly: weeklyData,
-                      monthly: monthlyData,
-                      yearly: yearlyData,
-                    };
-                  }
-                  // APPLY PAGINATION
-                  const paginateArray = (arr) => {
-                    if (!Array.isArray(arr)) return arr;
-                    return arr.slice(offset, offset + limitNum);
-                  };
-
-                  if (filteredData.weekly?.records) {
-                    filteredData.weekly.records = paginateArray(filteredData.weekly.records);
-                  }
-
-                  if (filteredData.monthly?.records) {
-                    filteredData.monthly.records = paginateArray(filteredData.monthly.records);
-                  }
-
-                  if (filteredData.yearly?.records) {
-                    filteredData.yearly.records = paginateArray(filteredData.yearly.records);
-                  }
-
-                  // filteredData.today = todayData;
-                  filteredData.today = paginateArray(todayData);
-
-
-                  return response.status(200).json({
-                    success: true,
-                    data: filteredData,
-                    page: pageNum,
-                    limit: limitNum,
-                  });
-                },
-              );
-            },
-          );
-        },
-      );
+          });
+        });
+      });
     });
   });
 };
@@ -7663,7 +7475,7 @@ function groupWeightByDate(rawData, type = "daily") {
 }
 
 // ===== Weekly Transformation =====
-function transformWeeklyWeightData(rawData, timezone, finalLanguage) {
+function transformWeeklyWeightData(rawData, timezone, finalLanguage, convertWeight = (v) => v) {
   const averaged = groupWeightByDate(rawData); // keys should be toDateString()
 
   // Get Monday of the current week
@@ -7690,8 +7502,8 @@ function transformWeeklyWeightData(rawData, timezone, finalLanguage) {
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
         day: formattedDay,
-        weight: averaged[key].weight,
-      });
+        weight: convertWeight(averaged[key].weight,
+      ) });
     } else {
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
@@ -7709,7 +7521,7 @@ function transformWeeklyWeightData(rawData, timezone, finalLanguage) {
 }
 
 // ===== Monthly Transformation =====
-function transformMonthlyWeightData(rawData) {
+function transformMonthlyWeightData(rawData, convertWeight = (v) => v) {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -7728,7 +7540,7 @@ function transformMonthlyWeightData(rawData) {
 
     monthly.push({
       day: dayLabel,
-      weight: averaged[key]?.weight || 0,
+      weight: averaged[key] ? convertWeight(averaged[key].weight) : 0,
     });
   }
 
@@ -7763,7 +7575,7 @@ function transformMonthlyWeightData(rawData) {
 //         records: yearly
 //     };
 // }
-function transformYearlyWeightData(rawData, finalLanguage) {
+function transformYearlyWeightData(rawData, finalLanguage, convertWeight = (v) => v) {
   const averaged = groupWeightByDate(rawData, "yearly");
 
   let yearly = [];
@@ -7780,8 +7592,8 @@ function transformYearlyWeightData(rawData, finalLanguage) {
     if (found !== undefined) {
       yearly.push({
         day: monthLabel,
-        weight: averaged[found].weight,
-      });
+        weight: convertWeight(averaged[found].weight,
+      ) })
     } else {
       yearly.push({
         day: monthLabel,
@@ -8080,7 +7892,7 @@ function groupTemperatureByDate(rawData, type = "daily") {
   return averaged;
 }
 // ===== Weekly Transformation =====
-function transformWeeklyTemperatureData(rawData, timezone, finalLanguage) {
+function transformWeeklyTemperatureData(rawData, timezone, finalLanguage, convertTemp = (v) => v) {
   const averaged = groupTemperatureByDate(rawData);
 
   // Get the Monday of the current week
@@ -8107,8 +7919,7 @@ function transformWeeklyTemperatureData(rawData, timezone, finalLanguage) {
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
         day: formattedDay,
-        temperature: averaged[key].temperature,
-      });
+        temperature: convertTemp(averaged[key].temperature) });
     } else {
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
@@ -8126,7 +7937,7 @@ function transformWeeklyTemperatureData(rawData, timezone, finalLanguage) {
 }
 
 // ===== Monthly Transformation =====
-function transformMonthlyTemperatureData(rawData) {
+function transformMonthlyTemperatureData(rawData, convertTemp = (v) => v) {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -8145,7 +7956,7 @@ function transformMonthlyTemperatureData(rawData) {
 
     monthly.push({
       day: dayLabel,
-      temperature: averaged[key]?.temperature || 0,
+      temperature: averaged[key] ? convertTemp(averaged[key].temperature) : 0,
     });
   }
 
@@ -8180,7 +7991,7 @@ function transformMonthlyTemperatureData(rawData) {
 //         records: yearly
 //     };
 // }
-function transformYearlyTemperatureData(rawData, finalLanguage) {
+function transformYearlyTemperatureData(rawData, finalLanguage, convertTemp = (v) => v) {
   const averaged = groupTemperatureByDate(rawData, "yearly");
 
   let yearly = [];
@@ -8197,8 +8008,7 @@ function transformYearlyTemperatureData(rawData, finalLanguage) {
     if (found !== undefined) {
       yearly.push({
         day: monthLabel,
-        temperature: averaged[found].temperature,
-      });
+        temperature: convertTemp(averaged[found].temperature) });
     } else {
       yearly.push({
         day: monthLabel,
