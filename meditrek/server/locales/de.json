@@ -48,5 +48,17 @@
   "msgUserDeleted": "Ihr Konto ist nicht bei uns registriert",
   "report_not_found": "Bericht nicht gefunden",
   "report_deleted_successfully": "Bericht erfolgreich gelöscht",
-  "user_deleted": "Benutzer erfolgreich gelöscht"
+  "user_deleted": "Benutzer erfolgreich gelöscht",
+  "kilogram": "Kilogramm",
+  "pound": "Pfund",
+  "celsius": "Celsius",
+  "fahrenheit": "Fahrenheit",
+  "kilogram_short": "kg",
+    "pound_short": "lb",
+    "celsius_short": "°C",
+    "fahrenheit_short": "°F",
+  "measurement_type_required": "Messtyp ist erforderlich",
+  "invalid_measurement_type": "Ungültiger Messtyp",
+  "language_code_required": "Sprachcode ist erforderlich",
+  "measurement_units_found": "Maßeinheiten gefunden"
 }

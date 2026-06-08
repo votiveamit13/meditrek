@@ -47,5 +47,17 @@
 	"temperature_added_successfully": "تم إضافة درجة الحرارة بنجاح",
 	"msgUserDeleted": "حسابك غير مسجل لدينا",
 	"report_not_found": "التقرير غير موجود",
-	"report_deleted_successfully": "تم حذف التقرير بنجاح"
+	"report_deleted_successfully": "تم حذف التقرير بنجاح",
+	"kilogram": "كيلوجرام",
+  "pound": "رطل",
+  "celsius": "درجة مئوية",
+  "fahrenheit": "فهرنهايت",
+  "kilogram_short": "كجم",
+    "pound_short": "رطل",
+    "celsius_short": "°م",
+    "fahrenheit_short": "°ف",
+  "measurement_type_required": "نوع القياس مطلوب",
+  "invalid_measurement_type": "نوع القياس غير صالح",
+  "language_code_required": "رمز اللغة مطلوب",
+  "measurement_units_found": "تم العثور على وحدات القياس"
 }

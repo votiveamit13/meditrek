@@ -5129,7 +5129,91 @@ const updateUserLanguage = (req, res) => {
 };
 
 
+const getMeasurementUnits = async (req, res) => {
+    try {
 
+        const { type, lang_code } = req.body;
+
+        // Set Language
+        const finalLanguage =
+            lang_code && lang_code.trim() !== ""
+                ? lang_code
+                : "en";
+
+        req.setLocale(finalLanguage);
+
+        // Validation
+        if (!type) {
+            return res.json({
+                success: false,
+                msg: req.__("measurement_type_required")
+            });
+        }
+
+        if (!["weight", "temperature"].includes(type)) {
+            return res.json({
+                success: false,
+                msg: req.__("invalid_measurement_type")
+            });
+        }
+
+        // Get Measurement Units
+        const sql = `
+            SELECT
+                measurement_unit_id,
+                unit_code
+            FROM measurement_units_master
+            WHERE
+                type = ?
+                AND active_flag = 1
+                AND delete_flag = 0
+            ORDER BY measurement_unit_id ASC
+        `;
+
+        const query = util.promisify(connection.query).bind(connection);
+        const result = await query(sql, [type]);
+
+        // Unit Translation Mapping
+        const unitMap = {
+    kg: {
+        unit_name: "kilogram",
+        unit_code: "kilogram_short"
+    },
+    lb: {
+        unit_name: "pound",
+        unit_code: "pound_short"
+    },
+    c: {
+        unit_name: "celsius",
+        unit_code: "celsius_short"
+    },
+    f: {
+        unit_name: "fahrenheit",
+        unit_code: "fahrenheit_short"
+    }
+};
+
+const data = result.map(item => ({
+    measurement_unit_id: item.measurement_unit_id,
+    unit_code: req.__(unitMap[item.unit_code].unit_code),
+    unit_name: req.__(unitMap[item.unit_code].unit_name)
+}));
+
+        return res.json({
+            success: true,
+            msg: req.__("measurement_units_found"),
+            data: data
+        });
+
+    } catch (error) {
+        console.log(error);
+
+        return res.json({
+            success: false,
+            msg: req.__("internal_server_error")
+        });
+    }
+};
 
 
 module.exports = {
@@ -5171,6 +5255,7 @@ module.exports = {
     
     updateTimezone,
     getUserLanguages,
-    getLanguages
+    getLanguages,
+    getMeasurementUnits
 
 }

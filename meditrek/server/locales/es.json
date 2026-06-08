@@ -49,5 +49,17 @@
   "report_not_found": "Reporte no encontrado",
   "report_deleted_successfully": "Reporte eliminado correctamente",
   "user_deleted": "Usuario eliminado correctamente",
-  "Report Deleted Successfully": "Reporte eliminado correctamente"
+  "Report Deleted Successfully": "Reporte eliminado correctamente",
+  "kilogram": "Kilogramo",
+  "pound": "Libra",
+  "celsius": "Celsius",
+  "fahrenheit": "Fahrenheit",
+   "kilogram_short": "kg",
+    "pound_short": "lb",
+    "celsius_short": "°C",
+    "fahrenheit_short": "°F",
+  "measurement_type_required": "Se requiere el tipo de medición",
+  "invalid_measurement_type": "Tipo de medición no válido",
+  "language_code_required": "Se requiere el código de idioma",
+  "measurement_units_found": "Unidades de medida encontradas"
 }

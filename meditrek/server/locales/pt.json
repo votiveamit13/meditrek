@@ -48,5 +48,17 @@
   "msgUserDeleted": "Sua conta não está registrada conosco",
   "report_not_found": "Relatório não encontrado",
   "report_deleted_successfully": "Relatório excluído com sucesso",
-  "user_deleted": "Usuário excluído com sucesso"
+  "user_deleted": "Usuário excluído com sucesso",
+  "kilogram": "Quilograma",
+  "pound": "Libra",
+  "celsius": "Celsius",
+  "fahrenheit": "Fahrenheit",
+  "kilogram_short": "kg",
+    "pound_short": "lb",
+    "celsius_short": "°C",
+    "fahrenheit_short": "°F",
+  "measurement_type_required": "O tipo de medição é obrigatório",
+  "invalid_measurement_type": "Tipo de medição inválido",
+  "language_code_required": "O código do idioma é obrigatório",
+  "measurement_units_found": "Unidades de medida encontradas"
 }

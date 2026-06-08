@@ -48,5 +48,17 @@
   "msgUserDeleted": "Il tuo account non è registrato con noi",
   "report_not_found": "Rapporto non trovato",
   "report_deleted_successfully": "Rapporto eliminato con successo",
-  "user_deleted": "Utente eliminato con successo"
+  "user_deleted": "Utente eliminato con successo",
+  "kilogram": "Chilogrammo",
+  "pound": "Libbra",
+  "celsius": "Celsius",
+  "fahrenheit": "Fahrenheit",
+  "kilogram_short": "kg",
+    "pound_short": "lb",
+    "celsius_short": "°C",
+    "fahrenheit_short": "°F",
+  "measurement_type_required": "Il tipo di misurazione è obbligatorio",
+  "invalid_measurement_type": "Tipo di misurazione non valido",
+  "language_code_required": "Il codice lingua è obbligatorio",
+  "measurement_units_found": "Unità di misura trovate"
 }
