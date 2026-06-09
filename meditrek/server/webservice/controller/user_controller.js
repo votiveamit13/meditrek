@@ -5392,19 +5392,81 @@ const updateMeasurementUnit = async (req, res) => {
 const getMeasurementName = (type) => {
   switch (Number(type)) {
     case 0:
-      return "Blood Pressure";
+      return {
+        en: "Blood Pressure",
+        es: "Presión Arterial",
+        fr: "Pression Artérielle",
+        it: "Pressione Arteriosa",
+        pt: "Pressão Arterial",
+        ar: "ضغط الدم",
+        de: "Blutdruck",
+      };
+
     case 1:
-      return "Fasting Glucose";
+      return {
+        en: "Fasting Glucose",
+        es: "Glucosa en Ayunas",
+        fr: "Glycémie à Jeun",
+        it: "Glucosio a Digiuno",
+        pt: "Glicose em Jejum",
+        ar: "سكر الدم الصائم",
+        de: "Nüchternglukose",
+      };
+
     case 2:
-      return "PPBGS";
+      return {
+        en: "PPBGS",
+        es: "Glucosa Postprandial",
+        fr: "Glycémie Postprandiale",
+        it: "Glicemia Postprandiale",
+        pt: "Glicemia Pós-Prandial",
+        ar: "سكر الدم بعد الوجبة",
+        de: "Postprandialer Blutzucker",
+      };
+
     case 3:
-      return "Weight";
+      return {
+        en: "Weight",
+        es: "Peso",
+        fr: "Poids",
+        it: "Peso",
+        pt: "Peso",
+        ar: "الوزن",
+        de: "Gewicht",
+      };
+
     case 4:
-      return "Temperature";
+      return {
+        en: "Temperature",
+        es: "Temperatura",
+        fr: "Température",
+        it: "Temperatura",
+        pt: "Temperatura",
+        ar: "درجة الحرارة",
+        de: "Temperatur",
+      };
+
     case 5:
-      return "Custom Measurement";
+      return {
+        en: "Custom Measurement",
+        es: "Medición Personalizada",
+        fr: "Mesure Personnalisée",
+        it: "Misurazione Personalizzata",
+        pt: "Medição Personalizada",
+        ar: "قياس مخصص",
+        de: "Benutzerdefinierte Messung",
+      };
+
     default:
-      return "Measurement";
+      return {
+        en: "Measurement",
+        es: "Medición",
+        fr: "Mesure",
+        it: "Misurazione",
+        pt: "Medição",
+        ar: "قياس",
+        de: "Messung",
+      };
   }
 };
 
@@ -5540,9 +5602,7 @@ const getMeasurementReminderData = async (request, response) => {
         for (const result of filtered) {
 
           const measurementName =
-            getMeasurementName(
-              result.measurement_type
-            );
+  getMeasurementName(result.measurement_type);
 
           const user_id_notification = 1;
 
@@ -5557,7 +5617,7 @@ const getMeasurementReminderData = async (request, response) => {
             "Measurement Reminder";
 
           const messages =
-            `⏰ Time to record your ${measurementName}.`;
+  `⏰ Time to record your ${measurementName.en}.`;
 
           const action_json_lang_data = {
             en: "Reminder",
@@ -5580,14 +5640,14 @@ const getMeasurementReminderData = async (request, response) => {
           };
 
           const message_json_lang_data = {
-            en: `⏰ Time to record your ${measurementName}.`,
-            es: `⏰ Es hora de registrar tu ${measurementName}.`,
-            fr: `⏰ Il est temps d'enregistrer votre ${measurementName}.`,
-            it: `⏰ È il momento di registrare il tuo ${measurementName}.`,
-            pt: `⏰ Hora de registrar sua ${measurementName}.`,
-            ar: `⏰ حان وقت تسجيل ${measurementName}.`,
-            de: `⏰ Zeit, Ihre ${measurementName} zu erfassen.`,
-          };
+  en: `⏰ Time to record your ${measurementName.en}.`,
+  es: `⏰ Es hora de registrar tu ${measurementName.es}.`,
+  fr: `⏰ Il est temps d'enregistrer votre ${measurementName.fr}.`,
+  it: `⏰ È il momento di registrare il tuo ${measurementName.it}.`,
+  pt: `⏰ Hora de registrar sua ${measurementName.pt}.`,
+  ar: `⏰ حان وقت تسجيل ${measurementName.ar}.`,
+  de: `⏰ Zeit, Ihre ${measurementName.de} zu erfassen.`,
+};
 
           const action_data = {
             user_id: user_id_notification,
@@ -5600,31 +5660,31 @@ const getMeasurementReminderData = async (request, response) => {
             await new Promise((resolve) => {
 
               getNotificationArrSingle(
-                user_id_notification,
-                other_user_id_notification,
-                action,
-                action_id,
+  user_id_notification,
+  other_user_id_notification,
+  action,
+  action_id,
 
-                title,
-                title,
-                title,
-                title,
-                title,
+  title,
+  title,
+  title,
+  title,
+  title,
 
-                messages,
-                messages,
-                messages,
-                messages,
-                messages,
+  messages,
+  messages,
+  messages,
+  messages,
+  messages,
 
-                action_json_lang_data,
-                title_json_lang_data,
-                message_json_lang_data,
+  action_json_lang_data,
+  title_json_lang_data,
+  message_json_lang_data,
 
-                action_data,
+  action_data,
 
-                resolve
-              );
+  resolve
+);
             });
 
           test = 1;
