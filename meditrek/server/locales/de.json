@@ -54,12 +54,17 @@
   "celsius": "Celsius",
   "fahrenheit": "Fahrenheit",
   "kilogram_short": "kg",
-    "pound_short": "lb",
-    "celsius_short": "°C",
-    "fahrenheit_short": "°F",
+  "pound_short": "lb",
+  "celsius_short": "°C",
+  "fahrenheit_short": "°F",
   "measurement_type_required": "Messtyp ist erforderlich",
   "invalid_measurement_type": "Ungültiger Messtyp",
   "language_code_required": "Sprachcode ist erforderlich",
   "measurement_units_found": "Maßeinheiten gefunden",
-  "measurement_unit_updated_successfully": "Maßeinheit erfolgreich aktualisiert"
+  "measurement_unit_updated_successfully": "Maßeinheit erfolgreich aktualisiert",
+  "invalid_schedule": "Ungültiger Zeitplan",
+  "invalid_weekday": "Ungültiger Wochentagswert",
+  "invalid_reminder_time": "Ungültige Erinnerungszeit",
+  "reminder_time_required": "Erinnerungszeit ist erforderlich",
+  "measurement_reminder_created_successfully": "Messungserinnerung erfolgreich erstellt"
 }

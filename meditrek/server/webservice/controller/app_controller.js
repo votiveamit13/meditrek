@@ -5435,6 +5435,247 @@ if (activeIndex !== -1) {
   }
 };
 
+const AddMeasurementReminder = async (request, response) => {
+  const {
+    user_id,
+    measurement_type,
+    schedule,
+    weekday,
+    schedule_date,
+    reminder_time,
+    instruction,
+    timezone,
+    language_code,
+  } = request.body;
+
+  if (
+    !user_id ||
+    measurement_type === undefined ||
+    schedule === undefined ||
+    !reminder_time
+  ) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
+
+  const validMeasurementTypes = [0, 1, 2, 3, 4, 5];
+
+  if (!validMeasurementTypes.includes(Number(measurement_type))) {
+    return response.status(200).json({
+      success: false,
+      msg: request.__("invalid_measurement_type"),
+    });
+  }
+
+  const validSchedules = [0, 1, 2];
+
+  if (!validSchedules.includes(Number(schedule))) {
+    return response.status(200).json({
+      success: false,
+      msg: request.__("invalid_schedule"),
+    });
+  }
+
+  const userQuery = `
+    SELECT mobile, active_flag, otp_verify, delete_flag
+    FROM user_master
+    WHERE user_id = ?
+  `;
+
+  connection.query(userQuery, [user_id], async (err, result) => {
+    if (err) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
+    }
+
+    if (result.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_not_found"),
+      });
+    }
+
+    if (
+      result[0]?.active_flag === 0 ||
+      result[0]?.delete_flag == 1
+    ) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_deactivated"),
+        active_flag: 0,
+      });
+    }
+
+    let finalWeekday = null;
+    let finalScheduleDate = null;
+
+    if (schedule == 0) {
+      finalWeekday = 0;
+      finalScheduleDate = null;
+    }
+
+    else if (schedule == 1) {
+      if (!weekday || weekday.trim() === "") {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("provide_weekday_as_comma_separated"),
+        });
+      }
+
+      const weekdays = weekday
+        .split(",")
+        .map(Number)
+        .filter((n) => !isNaN(n));
+
+      const invalidDays = weekdays.filter(
+        (day) => day < 0 || day > 6
+      );
+
+      if (invalidDays.length > 0) {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("invalid_weekday"),
+        });
+      }
+
+      finalWeekday = weekday.trim();
+      finalScheduleDate = null;
+    }
+
+    else if (schedule == 2) {
+      if (!schedule_date || schedule_date.trim() === "") {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("provide_date_as_comma_separated"),
+        });
+      }
+
+      finalWeekday = 0;
+      finalScheduleDate = schedule_date.trim();
+    }
+
+    const insertQuery = `
+      INSERT INTO measurement_reminder_master (
+        user_id,
+        measurement_type,
+        schedule,
+        weekday,
+        schedule_date,
+        instruction,
+        timezone
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const insertValues = [
+      user_id,
+      measurement_type,
+      schedule,
+      finalWeekday,
+      finalScheduleDate,
+      instruction || "",
+      timezone,
+    ];
+
+    connection.query(
+      insertQuery,
+      insertValues,
+      async (err, insertResult) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
+          });
+        }
+
+        const measurementReminderId = insertResult.insertId;
+
+        if (reminder_time && typeof reminder_time === "string") {
+          const { DateTime } = require("luxon");
+
+          const parseTo24Hour = (timeStr) => {
+            const dt = DateTime.fromFormat(
+              timeStr.trim(),
+              "hh:mm a"
+            );
+
+            if (!dt.isValid) {
+              console.error("Invalid time string:", timeStr);
+              return null;
+            }
+
+            return dt.toFormat("HH:mm");
+          };
+
+          const timeSlots = reminder_time
+            .split(",")
+            .map((slot) => parseTo24Hour(slot))
+            .filter(Boolean);
+
+          if (timeSlots.length > 0) {
+            const slotValues = timeSlots.map((slot) => [
+              measurementReminderId,
+              slot,
+            ]);
+
+            const slotQuery = `
+              INSERT INTO measurement_reminder_slots
+              (
+                measurement_reminder_id,
+                time
+              )
+              VALUES ?
+            `;
+
+            connection.query(
+              slotQuery,
+              [slotValues],
+              (err) => {
+                if (err) {
+                  return response.status(200).json({
+                    success: false,
+                    msg: request.__("internal_server_error"),
+                    key: err.message,
+                  });
+                }
+
+                return response.status(200).json({
+                  success: true,
+                  msg: request.__("measurement_reminder_created_successfully"),
+                  insertId: measurementReminderId,
+                });
+              }
+            );
+          } else {
+            return response.status(200).json({
+              success: false,
+              msg: request.__("invalid_reminder_time"),
+            });
+          }
+        } else {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("reminder_time_required"),
+          });
+        }
+      }
+    );
+  });
+};
+
 module.exports = {
   sendContactUs,
 
@@ -5493,4 +5734,5 @@ module.exports = {
   DeleteMedicationFromHistory,
   removePlayerId,
   homepage1,
+  AddMeasurementReminder
 };

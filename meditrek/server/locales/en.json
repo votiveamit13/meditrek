@@ -54,12 +54,17 @@
   "celsius": "Celsius",
   "fahrenheit": "Fahrenheit",
   "kilogram_short": "kg",
-    "pound_short": "lb",
-    "celsius_short": "°C",
-    "fahrenheit_short": "°F",
+  "pound_short": "lb",
+  "celsius_short": "°C",
+  "fahrenheit_short": "°F",
   "measurement_type_required": "Measurement type is required",
   "invalid_measurement_type": "Invalid measurement type",
   "language_code_required": "Language code is required",
   "measurement_units_found": "Measurement units found",
-  "measurement_unit_updated_successfully": "Measurement unit updated successfully"  
+  "measurement_unit_updated_successfully": "Measurement unit updated successfully",
+  "invalid_schedule": "Invalid schedule",
+  "invalid_weekday": "Invalid weekday value",
+  "invalid_reminder_time": "Invalid reminder time",
+  "reminder_time_required": "Reminder time is required",
+  "measurement_reminder_created_successfully": "Measurement reminder created successfully"
 }
