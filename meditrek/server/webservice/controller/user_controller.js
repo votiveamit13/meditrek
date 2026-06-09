@@ -5389,7 +5389,335 @@ const updateMeasurementUnit = async (req, res) => {
     }
 };
 
+const getMeasurementName = (type) => {
+  switch (Number(type)) {
+    case 0:
+      return "Blood Pressure";
+    case 1:
+      return "Fasting Glucose";
+    case 2:
+      return "PPBGS";
+    case 3:
+      return "Weight";
+    case 4:
+      return "Temperature";
+    case 5:
+      return "Custom Measurement";
+    default:
+      return "Measurement";
+  }
+};
 
+const getMeasurementReminderData = async (request, response) => {
+  try {
+    const serverTimezone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const serverTime = new Date();
+
+    const sql = `
+      SELECT
+        mrm.measurement_reminder_id,
+        mrm.user_id,
+        mrm.measurement_type,
+        mrm.schedule,
+        mrm.weekday,
+        mrm.schedule_date,
+        mrm.instruction,
+        mrs.measurement_reminder_slot_id,
+        mrs.time,
+        un.current_timezone
+      FROM measurement_reminder_master mrm
+      JOIN measurement_reminder_slots mrs
+        ON mrs.measurement_reminder_id = mrm.measurement_reminder_id
+      JOIN user_notification un
+        ON un.user_id = mrm.user_id
+      WHERE
+        mrm.delete_flag = 0
+        AND mrm.pause_status = 0
+        AND mrs.delete_flag = 0
+      ORDER BY mrm.measurement_reminder_id DESC
+    `;
+
+    connection.query(sql, [], async (err, data) => {
+
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+          key: err.message,
+        });
+      }
+
+      if (!data || data.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessage.dataNotFound,
+          data: "NA",
+          server_timezone: serverTimezone,
+          server_time: serverTime,
+        });
+      }
+
+      const nowUtc = moment.utc();
+
+      const filtered = data.filter((row) => {
+
+        const tz = row.current_timezone || "UTC";
+
+        const nowLocal = nowUtc.clone().tz(tz);
+
+        const slot =
+          row.time.length === 5
+            ? row.time
+            : moment(row.time, "HH:mm:ss").format("HH:mm");
+
+        const nowTime = nowLocal.format("HH:mm");
+
+        const diff = moment(slot, "HH:mm").diff(
+          moment(nowTime, "HH:mm"),
+          "minutes"
+        );
+
+        const timeMatched = Math.abs(diff) <= 0;
+
+        if (!timeMatched) return false;
+
+        // DAILY
+        if (row.schedule == 0) {
+          return true;
+        }
+
+        // WEEKLY
+        if (row.schedule == 1) {
+
+          const localDay = nowLocal.day();
+
+          const weekdaysArr =
+            (row.weekday || "")
+              .split(",")
+              .map(Number);
+
+          return weekdaysArr.includes(localDay);
+        }
+
+        // MONTHLY
+        if (row.schedule == 2) {
+
+          if (!row.schedule_date) return false;
+
+          const scheduleDateLocal =
+            moment(row.schedule_date)
+              .tz(tz)
+              .format("YYYY-MM-DD");
+
+          const todayLocal =
+            nowLocal.format("YYYY-MM-DD");
+
+          return scheduleDateLocal === todayLocal;
+        }
+
+        return false;
+      });
+
+      if (filtered.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: "No measurement reminders match current time",
+          server_timezone: serverTimezone,
+          server_time: serverTime,
+        });
+      }
+
+      let test = 0;
+
+      let notificationResults = [];
+
+      let notificationsSent = 0;
+
+      try {
+
+        for (const result of filtered) {
+
+          const measurementName =
+            getMeasurementName(
+              result.measurement_type
+            );
+
+          const user_id_notification = 1;
+
+          const other_user_id_notification =
+            result.user_id;
+
+          const action = "Reminder";
+
+          const action_id = "0";
+
+          const title =
+            "Measurement Reminder";
+
+          const messages =
+            `⏰ Time to record your ${measurementName}.`;
+
+          const action_json_lang_data = {
+            en: "Reminder",
+            es: "Recordatorio",
+            fr: "Rappel",
+            it: "Promemoria",
+            pt: "Lembrete",
+            ar: "تذكير",
+            de: "Erinnerung",
+          };
+
+          const title_json_lang_data = {
+            en: "Measurement Reminder",
+            es: "Recordatorio de medición",
+            fr: "Rappel de mesure",
+            it: "Promemoria di misurazione",
+            pt: "Lembrete de medição",
+            ar: "تذكير القياس",
+            de: "Messungserinnerung",
+          };
+
+          const message_json_lang_data = {
+            en: `⏰ Time to record your ${measurementName}.`,
+            es: `⏰ Es hora de registrar tu ${measurementName}.`,
+            fr: `⏰ Il est temps d'enregistrer votre ${measurementName}.`,
+            it: `⏰ È il momento di registrare il tuo ${measurementName}.`,
+            pt: `⏰ Hora de registrar sua ${measurementName}.`,
+            ar: `⏰ حان وقت تسجيل ${measurementName}.`,
+            de: `⏰ Zeit, Ihre ${measurementName} zu erfassen.`,
+          };
+
+          const action_data = {
+            user_id: user_id_notification,
+            other_user_id: other_user_id_notification,
+            action_id,
+            action,
+          };
+
+          const notification_arr_check =
+            await new Promise((resolve) => {
+
+              getNotificationArrSingle(
+                user_id_notification,
+                other_user_id_notification,
+                action,
+                action_id,
+
+                title,
+                title,
+                title,
+                title,
+                title,
+
+                messages,
+                messages,
+                messages,
+                messages,
+                messages,
+
+                action_json_lang_data,
+                title_json_lang_data,
+                message_json_lang_data,
+
+                action_data,
+
+                resolve
+              );
+            });
+
+          test = 1;
+
+          notificationResults.push(
+            notification_arr_check
+          );
+
+          notificationsSent++;
+        }
+
+        return response.status(200).json({
+          success: true,
+          msg:
+            notificationsSent > 0
+              ? `Measurement Reminder Notifications Processed (${notificationsSent} sent)`
+              : "No notifications processed",
+
+          notifications_sent:
+            notificationsSent,
+
+          notification_results:
+            notificationResults,
+
+          test,
+        });
+
+      } catch (error) {
+
+        console.error(
+          "Measurement Reminder Error:",
+          error
+        );
+
+        return response.status(500).json({
+          success: false,
+          msg: "Error processing reminders",
+          error: error.message,
+        });
+      }
+    });
+
+  } catch (err) {
+
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      key: err.message,
+    });
+  }
+};
+
+const createMockResponse = (resolve) => ({
+  status: (code) => ({
+    json: (data) => resolve({ statusCode: code, ...data }),
+  }),
+  json: (data) => resolve({ statusCode: 200, ...data }),
+});
+
+const runAllRemindersCron = async () => {
+  const mockReq = {};
+
+  try {
+    const [daily, weekly, monthly] = await Promise.allSettled([
+      new Promise((resolve) =>
+        getReminderData(mockReq, createMockResponse(resolve))
+      ),
+      new Promise((resolve) =>
+        getReminderDataWeekly(mockReq, createMockResponse(resolve))
+      ),
+      new Promise((resolve) =>
+        getReminderDataMonthly(mockReq, createMockResponse(resolve))
+      ),
+    ]);
+
+    console.log(
+      "[CRON] Daily:",
+      daily.status === "fulfilled" ? daily.value : daily.reason
+    );
+
+    console.log(
+      "[CRON] Weekly:",
+      weekly.status === "fulfilled" ? weekly.value : weekly.reason
+    );
+
+    console.log(
+      "[CRON] Monthly:",
+      monthly.status === "fulfilled" ? monthly.value : monthly.reason
+    );
+  } catch (error) {
+    console.error("[CRON ERROR]", error);
+  }
+};
 
 module.exports = {
 
@@ -5432,6 +5760,7 @@ module.exports = {
     getUserLanguages,
     getLanguages,
     getMeasurementUnits,
-    updateMeasurementUnit
-
+    updateMeasurementUnit,
+    getMeasurementReminderData,
+    runAllRemindersCron
 }

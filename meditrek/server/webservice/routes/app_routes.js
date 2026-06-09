@@ -6,7 +6,9 @@ const { getAllContent, getAllContentUrl, getMyMedications, getTodayMedicationNew
 const { signUp, userOtpVerify,verifyUserLoginOtp, userResendOtp, deleteAccount, editProfile, forgotPassword, forgotPasswordResendOtp, forgotPasswordVerifyOtp, resetPassword, changePassword, signIn, getUserNotification,getReminderData, getReminderDataMonthly, refillReminder,
     getReminderDataWeekly , getHomePageStatus, updateTimezone,getUserLanguages, updateUserLanguage, getLanguages,
     getMeasurementUnits,
-    updateMeasurementUnit} = require('../controller/user_controller');
+    updateMeasurementUnit,
+    getMeasurementReminderData,
+    runAllRemindersCron} = require('../controller/user_controller');
 
 const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1, AddMeasurementReminder} = require('../controller/app_controller');
 
@@ -20,7 +22,8 @@ router.get("/get_reminder_data_weekly_cron",getReminderDataWeekly);
 router.get("/get_reminder_data_monthly_cron",getReminderDataMonthly);
 router.get("/refill_reminder",refillReminder);
 router.get("/get_before_time_slots",getBeforeTimeSlots);
-
+router.get("/get_measurement_data_cron", getMeasurementReminderData);
+router.get("/get_medication_reminder_data_cron", runAllRemindersCron);
 
 router.post('/remove_player_id', upload.none(), removePlayerId);
 router.get("/get_medicine_history",getMedicineHistory);
