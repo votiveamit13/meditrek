@@ -10,7 +10,7 @@ const { signUp, userOtpVerify,verifyUserLoginOtp, userResendOtp, deleteAccount, 
     getMeasurementReminderData,
     runAllRemindersCron} = require('../controller/user_controller');
 
-const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1, AddMeasurementReminder, GetMeasurementReminderList} = require('../controller/app_controller');
+const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1, AddMeasurementReminder, GetMeasurementReminderList, EditMeasurementReminder} = require('../controller/app_controller');
 
 
 const router = express.Router();
@@ -221,5 +221,6 @@ router.post('/getMeasurementUnits', getMeasurementUnits);
 router.post('/updateMeasurementUnit', updateMeasurementUnit);
 router.post('/add_measurementReminder', upload.none(), AddMeasurementReminder);
 router.get('/get_measurement_reminder_list', GetMeasurementReminderList);
+router.post('/edit_measurementReminder', EditMeasurementReminder);
 
 module.exports = router;

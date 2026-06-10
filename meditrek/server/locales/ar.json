@@ -65,5 +65,6 @@
 	"invalid_weekday": "قيمة يوم الأسبوع غير صالحة",
 	"invalid_reminder_time": "وقت التذكير غير صالح",
 	"reminder_time_required": "وقت التذكير مطلوب",
-	"measurement_reminder_created_successfully": "تم إنشاء تذكير القياس بنجاح"
+	"measurement_reminder_created_successfully": "تم إنشاء تذكير القياس بنجاح",
+	"measurement_reminder_updated_successfully": "تم تحديث تذكير القياس بنجاح"
 }

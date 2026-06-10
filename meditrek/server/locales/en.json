@@ -66,5 +66,6 @@
   "invalid_weekday": "Invalid weekday value",
   "invalid_reminder_time": "Invalid reminder time",
   "reminder_time_required": "Reminder time is required",
-  "measurement_reminder_created_successfully": "Measurement reminder created successfully"
+  "measurement_reminder_created_successfully": "Measurement reminder created successfully",
+  "measurement_reminder_updated_successfully": "Measurement reminder updated successfully"
 }
