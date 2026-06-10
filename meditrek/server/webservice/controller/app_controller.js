@@ -5152,10 +5152,10 @@ const homepage = async (request, response) => {
 
     // Check if user exists & active
     const checkUser = `
-            SELECT user_id, active_flag, delete_flag, current_timezone
-            FROM user_master 
-            WHERE user_id = ? AND delete_flag = 0
-        `;
+      SELECT user_id, active_flag, delete_flag, current_timezone
+      FROM user_master 
+      WHERE user_id = ? AND delete_flag = 0
+    `;
 
     connection.query(checkUser, [user_id], async (err, userRes) => {
       if (err) {
@@ -5184,76 +5184,154 @@ const homepage = async (request, response) => {
       // Get today's date & current time
       const userTimezone = userRes[0].current_timezone || "UTC";
       const todayDate = moment().tz(userTimezone).format("YYYY-MM-DD");
-      const now = moment().tz(userTimezone); // current moment in user timezone
+      const now = moment().tz(userTimezone);
       const currentTime = now.format("HH:mm:ss");
       const todayDayOfWeek = now.day(); // 0=Sunday
 
-      // Fetch all not-taken reminders only for today
+      // ─── Helper: time-of-day category ───────────────────────────────────
+      const getTimeCategory = (timeString) => {
+        if (!timeString) return "evening";
+        const [time, meridianRaw] = timeString.trim().split(" ");
+        const [hourStr, minuteStr] = time.split(":");
+        const meridian = meridianRaw?.toUpperCase();
+
+        let hour = parseInt(hourStr, 10);
+        const minute = parseInt(minuteStr, 10);
+
+        if (isNaN(hour) || isNaN(minute)) return "evening";
+
+        if (meridian === "PM" && hour !== 12) hour += 12;
+        if (meridian === "AM" && hour === 12) hour = 0;
+
+        if (hour >= 5 && hour < 12) return "morning";
+        if (hour >= 12 && hour < 17) return "afternoon";
+        return "evening";
+      };
+
+      // ─── Helper: measurement type → display name ─────────────────────────
+      const getMeasurementName = (type) => {
+        switch (Number(type)) {
+          case 0: return "Blood Pressure";
+          case 1: return "Fasting Glucose";
+          case 2: return "PPBGS";
+          case 3: return "Weight";
+          case 4: return "Temperature";
+          case 5: return "Custom Measurement";
+          default: return "Measurement";
+        }
+      };
+
+      // ─── Query 1: medication reminders ───────────────────────────────────
       const getMedicationQuery = `
-                SELECT 
-                    mc.medication_id,
-                    ts.time_slots_id,
-                    mc.medicine_id,
-                    md.medicine_name,
-                    mc.dosage,
-                    mc.type,
-                    CASE mc.type
-                        WHEN 1 THEN 'pill'
-                        WHEN 2 THEN 'syrup'
-                        ELSE 'unknown'
-                    END AS type_label,
-                    NULLIF(mc.instruction, '') AS instruction,
-                    ts.taken_status,
-                    CASE ts.taken_status
-                        WHEN 0 THEN 'Not_Taken'
-                        WHEN 1 THEN 'Taken'
-                        ELSE 'unknown'
-                    END AS taken_label,
-                    mc.schedule,
-                    mc.medicine_type_name,
-                    CASE mc.schedule
-                        WHEN 0 THEN 'daily'
-                        WHEN 1 THEN 'weekly'
-                        WHEN 2 THEN 'monthly'
-                        ELSE 'unknown'
-                    END AS schedule_label,
-                    mc.remaining_quantity,
-                    mc.pause_status,
-                    mc.number_of_times,
-                    mc.timezone AS med_timezone,
-                    ts.time AS raw_time
-                FROM 
-                    medication_master AS mc
-                LEFT JOIN 
-                    medicine_master AS md ON mc.medicine_id = md.medicine_id
-                LEFT JOIN 
-                    time_slots_master AS ts ON mc.medication_id = ts.medication_id
-                WHERE 
-                    mc.user_id = ?
-                    AND mc.delete_flag = 0
-                    AND mc.pause_status = 0
-                    AND ts.delete_flag = 0
-                    AND ts.taken_status = 0
-                    AND (
-                        mc.schedule = 0  
-                        OR (mc.schedule = 1 AND FIND_IN_SET(?, mc.weekday)) 
-                        OR (mc.schedule = 2 AND FIND_IN_SET(?, mc.schedule_date)) 
-                    ) 
-                    AND NOT EXISTS (
-                        SELECT 1 
-                        FROM medicine_average_master mam 
-                        WHERE mam.user_id = mc.user_id 
-                          AND mam.medicine_id = mc.medicine_id 
-                          AND mam.time_slots_id = ts.time_slots_id
-                          AND mam.status = 2 
-                          AND DATE(mam.createtime) = ?
-                    )
-                ORDER BY ts.time ASC
-            `;
+        SELECT 
+          mc.medication_id,
+          ts.time_slots_id,
+          mc.medicine_id,
+          md.medicine_name,
+          mc.dosage,
+          mc.type,
+          CASE mc.type
+            WHEN 1 THEN 'pill'
+            WHEN 2 THEN 'syrup'
+            ELSE 'unknown'
+          END AS type_label,
+          NULLIF(mc.instruction, '') AS instruction,
+          ts.taken_status,
+          CASE ts.taken_status
+            WHEN 0 THEN 'Not_Taken'
+            WHEN 1 THEN 'Taken'
+            ELSE 'unknown'
+          END AS taken_label,
+          mc.schedule,
+          mc.medicine_type_name,
+          CASE mc.schedule
+            WHEN 0 THEN 'daily'
+            WHEN 1 THEN 'weekly'
+            WHEN 2 THEN 'monthly'
+            ELSE 'unknown'
+          END AS schedule_label,
+          mc.remaining_quantity,
+          mc.pause_status,
+          mc.number_of_times,
+          mc.timezone AS med_timezone,
+          ts.time AS raw_time
+        FROM 
+          medication_master AS mc
+        LEFT JOIN 
+          medicine_master AS md ON mc.medicine_id = md.medicine_id
+        LEFT JOIN 
+          time_slots_master AS ts ON mc.medication_id = ts.medication_id
+        WHERE 
+          mc.user_id = ?
+          AND mc.delete_flag = 0
+          AND mc.pause_status = 0
+          AND ts.delete_flag = 0
+          AND ts.taken_status = 0
+          AND (
+            mc.schedule = 0  
+            OR (mc.schedule = 1 AND FIND_IN_SET(?, mc.weekday)) 
+            OR (mc.schedule = 2 AND FIND_IN_SET(?, mc.schedule_date)) 
+          ) 
+          AND NOT EXISTS (
+            SELECT 1 
+            FROM medicine_average_master mam 
+            WHERE mam.user_id = mc.user_id 
+              AND mam.medicine_id = mc.medicine_id 
+              AND mam.time_slots_id = ts.time_slots_id
+              AND mam.status = 2 
+              AND DATE(mam.createtime) = ?
+          )
+        ORDER BY ts.time ASC
+      `;
 
-      const values = [user_id, todayDayOfWeek.toString(), todayDate, todayDate];
+      const medValues = [
+        user_id,
+        todayDayOfWeek.toString(),
+        todayDate,
+        todayDate,
+      ];
 
-      connection.query(getMedicationQuery, values, async (err, meds) => {
+      // ─── Query 2: measurement reminders ──────────────────────────────────
+      const getMeasurementQuery = `
+        SELECT
+          mrm.measurement_reminder_id,
+          mrm.measurement_type,
+          mrm.schedule,
+          mrm.instruction,
+          mrm.pause_status,
+          mrm.timezone AS med_timezone,
+          mrs.measurement_reminder_slot_id AS time_slots_id,
+          mrs.time AS raw_time,
+          CASE mrm.schedule
+            WHEN 0 THEN 'daily'
+            WHEN 1 THEN 'weekly'
+            WHEN 2 THEN 'monthly'
+            ELSE 'unknown'
+          END AS schedule_label
+        FROM measurement_reminder_master mrm
+        LEFT JOIN measurement_reminder_slots mrs
+          ON mrm.measurement_reminder_id = mrs.measurement_reminder_id
+        WHERE
+          mrm.user_id = ?
+          AND mrm.delete_flag = 0
+          AND mrm.pause_status = 0
+          AND mrs.delete_flag = 0
+          AND (
+            mrm.schedule = 0
+            OR (mrm.schedule = 1 AND FIND_IN_SET(?, mrm.weekday))
+            OR (mrm.schedule = 2 AND FIND_IN_SET(?, mrm.schedule_date))
+          )
+        ORDER BY mrs.time ASC
+      `;
+
+      const measurementValues = [
+        user_id,
+        todayDayOfWeek.toString(),
+        todayDate,
+      ];
+
+      // ─── Run both queries, then merge ────────────────────────────────────
+      connection.query(getMedicationQuery, medValues, (err, meds) => {
         if (err) {
           return response.status(200).json({
             success: false,
@@ -5262,168 +5340,132 @@ const homepage = async (request, response) => {
           });
         }
 
-        if (!meds || meds.length === 0) {
-          return response.status(200).json({
-            success: true,
-            msg: languageMessage.dataNotFound,
-            dataArray: [],
-          });
-        }
+        connection.query(
+          getMeasurementQuery,
+          measurementValues,
+          (err, measurements) => {
+            if (err) {
+              return response.status(200).json({
+                success: false,
+                msg: languageMessage.internalServerError,
+                key: err.message,
+              });
+            }
 
-        // categorize time
-        const getTimeCategory = (timeString) => {
-          if (!timeString) return "evening";
-          const [time, meridianRaw] = timeString.trim().split(" ");
-          const [hourStr, minuteStr] = time.split(":");
-          const meridian = meridianRaw?.toUpperCase();
+            // FIX 1: renamed to medReminders to avoid const redeclaration
+            const medReminders = (meds || []).map((med) => {
+              const userMoment = moment.tz(
+                `${todayDate} ${med.raw_time}`,
+                "YYYY-MM-DD HH:mm:ss",
+                userTimezone
+              );
 
-          let hour = parseInt(hourStr, 10);
-          const minute = parseInt(minuteStr, 10);
+              return {
+                ...med,
+                reminder_type: "medication",
+                time_slot: userMoment.format("hh:mm A"),
+                time_category: getTimeCategory(userMoment.format("hh:mm A")),
+                time_moment: userMoment,
+              };
+            });
 
-          if (isNaN(hour) || isNaN(minute)) return "evening";
+            const measurementReminders = (measurements || []).map((item) => {
+              const userMoment = moment.tz(
+                `${todayDate} ${item.raw_time}`,
+                "YYYY-MM-DD HH:mm:ss",
+                userTimezone
+              );
 
-          if (meridian === "PM" && hour !== 12) hour += 12;
-          if (meridian === "AM" && hour === 12) hour = 0;
+              return {
+                medication_id: null,
+                time_slots_id: item.time_slots_id,
+                medicine_id: null,
+                medicine_name: getMeasurementName(item.measurement_type),
+                dosage: null,
+                type: 99,
+                type_label: "measurement",
+                instruction: item.instruction,
+                taken_status: 0,
+                taken_label: "Not_Taken",
+                schedule: item.schedule,
+                medicine_type_name: "Measurement",
+                schedule_label: item.schedule_label,
+                remaining_quantity: 0,
+                pause_status: item.pause_status,
+                number_of_times: 1,
+                med_timezone: item.med_timezone,
+                raw_time: item.raw_time,
+                measurement_reminder_id: item.measurement_reminder_id,
+                measurement_type: item.measurement_type,
+                reminder_type: "measurement",
+                time_slot: userMoment.format("hh:mm A"),
+                time_category: getTimeCategory(userMoment.format("hh:mm A")),
+                time_moment: userMoment,
+              };
+            });
 
-          if (hour >= 5 && hour < 12) return "morning";
-          if (hour >= 12 && hour < 17) return "afternoon";
-          return "evening";
-        };
+            // FIX 2: merge after both arrays are built (no redeclaration)
+            const allReminders = [
+              ...medReminders,
+              ...measurementReminders,
+            ];
 
-        // Convert DB time (HH:mm:ss) → user timezone wall clock (no UTC shift)
-        const categorizedMeds = meds.map((med) => {
-          const raw = med.raw_time;
-          const medTZ = med.med_timezone || "UTC";
-          const userTZ = userTimezone;
+            // FIX 3: moved empty-check here, after both queries, so
+            //         measurement-only users don't get a false empty response
+            if (allReminders.length === 0) {
+              return response.status(200).json({
+                success: true,
+                msg: languageMessage.dataNotFound,
+                current_time: currentTime,
+                upcoming_total: 0,
+                dataArray: [],
+              });
+            }
 
-          // medication "today" in its own timezone
-          // const medToday = moment().tz(medTZ).format("YYYY-MM-DD");
+            // Sort ascending by time
+            allReminders.sort((a, b) => a.time_moment - b.time_moment);
 
-          // interpret as wall time in med timezone
-          // const medMoment = moment.tz(
-          //     `${medToday} ${raw}`,
-          //     "YYYY-MM-DD HH:mm:ss",
-          //     medTZ
-          // );
+            // FIX 4: scan from the end to find the last past reminder
+            //         (avoids fragile forward-break assumption)
+            let activeIndex = -1;
+            for (let i = allReminders.length - 1; i >= 0; i--) {
+              if (allReminders[i].time_moment.isSameOrBefore(now)) {
+                activeIndex = i;
+                break;
+              }
+            }
 
-          // convert to user's current timezone
-          // const userMoment = medMoment.clone().tz(userTZ);
-          // Interpret raw_time as local wall-clock time (NO timezone conversion)
-          // const userMoment = moment(
-          //   `${todayDate} ${raw}`,
-          //   "YYYY-MM-DD HH:mm:ss",
-          // );
-          const userMoment = moment.tz(
-            `${todayDate} ${raw}`,
-            "YYYY-MM-DD HH:mm:ss",
-            userTimezone
-          );
+            // Rearrange: active → future → older past
+            let finalOrdered = [];
+            if (activeIndex !== -1) {
+              finalOrdered.push(allReminders[activeIndex]);           // active
+              finalOrdered.push(...allReminders.slice(activeIndex + 1)); // future
+              finalOrdered.push(...allReminders.slice(0, activeIndex));  // older past
+            } else {
+              finalOrdered = allReminders; // all future
+            }
 
-          return {
-            ...med,
-            time_slot: userMoment.format("hh:mm A"),
-            time_category: getTimeCategory(userMoment.format("hh:mm A")),
-            time_moment: userMoment,
-          };
-        });
+            // FIX 5: include the active reminder in upcoming count
+            //         (diff >= 0 catches exact-now; active item is diff ~ 0)
+            const upcomingCount = finalOrdered.filter((item) => {
+              const diff = item.time_moment.diff(now, "minutes");
+              return diff >= 0;
+            }).length;
 
-        // const CURRENT_TIME_WINDOW = 5; // minutes
+            const finalResponse = finalOrdered.map((item) => {
+              const { time_moment, ...rest } = item;
+              return rest;
+            });
 
-        // categorizedMeds.sort((a, b) => {
-        //   const aDiff = a.time_moment.diff(now, "minutes");
-        //   const bDiff = b.time_moment.diff(now, "minutes");
-
-        //   const aCurrent = Math.abs(aDiff) <= CURRENT_TIME_WINDOW;
-        //   const bCurrent = Math.abs(bDiff) <= CURRENT_TIME_WINDOW;
-
-        //   if (aCurrent && !bCurrent) return -1;
-        //   if (!aCurrent && bCurrent) return 1;
-        //   if (aCurrent && bCurrent) return Math.abs(aDiff) - Math.abs(bDiff);
-
-        //   if (aDiff > 0 && bDiff < 0) return -1;
-        //   if (aDiff < 0 && bDiff > 0) return 1;
-        //   return a.time_moment - b.time_moment;
-        // });
-        // const GRACE_PERIOD = 60; // minutes
-
-        // categorizedMeds.sort((a, b) => {
-        //   const aDiff = a.time_moment.diff(now, "minutes");
-        //   const bDiff = b.time_moment.diff(now, "minutes");
-
-        //   const aActive = aDiff >= -GRACE_PERIOD;
-        //   const bActive = bDiff >= -GRACE_PERIOD;
-
-        //   // 🥇 Active meds first (future + recent past)
-        //   if (aActive && !bActive) return -1;
-        //   if (!aActive && bActive) return 1;
-
-        //   // 🥈 Among active → closest to now first
-        //   if (aActive && bActive) {
-        //     return Math.abs(aDiff) - Math.abs(bDiff);
-        //   }
-
-        //   // 🥉 Old past → chronological
-        //   return a.time_moment - b.time_moment;
-        // });
-
-        // Step 1: sort by actual time first
-categorizedMeds.sort((a, b) => a.time_moment - b.time_moment);
-
-// Step 2: find active index (last past medicine)
-let activeIndex = -1;
-
-for (let i = 0; i < categorizedMeds.length; i++) {
-  if (categorizedMeds[i].time_moment.isSameOrBefore(now)) {
-    activeIndex = i;
-  } else {
-    break;
-  }
-}
-
-// Step 3: rearrange order
-let finalOrdered = [];
-
-if (activeIndex !== -1) {
-  // 🟢 Active medicine (last past)
-  finalOrdered.push(categorizedMeds[activeIndex]);
-
-  // 🟡 Future medicines
-  finalOrdered.push(...categorizedMeds.slice(activeIndex + 1));
-
-  // 🔴 Older past medicines
-  finalOrdered.push(...categorizedMeds.slice(0, activeIndex));
-} else {
-  // If no past → all future
-  finalOrdered = categorizedMeds;
-}
-
-        // const upcomingCount = categorizedMeds.filter((med) => {
-        //   const diff = med.time_moment.diff(now, "minutes");
-        //   return diff >= -GRACE_PERIOD;
-        // }).length;
-
-        const upcomingCount = finalOrdered.filter((med) => {
-  const diff = med.time_moment.diff(now, "minutes");
-  return diff >= 0;
-}).length;
-
-        // const finalResponse = categorizedMeds.map((med) => {
-        //   const { time_moment, ...rest } = med;
-        //   return rest;
-        // });
-
-        const finalResponse = finalOrdered.map((med) => {
-          const { time_moment, ...rest } = med;
-          return rest;
-        });
-
-        return response.status(200).json({
-          success: true,
-          msg: languageMessage.dataFound,
-          current_time: currentTime,
-          upcoming_total: upcomingCount,
-          dataArray: finalResponse,
-        });
+            return response.status(200).json({
+              success: true,
+              msg: languageMessage.dataFound,
+              current_time: currentTime,
+              upcoming_total: upcomingCount,
+              dataArray: finalResponse,
+            });
+          }
+        );
       });
     });
   } catch (error) {
