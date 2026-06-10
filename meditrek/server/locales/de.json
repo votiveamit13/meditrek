@@ -67,5 +67,6 @@
   "invalid_reminder_time": "Ungültige Erinnerungszeit",
   "reminder_time_required": "Erinnerungszeit ist erforderlich",
   "measurement_reminder_created_successfully": "Messungserinnerung erfolgreich erstellt",
-  "measurement_reminder_updated_successfully": "Messungserinnerung erfolgreich aktualisiert"
+  "measurement_reminder_updated_successfully": "Messungserinnerung erfolgreich aktualisiert",
+  "measurement_reminder_status_updated": "Status der Messungserinnerung erfolgreich aktualisiert"
 }

@@ -67,5 +67,6 @@
   "invalid_reminder_time": "Ora del promemoria non valida",
   "reminder_time_required": "L'orario del promemoria è obbligatorio",
   "measurement_reminder_created_successfully": "Promemoria di misurazione creato con successo",
-  "measurement_reminder_updated_successfully": "Promemoria di misurazione aggiornato con successo"
+  "measurement_reminder_updated_successfully": "Promemoria di misurazione aggiornato con successo",
+  "measurement_reminder_status_updated": "Stato del promemoria di misurazione aggiornato con successo"
 }

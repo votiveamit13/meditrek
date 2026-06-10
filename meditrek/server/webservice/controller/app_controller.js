@@ -6278,6 +6278,121 @@ const EditMeasurementReminder = async (request, response) => {
   });
 };
 
+const pauseMeasurementReminder = async (request, response) => {
+  const {
+    user_id,
+    measurement_reminder_id,
+    status,
+    language_code,
+  } = request.body;
+
+  if (!user_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  if (!measurement_reminder_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  if (status === undefined) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
+
+  const query1 = `
+    SELECT
+      mobile,
+      active_flag,
+      otp_verify,
+      delete_flag
+    FROM user_master
+    WHERE user_id = ?
+  `;
+
+  connection.query(query1, [user_id], async (err, result) => {
+
+    if (err) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
+    }
+
+    if (result.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_not_found"),
+      });
+    }
+
+    if (result[0]?.active_flag === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_deactivated"),
+        active_flag: 0,
+      });
+    }
+
+    if (result[0]?.delete_flag == 1) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
+    }
+
+    const query2 = `
+      UPDATE measurement_reminder_master
+      SET pause_status = ?
+      WHERE measurement_reminder_id = ?
+      AND delete_flag = 0
+    `;
+
+    connection.query(
+      query2,
+      [status, measurement_reminder_id],
+      async (err, updateResult) => {
+
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
+          });
+        }
+
+        if (updateResult.affectedRows === 0) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("data_not_found"),
+          });
+        }
+
+        return response.status(200).json({
+          success: true,
+          msg: request.__("measurement_reminder_status_updated"),
+        });
+      }
+    );
+  });
+};
+
 module.exports = {
   sendContactUs,
 
@@ -6338,5 +6453,6 @@ module.exports = {
   homepage1,
   AddMeasurementReminder,
   GetMeasurementReminderList,
-  EditMeasurementReminder
+  EditMeasurementReminder,
+  pauseMeasurementReminder
 };

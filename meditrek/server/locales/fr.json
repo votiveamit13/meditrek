@@ -67,5 +67,6 @@
   "invalid_reminder_time": "Heure de rappel invalide",
   "reminder_time_required": "L'heure du rappel est requise",
   "measurement_reminder_created_successfully": "Rappel de mesure créé avec succès",
-  "measurement_reminder_updated_successfully": "Rappel de mesure mis à jour avec succès"
+  "measurement_reminder_updated_successfully": "Rappel de mesure mis à jour avec succès",
+  "measurement_reminder_status_updated": "Le statut du rappel de mesure a été mis à jour avec succès"
 }
