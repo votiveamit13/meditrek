@@ -68,5 +68,6 @@
   "reminder_time_required": "Reminder time is required",
   "measurement_reminder_created_successfully": "Measurement reminder created successfully",
   "measurement_reminder_updated_successfully": "Measurement reminder updated successfully",
-  "measurement_reminder_status_updated": "Measurement reminder status updated successfully"
+  "measurement_reminder_status_updated": "Measurement reminder status updated successfully",
+  "measurement_reminder_deleted_successfully": "Measurement reminder deleted successfully"
 }

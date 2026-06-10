@@ -67,5 +67,6 @@
 	"reminder_time_required": "وقت التذكير مطلوب",
 	"measurement_reminder_created_successfully": "تم إنشاء تذكير القياس بنجاح",
 	"measurement_reminder_updated_successfully": "تم تحديث تذكير القياس بنجاح",
-	"measurement_reminder_status_updated": "تم تحديث حالة تذكير القياس بنجاح"
+	"measurement_reminder_status_updated": "تم تحديث حالة تذكير القياس بنجاح",
+	"measurement_reminder_deleted_successfully": "تم حذف تذكير القياس بنجاح"
 }

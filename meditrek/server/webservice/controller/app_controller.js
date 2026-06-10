@@ -6393,6 +6393,115 @@ const pauseMeasurementReminder = async (request, response) => {
   });
 };
 
+const DeleteMeasurementReminder = async (request, response) => {
+  const {
+    user_id,
+    measurement_reminder_id,
+    language_code,
+  } = request.body;
+
+  if (!user_id || !measurement_reminder_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
+
+  const userQuery = `
+    SELECT
+      mobile,
+      active_flag,
+      delete_flag
+    FROM user_master
+    WHERE user_id = ?
+  `;
+
+  connection.query(userQuery, [user_id], async (err, result) => {
+
+    if (err) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
+    }
+
+    if (result.length === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_not_found"),
+      });
+    }
+
+    if (result[0]?.active_flag === 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("user_deactivated"),
+        active_flag: 0,
+      });
+    }
+
+    if (result[0]?.delete_flag == 1) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("your_account_is_not_registered_with_us"),
+        active_flag: 0,
+      });
+    }
+
+    const deleteQuery = `
+      UPDATE measurement_reminder_master
+      SET
+        delete_flag = 1,
+        updatetime = ?
+      WHERE
+        measurement_reminder_id = ?
+        AND user_id = ?
+        AND delete_flag = 0
+    `;
+
+    connection.query(
+      deleteQuery,
+      [
+        formattedDate,
+        measurement_reminder_id,
+        user_id,
+      ],
+      async (err, deleteResult) => {
+
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("internal_server_error"),
+            key: err.message,
+          });
+        }
+
+        if (deleteResult.affectedRows === 0) {
+          return response.status(200).json({
+            success: false,
+            msg: request.__("data_not_found"),
+          });
+        }
+
+        return response.status(200).json({
+          success: true,
+          msg: request.__(
+            "measurement_reminder_deleted_successfully"
+          ),
+        });
+      }
+    );
+  });
+};
+
 module.exports = {
   sendContactUs,
 
@@ -6454,5 +6563,6 @@ module.exports = {
   AddMeasurementReminder,
   GetMeasurementReminderList,
   EditMeasurementReminder,
-  pauseMeasurementReminder
+  pauseMeasurementReminder,
+  DeleteMeasurementReminder
 };

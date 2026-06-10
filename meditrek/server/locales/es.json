@@ -69,5 +69,6 @@
   "reminder_time_required": "La hora del recordatorio es obligatoria",
   "measurement_reminder_created_successfully": "Recordatorio de medición creado correctamente",
   "measurement_reminder_updated_successfully": "Recordatorio de medición actualizado correctamente",
-  "measurement_reminder_status_updated": "Estado del recordatorio de medición actualizado correctamente"
+  "measurement_reminder_status_updated": "Estado del recordatorio de medición actualizado correctamente",
+  "measurement_reminder_deleted_successfully": "Recordatorio de medición eliminado correctamente"
 }
