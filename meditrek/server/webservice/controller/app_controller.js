@@ -5676,6 +5676,324 @@ const AddMeasurementReminder = async (request, response) => {
   });
 };
 
+const GetMeasurementReminderList = async (request, response) => {
+  const {
+    user_id,
+    language_code,
+    page = 1,
+    limit = 10,
+  } = request.query;
+
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
+
+  if (!user_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+    });
+  }
+
+  const finalLanguage =
+    language_code && language_code.trim() !== ""
+      ? language_code
+      : await getUserLanguage({ user_id });
+
+  request.setLocale(finalLanguage);
+
+  const getMeasurementTypeName = (type, lang = "en") => {
+    const data = {
+      en: [
+        "Blood Pressure",
+        "Fasting Glucose",
+        "PPBGS",
+        "Weight",
+        "Temperature",
+        "Custom",
+      ],
+      ar: [
+        "ضغط الدم",
+        "سكر الدم الصائم",
+        "سكر الدم بعد الوجبة",
+        "الوزن",
+        "درجة الحرارة",
+        "مخصص",
+      ],
+      es: [
+        "Presión Arterial",
+        "Glucosa en Ayunas",
+        "Glucosa Postprandial",
+        "Peso",
+        "Temperatura",
+        "Personalizado",
+      ],
+      fr: [
+        "Pression Artérielle",
+        "Glycémie à Jeun",
+        "Glycémie Postprandiale",
+        "Poids",
+        "Température",
+        "Personnalisé",
+      ],
+      it: [
+        "Pressione Arteriosa",
+        "Glucosio a Digiuno",
+        "Glicemia Postprandiale",
+        "Peso",
+        "Temperatura",
+        "Personalizzato",
+      ],
+      pt: [
+        "Pressão Arterial",
+        "Glicose em Jejum",
+        "Glicemia Pós-Prandial",
+        "Peso",
+        "Temperatura",
+        "Personalizado",
+      ],
+      de: [
+        "Blutdruck",
+        "Nüchternglukose",
+        "Postprandialer Blutzucker",
+        "Gewicht",
+        "Temperatur",
+        "Benutzerdefiniert",
+      ],
+    };
+
+    return data[lang]?.[type] || data.en[type] || "";
+  };
+
+  const getScheduleName = (schedule, lang = "en") => {
+    const data = {
+      en: ["Daily", "Weekly", "Monthly"],
+      ar: ["يومي", "أسبوعي", "شهري"],
+      es: ["Diario", "Semanal", "Mensual"],
+      fr: ["Quotidien", "Hebdomadaire", "Mensuel"],
+      it: ["Giornaliero", "Settimanale", "Mensile"],
+      pt: ["Diário", "Semanal", "Mensal"],
+      de: ["Täglich", "Wöchentlich", "Monatlich"],
+    };
+
+    return data[lang]?.[schedule] || data.en[schedule] || "";
+  };
+
+  const getWeekdayNames = (weekdayString, lang = "en") => {
+    if (!weekdayString || weekdayString === "0") return [];
+
+    const days = {
+      en: [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ],
+      ar: [
+        "الأحد",
+        "الإثنين",
+        "الثلاثاء",
+        "الأربعاء",
+        "الخميس",
+        "الجمعة",
+        "السبت",
+      ],
+      es: [
+        "Domingo",
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado",
+      ],
+      fr: [
+        "Dimanche",
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+      ],
+      it: [
+        "Domenica",
+        "Lunedì",
+        "Martedì",
+        "Mercoledì",
+        "Giovedì",
+        "Venerdì",
+        "Sabato",
+      ],
+      pt: [
+        "Domingo",
+        "Segunda",
+        "Terça",
+        "Quarta",
+        "Quinta",
+        "Sexta",
+        "Sábado",
+      ],
+      de: [
+        "Sonntag",
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag",
+      ],
+    };
+
+    return weekdayString
+      .split(",")
+      .map((day) => days[lang]?.[Number(day)] || days.en[Number(day)])
+      .filter(Boolean);
+  };
+
+  try {
+    const userQuery = `
+      SELECT active_flag, delete_flag
+      FROM user_master
+      WHERE user_id = ?
+    `;
+
+    connection.query(userQuery, [user_id], (err, userResult) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("internal_server_error"),
+          key: err.message,
+        });
+      }
+
+      if (userResult.length === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("user_not_found"),
+        });
+      }
+
+      if (
+        userResult[0].active_flag === 0 ||
+        userResult[0].delete_flag == 1
+      ) {
+        return response.status(200).json({
+          success: false,
+          msg: request.__("user_deactivated"),
+        });
+      }
+
+      const listQuery = `
+        SELECT
+          mrm.measurement_reminder_id,
+          mrm.measurement_type,
+          mrm.schedule,
+          mrm.weekday,
+          mrm.schedule_date,
+          mrm.instruction,
+          mrm.timezone,
+          mrm.pause_status,
+          mrm.createtime,
+
+          GROUP_CONCAT(
+            DATE_FORMAT(
+              STR_TO_DATE(mrs.time, '%H:%i'),
+              '%h:%i %p'
+            )
+            ORDER BY mrs.time
+            SEPARATOR ','
+          ) AS reminder_time
+
+        FROM measurement_reminder_master mrm
+
+        LEFT JOIN measurement_reminder_slots mrs
+          ON mrs.measurement_reminder_id =
+             mrm.measurement_reminder_id
+          AND mrs.delete_flag = 0
+
+        WHERE
+          mrm.user_id = ?
+          AND mrm.delete_flag = 0
+
+        GROUP BY mrm.measurement_reminder_id
+
+        ORDER BY mrm.measurement_reminder_id DESC
+
+        LIMIT ? OFFSET ?
+      `;
+
+      connection.query(
+        listQuery,
+        [user_id, limitNum, offset],
+        (err, result) => {
+          if (err) {
+            return response.status(200).json({
+              success: false,
+              msg: request.__("internal_server_error"),
+              key: err.message,
+            });
+          }
+
+          if (result.length === 0) {
+            return response.status(200).json({
+              success: true,
+              msg: request.__("data_not_found"),
+              data: [],
+            });
+          }
+
+          const formattedData = result.map((item) => ({
+            ...item,
+
+            measurement_type_name:
+              getMeasurementTypeName(
+                Number(item.measurement_type),
+                finalLanguage
+              ),
+
+            schedule_name:
+              getScheduleName(
+                Number(item.schedule),
+                finalLanguage
+              ),
+
+            weekday_names:
+              Number(item.schedule) === 1
+                ? getWeekdayNames(
+                    item.weekday,
+                    finalLanguage
+                  )
+                : [],
+
+            schedule_dates:
+              Number(item.schedule) === 2
+                ? (item.schedule_date || "")
+                    .split(",")
+                    .filter(Boolean)
+                : [],
+          }));
+
+          return response.status(200).json({
+            success: true,
+            msg: request.__("data_found"),
+            data: formattedData,
+          });
+        }
+      );
+    });
+  } catch (err) {
+    return response.status(200).json({
+      success: false,
+      msg: request.__("internal_server_error"),
+      key: err.message,
+    });
+  }
+};
+
 module.exports = {
   sendContactUs,
 
@@ -5734,5 +6052,6 @@ module.exports = {
   DeleteMedicationFromHistory,
   removePlayerId,
   homepage1,
-  AddMeasurementReminder
+  AddMeasurementReminder,
+  GetMeasurementReminderList
 };
