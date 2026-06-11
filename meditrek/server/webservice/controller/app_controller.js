@@ -2820,8 +2820,8 @@ const deleteAdverseReaction = async (request, response) => {
   }
 
   const finalLanguage = language_code && language_code.trim() !== ""
-      ? language_code
-      : await getUserLanguage({ user_id });
+    ? language_code
+    : await getUserLanguage({ user_id });
 
   request.setLocale(finalLanguage);
 
@@ -4027,7 +4027,7 @@ const editMedication = async (request, response) => {
 // };
 const getTodayMedication = async (request, response) => {
   try {
-    const { user_id, date, type,page = 1, limit = 10  } = request.query;
+    const { user_id, date, type, page = 1, limit = 10 } = request.query;
 
     if (!user_id) {
       return response.status(200).json({
@@ -4041,7 +4041,7 @@ const getTodayMedication = async (request, response) => {
             FROM user_master 
             WHERE user_id = ?
         `;
-     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     connection.query(userQuery, [user_id], (err, userRes) => {
       if (err)
         return response
@@ -4224,7 +4224,7 @@ const getTodayMedication = async (request, response) => {
             return response.status(200).json({
               success: true,
               msg: "Data Found",
-               page: parseInt(page),
+              page: parseInt(page),
               limit: parseInt(limit),
               // dataArray: filteredData,
               dataArray: paginatedData,
@@ -5168,9 +5168,9 @@ const homepage = async (request, response) => {
     `;
 
     const finalLanguage =
-  language_code && language_code.trim() !== ""
-    ? language_code
-    : await getUserLanguage({ user_id });
+      language_code && language_code.trim() !== ""
+        ? language_code
+        : await getUserLanguage({ user_id });
 
     connection.query(checkUser, [user_id], async (err, userRes) => {
       if (err) {
@@ -5224,66 +5224,66 @@ const homepage = async (request, response) => {
       };
 
       // ─── Helper: measurement type → display name ─────────────────────────
-     const getMeasurementName = (type, lang = "en") => {
-  const data = {
-    0: {
-      en: "Blood Pressure",
-      es: "Presión Arterial",
-      fr: "Pression Artérielle",
-      it: "Pressione Arteriosa",
-      pt: "Pressão Arterial",
-      ar: "ضغط الدم",
-      de: "Blutdruck",
-    },
-    1: {
-      en: "Fasting Glucose",
-      es: "Glucosa en Ayunas",
-      fr: "Glycémie à Jeun",
-      it: "Glucosio a Digiuno",
-      pt: "Glicose em Jejum",
-      ar: "سكر الدم الصائم",
-      de: "Nüchternglukose",
-    },
-    2: {
-      en: "PPBGS",
-      es: "Glucosa Postprandial",
-      fr: "Glycémie Postprandiale",
-      it: "Glicemia Postprandiale",
-      pt: "Glicemia Pós-Prandial",
-      ar: "سكر الدم بعد الوجبة",
-      de: "Postprandialer Blutzucker",
-    },
-    3: {
-      en: "Weight",
-      es: "Peso",
-      fr: "Poids",
-      it: "Peso",
-      pt: "Peso",
-      ar: "الوزن",
-      de: "Gewicht",
-    },
-    4: {
-      en: "Temperature",
-      es: "Temperatura",
-      fr: "Température",
-      it: "Temperatura",
-      pt: "Temperatura",
-      ar: "درجة الحرارة",
-      de: "Temperatur",
-    },
-    5: {
-      en: "Custom Measurement",
-      es: "Medición Personalizada",
-      fr: "Mesure Personnalisée",
-      it: "Misurazione Personalizzata",
-      pt: "Medição Personalizada",
-      ar: "قياس مخصص",
-      de: "Benutzerdefinierte Messung",
-    }
-  };
+      const getMeasurementName = (type, lang = "en") => {
+        const data = {
+          0: {
+            en: "Blood Pressure",
+            es: "Presión Arterial",
+            fr: "Pression Artérielle",
+            it: "Pressione Arteriosa",
+            pt: "Pressão Arterial",
+            ar: "ضغط الدم",
+            de: "Blutdruck",
+          },
+          1: {
+            en: "Fasting Glucose",
+            es: "Glucosa en Ayunas",
+            fr: "Glycémie à Jeun",
+            it: "Glucosio a Digiuno",
+            pt: "Glicose em Jejum",
+            ar: "سكر الدم الصائم",
+            de: "Nüchternglukose",
+          },
+          2: {
+            en: "PPBGS",
+            es: "Glucosa Postprandial",
+            fr: "Glycémie Postprandiale",
+            it: "Glicemia Postprandiale",
+            pt: "Glicemia Pós-Prandial",
+            ar: "سكر الدم بعد الوجبة",
+            de: "Postprandialer Blutzucker",
+          },
+          3: {
+            en: "Weight",
+            es: "Peso",
+            fr: "Poids",
+            it: "Peso",
+            pt: "Peso",
+            ar: "الوزن",
+            de: "Gewicht",
+          },
+          4: {
+            en: "Temperature",
+            es: "Temperatura",
+            fr: "Température",
+            it: "Temperatura",
+            pt: "Temperatura",
+            ar: "درجة الحرارة",
+            de: "Temperatur",
+          },
+          5: {
+            en: "Custom Measurement",
+            es: "Medición Personalizada",
+            fr: "Mesure Personnalisée",
+            it: "Misurazione Personalizzata",
+            pt: "Medição Personalizada",
+            ar: "قياس مخصص",
+            de: "Benutzerdefinierte Messung",
+          }
+        };
 
-  return data[type]?.[lang] || data[type]?.en || "Measurement";
-};
+        return data[type]?.[lang] || data[type]?.en || "Measurement";
+      };
 
       // ─── Query 1: medication reminders ───────────────────────────────────
       const getMedicationQuery = `
@@ -5444,10 +5444,10 @@ const homepage = async (request, response) => {
                 medication_id: null,
                 time_slots_id: item.time_slots_id,
                 medicine_id: null,
-medicine_name: getMeasurementName(
-  item.measurement_type,
-  finalLanguage
-),
+                medicine_name: getMeasurementName(
+                  item.measurement_type,
+                  finalLanguage
+                ),
                 dosage: null,
                 type: 99,
                 type_label: "measurement",
@@ -5456,8 +5456,8 @@ medicine_name: getMeasurementName(
                 taken_label: "Not_Taken",
                 schedule: item.schedule,
                 medicine_type_name:
-  measurementTypeLabel[finalLanguage] ||
-  measurementTypeLabel.en,
+                  measurementTypeLabel[finalLanguage] ||
+                  measurementTypeLabel.en,
                 schedule_label: item.schedule_label,
                 remaining_quantity: 0,
                 pause_status: item.pause_status,
@@ -6075,16 +6075,16 @@ const GetMeasurementReminderList = async (request, response) => {
             weekday_names:
               Number(item.schedule) === 1
                 ? getWeekdayNames(
-                    item.weekday,
-                    finalLanguage
-                  )
+                  item.weekday,
+                  finalLanguage
+                )
                 : [],
 
             schedule_dates:
               Number(item.schedule) === 2
                 ? (item.schedule_date || "")
-                    .split(",")
-                    .filter(Boolean)
+                  .split(",")
+                  .filter(Boolean)
                 : [],
           }));
 

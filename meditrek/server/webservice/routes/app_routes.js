@@ -8,7 +8,8 @@ const { signUp, userOtpVerify,verifyUserLoginOtp, userResendOtp, deleteAccount, 
     getMeasurementUnits,
     updateMeasurementUnit,
     getMeasurementReminderData,
-    runAllRemindersCron} = require('../controller/user_controller');
+    runAllRemindersCron,
+    updateMeasurementReminderStatus} = require('../controller/user_controller');
 
 const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1, AddMeasurementReminder, GetMeasurementReminderList, EditMeasurementReminder, pauseMeasurementReminder, DeleteMeasurementReminder} = require('../controller/app_controller');
 
@@ -224,5 +225,6 @@ router.get('/get_measurement_reminder_list', GetMeasurementReminderList);
 router.post('/edit_measurementReminder', EditMeasurementReminder);
 router.post('/pauseMeasurementReminder', pauseMeasurementReminder);
 router.post('/deleteMeasurementReminder', DeleteMeasurementReminder);
+router.post('/updateMeasurementReminder', updateMeasurementReminderStatus);
 
 module.exports = router;
