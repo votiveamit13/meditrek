@@ -5380,6 +5380,10 @@ const homepage = async (request, response) => {
           AND mrm.delete_flag = 0
           AND mrm.pause_status = 0
           AND mrs.delete_flag = 0
+          AND NOT (
+    mrs.status = 2
+    AND DATE(mrs.updatetime) = ?
+)
           AND (
             mrm.schedule = 0
             OR (mrm.schedule = 1 AND FIND_IN_SET(?, mrm.weekday))
@@ -5389,10 +5393,11 @@ const homepage = async (request, response) => {
       `;
 
       const measurementValues = [
-        user_id,
-        todayDayOfWeek.toString(),
-        todayDate,
-      ];
+  user_id,
+  todayDayOfWeek.toString(),
+  todayDate,
+  todayDate
+];
 
       // ─── Run both queries, then merge ────────────────────────────────────
       connection.query(getMedicationQuery, medValues, (err, meds) => {
