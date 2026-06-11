@@ -4984,8 +4984,21 @@ const getUserLanguages = async (req, res) => {
       [user_id]
     );
 
+    console.log("========== DEBUG ==========");
+console.log("rows =", rows);
+console.log("typeof rows =", typeof rows);
+console.log("isArray =", Array.isArray(rows));
+console.log("===========================");
+
     const userLang = userData?.[0]?.current_language || null;
-    const defaultLang = rows?.find(r => r.is_default == 1);
+    let defaultLang = null;
+
+if (Array.isArray(rows)) {
+    defaultLang = rows.find(r => r.is_default == 1);
+} else {
+    console.log("ROWS IS NOT ARRAY");
+    console.log(rows);
+}
 
     return res.json({
       success: true,
