@@ -5138,8 +5138,18 @@ const removePlayerId = async (request, response) => {
 //     });
 //   }
 // };
+const measurementTypeLabel = {
+  en: "Measurement",
+  es: "Medición",
+  fr: "Mesure",
+  it: "Misurazione",
+  pt: "Medição",
+  ar: "قياس",
+  de: "Messung",
+};
+
 const homepage = async (request, response) => {
-  const { user_id } = request.query;
+  const { user_id, language_code } = request.query;
 
   try {
     if (!user_id) {
@@ -5156,6 +5166,11 @@ const homepage = async (request, response) => {
       FROM user_master 
       WHERE user_id = ? AND delete_flag = 0
     `;
+
+    const finalLanguage =
+  language_code && language_code.trim() !== ""
+    ? language_code
+    : await getUserLanguage({ user_id });
 
     connection.query(checkUser, [user_id], async (err, userRes) => {
       if (err) {
@@ -5209,17 +5224,66 @@ const homepage = async (request, response) => {
       };
 
       // ─── Helper: measurement type → display name ─────────────────────────
-      const getMeasurementName = (type) => {
-        switch (Number(type)) {
-          case 0: return "Blood Pressure";
-          case 1: return "Fasting Glucose";
-          case 2: return "PPBGS";
-          case 3: return "Weight";
-          case 4: return "Temperature";
-          case 5: return "Custom Measurement";
-          default: return "Measurement";
-        }
-      };
+     const getMeasurementName = (type, lang = "en") => {
+  const data = {
+    0: {
+      en: "Blood Pressure",
+      es: "Presión Arterial",
+      fr: "Pression Artérielle",
+      it: "Pressione Arteriosa",
+      pt: "Pressão Arterial",
+      ar: "ضغط الدم",
+      de: "Blutdruck",
+    },
+    1: {
+      en: "Fasting Glucose",
+      es: "Glucosa en Ayunas",
+      fr: "Glycémie à Jeun",
+      it: "Glucosio a Digiuno",
+      pt: "Glicose em Jejum",
+      ar: "سكر الدم الصائم",
+      de: "Nüchternglukose",
+    },
+    2: {
+      en: "PPBGS",
+      es: "Glucosa Postprandial",
+      fr: "Glycémie Postprandiale",
+      it: "Glicemia Postprandiale",
+      pt: "Glicemia Pós-Prandial",
+      ar: "سكر الدم بعد الوجبة",
+      de: "Postprandialer Blutzucker",
+    },
+    3: {
+      en: "Weight",
+      es: "Peso",
+      fr: "Poids",
+      it: "Peso",
+      pt: "Peso",
+      ar: "الوزن",
+      de: "Gewicht",
+    },
+    4: {
+      en: "Temperature",
+      es: "Temperatura",
+      fr: "Température",
+      it: "Temperatura",
+      pt: "Temperatura",
+      ar: "درجة الحرارة",
+      de: "Temperatur",
+    },
+    5: {
+      en: "Custom Measurement",
+      es: "Medición Personalizada",
+      fr: "Mesure Personnalisée",
+      it: "Misurazione Personalizzata",
+      pt: "Medição Personalizada",
+      ar: "قياس مخصص",
+      de: "Benutzerdefinierte Messung",
+    }
+  };
+
+  return data[type]?.[lang] || data[type]?.en || "Measurement";
+};
 
       // ─── Query 1: medication reminders ───────────────────────────────────
       const getMedicationQuery = `
@@ -5380,7 +5444,10 @@ const homepage = async (request, response) => {
                 medication_id: null,
                 time_slots_id: item.time_slots_id,
                 medicine_id: null,
-                medicine_name: getMeasurementName(item.measurement_type),
+medicine_name: getMeasurementName(
+  item.measurement_type,
+  finalLanguage
+),
                 dosage: null,
                 type: 99,
                 type_label: "measurement",
@@ -5388,7 +5455,9 @@ const homepage = async (request, response) => {
                 taken_status: 0,
                 taken_label: "Not_Taken",
                 schedule: item.schedule,
-                medicine_type_name: "Measurement",
+                medicine_type_name:
+  measurementTypeLabel[finalLanguage] ||
+  measurementTypeLabel.en,
                 schedule_label: item.schedule_label,
                 remaining_quantity: 0,
                 pause_status: item.pause_status,
