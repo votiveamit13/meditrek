@@ -5394,8 +5394,8 @@ const homepage = async (request, response) => {
 
       const measurementValues = [
   user_id,
-  todayDayOfWeek.toString(),
   todayDate,
+  todayDayOfWeek.toString(),
   todayDate
 ];
 
