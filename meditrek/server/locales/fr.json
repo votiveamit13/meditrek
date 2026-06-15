@@ -71,5 +71,6 @@
   "measurement_reminder_status_updated": "Le statut du rappel de mesure a été mis à jour avec succès",
   "measurement_reminder_deleted_successfully": "Rappel de mesure supprimé avec succès",
   "measurement_reminder_skipped": "Rappel de mesure ignoré avec succès",
-  "invalid_status": "Valeur de statut invalide"
+  "invalid_status": "Valeur de statut invalide",
+  "measurement_reminder_already_exists": "Le rappel de mesure existe déjà. Veuillez modifier le rappel existant."
 }

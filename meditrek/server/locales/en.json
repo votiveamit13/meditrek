@@ -71,5 +71,6 @@
   "measurement_reminder_status_updated": "Measurement reminder status updated successfully",
   "measurement_reminder_deleted_successfully": "Measurement reminder deleted successfully",
   "measurement_reminder_skipped": "Measurement reminder skipped successfully",
-  "invalid_status": "Invalid status value"
+  "invalid_status": "Invalid status value",
+  "measurement_reminder_already_exists": "Measurement reminder already exists. Please edit the existing reminder."
 }

@@ -72,5 +72,6 @@
   "measurement_reminder_status_updated": "Estado del recordatorio de medición actualizado correctamente",
   "measurement_reminder_deleted_successfully": "Recordatorio de medición eliminado correctamente",
    "measurement_reminder_skipped": "Recordatorio de medición omitido correctamente",
-  "invalid_status": "Valor de estado no válido"
+  "invalid_status": "Valor de estado no válido",
+  "measurement_reminder_already_exists": "El recordatorio de medición ya existe. Edite el recordatorio existente."
 }

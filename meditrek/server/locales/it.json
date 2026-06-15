@@ -71,5 +71,6 @@
   "measurement_reminder_status_updated": "Stato del promemoria di misurazione aggiornato con successo",
   "measurement_reminder_deleted_successfully": "Promemoria di misurazione eliminato con successo",
   "measurement_reminder_skipped": "Promemoria di misurazione ignorato con successo",
-  "invalid_status": "Valore dello stato non valido"
+  "invalid_status": "Valore dello stato non valido",
+  "measurement_reminder_already_exists": "Il promemoria della misurazione esiste già. Modifica il promemoria esistente."
 }

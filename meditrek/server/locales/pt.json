@@ -71,5 +71,6 @@
   "measurement_reminder_status_updated": "Status do lembrete de medição atualizado com sucesso",
   "measurement_reminder_deleted_successfully": "Lembrete de medição excluído com sucesso",
   "measurement_reminder_skipped": "Lembrete de medição ignorado com sucesso",
-  "invalid_status": "Valor de status inválido"
+  "invalid_status": "Valor de status inválido",
+  "measurement_reminder_already_exists": "O lembrete de medição já existe. Edite o lembrete existente."
 }

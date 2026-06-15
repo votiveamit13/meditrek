@@ -70,5 +70,6 @@
 	"measurement_reminder_status_updated": "تم تحديث حالة تذكير القياس بنجاح",
 	"measurement_reminder_deleted_successfully": "تم حذف تذكير القياس بنجاح",
 	"measurement_reminder_skipped": "تم تخطي تذكير القياس بنجاح",
-  "invalid_status": "قيمة الحالة غير صالحة"
+  "invalid_status": "قيمة الحالة غير صالحة",
+  "measurement_reminder_already_exists": "تذكير القياس موجود بالفعل. يرجى تعديل التذكير الحالي."
 }

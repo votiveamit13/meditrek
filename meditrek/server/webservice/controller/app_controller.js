@@ -2168,7 +2168,7 @@ const addTemperature = async (request, response) => {
           });
         }
 
-        let finalTemperature = parseFloat(temperature);
+        let finalTemperature = temperature.toString().trim();
 
         // Default Unit
         let unitCode = "c";
@@ -5682,6 +5682,37 @@ const AddMeasurementReminder = async (request, response) => {
       finalScheduleDate = schedule_date.trim();
     }
 
+    const checkExistingQuery = `
+  SELECT measurement_reminder_id
+  FROM measurement_reminder_master
+  WHERE
+    user_id = ?
+    AND measurement_type = ?
+    AND delete_flag = 0
+`;
+
+connection.query(
+  checkExistingQuery,
+  [user_id, measurement_type],
+  async (err, existingResult) => {
+
+    if (err) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__("internal_server_error"),
+        key: err.message,
+      });
+    }
+
+    if (existingResult.length > 0) {
+      return response.status(200).json({
+        success: false,
+        msg: request.__(
+          "measurement_reminder_already_exists"
+        ),
+      });
+    }
+
     const insertQuery = `
       INSERT INTO measurement_reminder_master (
         user_id,
@@ -5709,6 +5740,7 @@ const AddMeasurementReminder = async (request, response) => {
       insertQuery,
       insertValues,
       async (err, insertResult) => {
+
         if (err) {
           return response.status(200).json({
             success: false,
@@ -5717,78 +5749,78 @@ const AddMeasurementReminder = async (request, response) => {
           });
         }
 
-        const measurementReminderId = insertResult.insertId;
+        const measurementReminderId =
+          insertResult.insertId;
 
-        if (reminder_time && typeof reminder_time === "string") {
-          const { DateTime } = require("luxon");
+        const { DateTime } = require("luxon");
 
-          const parseTo24Hour = (timeStr) => {
-            const dt = DateTime.fromFormat(
-              timeStr.trim(),
-              "hh:mm a"
-            );
+        const parseTo24Hour = (timeStr) => {
+          const dt = DateTime.fromFormat(
+            timeStr.trim(),
+            "hh:mm a"
+          );
 
-            if (!dt.isValid) {
-              console.error("Invalid time string:", timeStr);
-              return null;
-            }
-
-            return dt.toFormat("HH:mm");
-          };
-
-          const timeSlots = reminder_time
-            .split(",")
-            .map((slot) => parseTo24Hour(slot))
-            .filter(Boolean);
-
-          if (timeSlots.length > 0) {
-            const slotValues = timeSlots.map((slot) => [
-              measurementReminderId,
-              slot,
-            ]);
-
-            const slotQuery = `
-              INSERT INTO measurement_reminder_slots
-              (
-                measurement_reminder_id,
-                time
-              )
-              VALUES ?
-            `;
-
-            connection.query(
-              slotQuery,
-              [slotValues],
-              (err) => {
-                if (err) {
-                  return response.status(200).json({
-                    success: false,
-                    msg: request.__("internal_server_error"),
-                    key: err.message,
-                  });
-                }
-
-                return response.status(200).json({
-                  success: true,
-                  msg: request.__("measurement_reminder_created_successfully"),
-                  insertId: measurementReminderId,
-                });
-              }
-            );
-          } else {
-            return response.status(200).json({
-              success: false,
-              msg: request.__("invalid_reminder_time"),
-            });
+          if (!dt.isValid) {
+            return null;
           }
-        } else {
+
+          return dt.toFormat("HH:mm");
+        };
+
+        const timeSlots = reminder_time
+          .split(",")
+          .map((slot) => parseTo24Hour(slot))
+          .filter(Boolean);
+
+        if (timeSlots.length === 0) {
           return response.status(200).json({
             success: false,
-            msg: request.__("reminder_time_required"),
+            msg: request.__("invalid_reminder_time"),
           });
         }
+
+        const slotValues = timeSlots.map((slot) => [
+          measurementReminderId,
+          slot,
+        ]);
+
+        const slotQuery = `
+          INSERT INTO measurement_reminder_slots
+          (
+            measurement_reminder_id,
+            time
+          )
+          VALUES ?
+        `;
+
+        connection.query(
+          slotQuery,
+          [slotValues],
+          (err) => {
+
+            if (err) {
+              return response.status(200).json({
+                success: false,
+                msg: request.__(
+                  "internal_server_error"
+                ),
+                key: err.message,
+              });
+            }
+
+            return response.status(200).json({
+              success: true,
+              msg: request.__(
+                "measurement_reminder_created_successfully"
+              ),
+              insertId: measurementReminderId,
+            });
+          }
+        );
       }
     );
+  }
+);
   });
 };
 
@@ -5895,8 +5927,14 @@ const GetMeasurementReminderList = async (request, response) => {
     return data[lang]?.[schedule] || data.en[schedule] || "";
   };
 
-  const getWeekdayNames = (weekdayString, lang = "en") => {
-    if (!weekdayString || weekdayString === "0") return [];
+const getWeekdayNames = (weekdayString, lang = "en") => {
+  if (
+    weekdayString === null ||
+    weekdayString === undefined ||
+    weekdayString === ""
+  ) {
+    return [];
+  }
 
     const days = {
       en: [
@@ -5964,11 +6002,15 @@ const GetMeasurementReminderList = async (request, response) => {
       ],
     };
 
-    return weekdayString
-      .split(",")
-      .map((day) => days[lang]?.[Number(day)] || days.en[Number(day)])
-      .filter(Boolean);
-  };
+  return String(weekdayString)
+    .split(",")
+    .map(
+      (day) =>
+        days[lang]?.[Number(day)] ||
+        days.en[Number(day)]
+    )
+    .filter(Boolean);
+};
 
   try {
     const userQuery = `

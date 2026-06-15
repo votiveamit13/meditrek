@@ -71,5 +71,6 @@
   "measurement_reminder_status_updated": "Status der Messungserinnerung erfolgreich aktualisiert",
   "measurement_reminder_deleted_successfully": "Messungserinnerung erfolgreich gelöscht",
   "measurement_reminder_skipped": "Messungserinnerung erfolgreich übersprungen",
-  "invalid_status": "Ungültiger Statuswert"
+  "invalid_status": "Ungültiger Statuswert",
+  "measurement_reminder_already_exists": "Die Messerinnerung existiert bereits. Bitte bearbeiten Sie die vorhandene Erinnerung."
 }
