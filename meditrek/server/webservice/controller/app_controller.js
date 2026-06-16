@@ -5380,8 +5380,8 @@ const homepage = async (request, response) => {
           AND mrm.delete_flag = 0
           AND mrm.pause_status = 0
           AND mrs.delete_flag = 0
-          AND NOT (
-    mrs.status = 2
+AND NOT (
+    mrs.status IN (1, 2)
     AND DATE(mrs.updatetime) = ?
 )
           AND (
