@@ -6615,23 +6615,18 @@ const DeleteMeasurementReminder = async (request, response) => {
     }
 
     const deleteQuery = `
-      UPDATE measurement_reminder_master
-      SET
-        delete_flag = 1,
-        updatetime = ?
-      WHERE
-        measurement_reminder_id = ?
-        AND user_id = ?
-        AND delete_flag = 0
-    `;
+  DELETE FROM measurement_reminder_master
+  WHERE
+    measurement_reminder_id = ?
+    AND user_id = ?
+`;
 
-    connection.query(
-      deleteQuery,
-      [
-        formattedDate,
-        measurement_reminder_id,
-        user_id,
-      ],
+connection.query(
+  deleteQuery,
+  [
+    measurement_reminder_id,
+    user_id,
+  ],
       async (err, deleteResult) => {
 
         if (err) {
