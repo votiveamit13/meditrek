@@ -7502,8 +7502,8 @@ function transformWeeklyWeightData(rawData, timezone, finalLanguage, convertWeig
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
         day: formattedDay,
-        weight: convertWeight(averaged[key].weight,
-      ) });
+        weight: convertWeight(averaged[key].weight) 
+      });
     } else {
       weekly.push({
         //day: moment(currentDate).format("DD MMM"),
@@ -7592,8 +7592,8 @@ function transformYearlyWeightData(rawData, finalLanguage, convertWeight = (v) =
     if (found !== undefined) {
       yearly.push({
         day: monthLabel,
-        weight: convertWeight(averaged[found].weight,
-      ) })
+        weight: convertWeight(averaged[found].weight) 
+      })
     } else {
       yearly.push({
         day: monthLabel,

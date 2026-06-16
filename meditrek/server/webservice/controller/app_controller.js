@@ -2168,7 +2168,7 @@ const addTemperature = async (request, response) => {
           });
         }
 
-        let finalTemperature = temperature.toString().trim();
+        let finalTemperature = parseFloat(temperature);
 
         // Default Unit
         let unitCode = "c";
