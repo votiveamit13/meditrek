@@ -5501,6 +5501,8 @@ const getMeasurementReminderData = async (request, response) => {
         mrm.instruction,
         mrs.measurement_reminder_slot_id,
         mrs.time,
+        mrs.status,
+    mrs.updatetime,
         un.current_timezone
       FROM measurement_reminder_master mrm
       JOIN measurement_reminder_slots mrs
@@ -5511,6 +5513,10 @@ const getMeasurementReminderData = async (request, response) => {
         mrm.delete_flag = 0
         AND mrm.pause_status = 0
         AND mrs.delete_flag = 0
+        AND NOT (
+      mrs.status IN (1,2)
+      AND DATE(mrs.updatetime) = CURDATE()
+    )
       ORDER BY mrm.measurement_reminder_id DESC
     `;
 
