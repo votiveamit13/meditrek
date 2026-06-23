@@ -4229,11 +4229,14 @@ const getReminderDataMonthly = async (request, response) => {
                 if (!row.schedule_date) return false;
 
                 // Compare date in local timezone
-                const scheduleDateLocal = moment(row.schedule_date).tz(tz).format("YYYY-MM-DD");
                 const todayLocal = nowLocal.format("YYYY-MM-DD");
+                const scheduleDates = String(row.schedule_date)
+                    .split(",")
+                    .map(d => d.trim());
 
-                if (scheduleDateLocal !== todayLocal) return false;
-
+                if (!scheduleDates.includes(todayLocal)) {
+                    return false;
+                }
                 // Time matching (same as daily)
                 const slot = row.time.length === 5
                     ? row.time

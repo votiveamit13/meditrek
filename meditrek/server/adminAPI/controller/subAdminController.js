@@ -5409,8 +5409,7 @@ const getDocterAllDiseases = (req, res) => {
       AND um.delete_flag = 0
 
     JOIN disease_master dm
-      ON dm.delete_flag = 0
-      AND um.diseases LIKE CONCAT('%disease_id: ', dm.disease_id, '%')
+      ON um.diseases LIKE CONCAT('%disease_id: ', dm.disease_id, '%')
 
     JOIN disease_translation dt
       ON dt.disease_id = dm.disease_id
