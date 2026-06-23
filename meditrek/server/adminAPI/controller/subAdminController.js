@@ -5401,7 +5401,12 @@ const getDocterAllDiseases = (req, res) => {
   }
 
   const sql = `
-    SELECT DISTINCT dm.disease_id, dt.disease_name
+    SELECT
+  COALESCE(
+    MAX(CASE WHEN dm.delete_flag = 0 THEN dm.disease_id END),
+    MIN(dm.disease_id)
+  ) AS disease_id,
+  dt.disease_name
     FROM patient_master pm
 
     JOIN user_master um 
@@ -5418,7 +5423,8 @@ const getDocterAllDiseases = (req, res) => {
     WHERE pm.doctor_id = ?
       AND pm.delete_flag = 0
 
-    ORDER BY dm.disease_name ASC
+    GROUP BY dt.disease_name
+ORDER BY dt.disease_name ASC
   `;
 
   connection.query(sql, [doctor_id], (err, result) => {
