@@ -3208,196 +3208,275 @@ const getTabularLabreport = async (request, response) => {
 //get shared tabular 
 
 
+// const getSharedTabular = async (req, res) => {
+//   const { doctor_id, from_date, to_date } = req.query;
+
+//   try {
+//     // Validate required parameters
+//     if (!from_date) {
+//       return res.status(200).json({
+//         status: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "from_date",
+//       });
+//     }
+
+//     if (!to_date) {
+//       return res.status(200).json({
+//         status: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "to_date",
+//       });
+//     }
+
+//     if (!doctor_id) {
+//       return res.status(200).json({
+//         status: false,
+//         msg: languageMessages.msg_empty_param,
+//         key: "doctor_id",
+//       });
+//     }
+
+//     // Get all patients for the doctor
+//     const fetchUserId = "SELECT user_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
+
+//     connection.query(fetchUserId, [doctor_id], async (userError, userResult) => {
+//       if (userError) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: userError.message
+//         });
+//       }
+
+//       if (userResult.length <= 0) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: 'No patients found for this doctor'
+//         });
+//       }
+
+//       // Extract user IDs to an array
+//       const userIds = userResult.map(data => data.user_id);
+
+//       // Create placeholders for multiple user IDs in queries
+//       const userIdPlaceholders = userIds.map(() => '?').join(',');
+
+//       // Initialize arrays to store results
+//       let medicationData = [];
+//       let adverseReactionData = [];
+//       let labReportData = [];
+//       let measurementData = [];
+//       let complianceData = [];
+
+//       const fetchMedication = `SELECT 
+//   m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
+//   m.schedule, m.weekday, m.current_quantity, m.remainder_quantity, 
+//   m.pause_status, m.remaining_quantity, m.instruction, m.status, 
+//   m.updatetime, m.createtime, a.medicine_name, a.description, 
+//   um.name AS patient_name, um.dob,
+//   DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time
+// FROM 
+//   medication_master m 
+// JOIN 
+//   medicine_master a ON a.medicine_id = m.medicine_id 
+// JOIN 
+//   time_slots_master tm ON tm.medication_id = m.medication_id AND tm.taken_status = 0 AND tm.delete_flag = 0
+// JOIN 
+//   user_master um ON um.user_id = m.user_id 
+// WHERE 
+//   m.user_id IN (${userIdPlaceholders}) 
+//   AND
+//    m.delete_flag = 0 
+//   AND DATE(m.createtime) BETWEEN ? AND ?
+// ORDER BY 
+//   m.medication_id DESC
+// `
+
+//       // SQL queries for each data type
+//       // const fetchMedication = `SELECT 
+//       //     m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
+//       //     m.schedule, m.weekday, m.current_quantity, um.dob, m.remainder_quantity, m.pause_status, m.remaining_quantity, m.instruction, m.status, 
+//       //     m.updatetime, m.createtime, a.medicine_name, a.description, 
+//       //     um.name AS patient_name 
+//       //   FROM 
+//       //     medication_master m 
+//       //   LEFT JOIN 
+//       //     medicine_master a ON a.medicine_id = m.medicine_id 
+//       //   LEFT JOIN 
+//       //     user_master um ON um.user_id = m.user_id 
+
+//       //   WHERE 
+//       //     m.user_id IN (${userIdPlaceholders}) 
+//       //     AND m.delete_flag = 0 
+//       //     AND DATE(m.createtime) BETWEEN ? AND ? 
+//       //   ORDER BY 
+//       //     m.medication_id DESC`;
+
+
+
+
+
+//       // const fetchAdverse = `
+//       //   SELECT 
+//       //     a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+//       //     mm.category_name, s.symptom_name, a.medication_start_date, 
+//       //     a.reaction_date, a.createtime, 
+//       //     um.name AS patient_name 
+//       //   FROM 
+//       //     adverse_reaction_master AS a 
+//       //   JOIN 
+//       //     medicine_master as m ON m.medicine_id = a.medicine_id
+//       //   JOIN 
+//       //     medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+//       //   JOIN 
+//       //     symptoms_master as s ON s.symptom_id = a.symptom_id 
+//       //   JOIN 
+//       //     user_master um ON um.user_id = a.user_id 
+//       //   WHERE 
+//       //     a.user_id IN (${userIdPlaceholders})
+//       //     AND DATE(a.createtime) BETWEEN ? AND ?`;
+
+//      const fetchAdverse = `
+//   SELECT 
+//     a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+//     mm.category_name, s.symptom_name, a.medication_start_date, 
+//     a.reaction_date, a.createtime, 
+//     um.name AS patient_name 
+//   FROM 
+//     adverse_reaction_master AS a 
+//   LEFT JOIN 
+//     medicine_master as m ON m.medicine_id = a.medicine_id
+//   LEFT JOIN 
+//     medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+//   LEFT JOIN 
+//     symptoms_master as s ON s.symptom_id = a.symptom_id 
+//   LEFT JOIN 
+//     user_master um ON um.user_id = a.user_id 
+//   WHERE 
+//     a.user_id IN (${userIdPlaceholders})
+//     AND a.delete_flag = 0
+//     AND (DATE(a.createtime) BETWEEN ? AND ? OR a.createtime IS NULL)`;
+//       const fetchLabReport = `
+//         SELECT 
+//           mrm.medical_report_id, mrm.file, mrm.createtime, mrm.user_id,
+//           rcm.category_name, um.name AS patient_name 
+//         FROM 
+//           medical_report_master mrm 
+//         JOIN 
+//           report_category rcm ON rcm.report_category_id = mrm.report_category_id 
+//         JOIN 
+//           user_master um ON um.user_id = mrm.user_id 
+//         WHERE 
+//           mrm.user_id IN (${userIdPlaceholders})
+//           AND mrm.delete_flag = 0
+//           AND DATE(mrm.createtime) BETWEEN ? AND ?  
+//         ORDER BY 
+//           mrm.createtime DESC`;
+
+//       const fetchMeasurement = `
+//         SELECT 
+//           mm.type, mm.user_id, mm.measurement_id, mm.systolic_bp, 
+//           mm.diastolic_bp, mm.pulse, mm.weight, mm.createtime, mm.symptom, mm.symptom_range,
+//           DATE_FORMAT(mm.createtime, '%Y-%m-%d') AS date,
+//           DATE_FORMAT(CONVERT_TZ(mm.createtime, '+00:00', '+05:30'), '%h:%i %p') AS time,
+//          mm.fasting_glucose, mm.temperature, mm.ppbgs, 
+//          um.name AS patient_name
+//         FROM 
+//           measurement_master mm 
+//         JOIN 
+//           user_master um ON mm.user_id = um.user_id
+//         WHERE 
+//           mm.user_id IN (${userIdPlaceholders})
+//           AND mm.delete_flag = 0
+//           AND DATE(mm.createtime) BETWEEN ? AND ?  
+//         ORDER BY 
+//           mm.createtime DESC`;
+
+//       const fetchCompliance = `SELECT m.medication_id,m.user_id,m.medicine_id,m.dosage,m.type,m.schedule, m.schedule_date, m.pause_status, m.number_of_times, tm.taken_status, um.name, m.weekday,m.current_quantity, DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time,m.remainder_quantity,m.remaining_quantity,m.instruction,m.status,m.updatetime,a.medicine_name,a.description FROM medication_master m JOIN medicine_master a ON a.medicine_id = m.medicine_id JOIN user_master um ON um.user_id = m.user_id JOIN time_slots_master tm ON tm.medication_id = m.medication_id WHERE m.delete_flag = 0 AND m.user_id IN (${userIdPlaceholders}) AND DATE(m.createtime) BETWEEN ? AND ? ORDER BY m.medication_id desc`
+
+//       // Execute all queries using promises
+//       try {
+//         // Helper function to query database with a promise
+//         const queryPromise = (sql, params) => {
+//           return new Promise((resolve, reject) => {
+//             connection.query(sql, params, (error, results) => {
+//               if (error) reject(error);
+//               else resolve(results);
+//             });
+//           });
+//         };
+
+//         // Query params for each query (user IDs + date range)
+//         const queryParams = [...userIds, from_date, to_date];
+
+//         // Execute all queries in parallel
+//         const [medicationResults, adverseResults, labResults, measurementResults, complianceResults] = await Promise.all([
+//           queryPromise(fetchMedication, queryParams),
+//           queryPromise(fetchAdverse, queryParams),
+//           queryPromise(fetchLabReport, queryParams),
+//           queryPromise(fetchMeasurement, queryParams),
+//           queryPromise(fetchCompliance, queryParams)
+//         ]);
+
+//         // Return all data in structured format
+//         return res.status(200).json({
+//           success: true,
+//           userIdPlaceholders: userIdPlaceholders,
+//           medication: medicationResults || [],
+//           adverseReaction: adverseResults || [],
+//           labReport: labResults || [],
+//           measurement: measurementResults || [],
+//           compliance: complianceResults || [],
+//           msg: "Data fetched successfully"
+//         });
+
+//       } catch (queryError) {
+//         return res.status(200).json({
+//           success: false,
+//           msg: languageMessages.internalServerError,
+//           error: queryError.message
+//         });
+//       }
+//     });
+
+//   } catch (error) {
+//     return res.status(200).json({
+//       success: false,
+//       msg: languageMessages.internalServerError,
+//       err: error.message,
+//     });
+//   }
+// };
 const getSharedTabular = async (req, res) => {
   const { doctor_id, from_date, to_date } = req.query;
 
   try {
-    // Validate required parameters
     if (!from_date) {
-      return res.status(200).json({
-        status: false,
-        msg: languageMessages.msg_empty_param,
-        key: "from_date",
-      });
+      return res.status(200).json({ status: false, msg: languageMessages.msg_empty_param, key: "from_date" });
     }
-
     if (!to_date) {
-      return res.status(200).json({
-        status: false,
-        msg: languageMessages.msg_empty_param,
-        key: "to_date",
-      });
+      return res.status(200).json({ status: false, msg: languageMessages.msg_empty_param, key: "to_date" });
     }
-
     if (!doctor_id) {
-      return res.status(200).json({
-        status: false,
-        msg: languageMessages.msg_empty_param,
-        key: "doctor_id",
-      });
+      return res.status(200).json({ status: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
     }
 
-    // Get all patients for the doctor
     const fetchUserId = "SELECT user_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
 
     connection.query(fetchUserId, [doctor_id], async (userError, userResult) => {
       if (userError) {
-        return res.status(200).json({
-          success: false,
-          msg: languageMessages.internalServerError,
-          error: userError.message
-        });
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, error: userError.message });
       }
 
       if (userResult.length <= 0) {
-        return res.status(200).json({
-          success: false,
-          msg: 'No patients found for this doctor'
-        });
+        return res.status(200).json({ success: false, msg: 'No patients found for this doctor' });
       }
 
-      // Extract user IDs to an array
       const userIds = userResult.map(data => data.user_id);
-
-      // Create placeholders for multiple user IDs in queries
       const userIdPlaceholders = userIds.map(() => '?').join(',');
 
-      // Initialize arrays to store results
-      let medicationData = [];
-      let adverseReactionData = [];
-      let labReportData = [];
-      let measurementData = [];
-      let complianceData = [];
-
-      const fetchMedication = `SELECT 
-  m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
-  m.schedule, m.weekday, m.current_quantity, m.remainder_quantity, 
-  m.pause_status, m.remaining_quantity, m.instruction, m.status, 
-  m.updatetime, m.createtime, a.medicine_name, a.description, 
-  um.name AS patient_name, um.dob,
-  DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time
-FROM 
-  medication_master m 
-JOIN 
-  medicine_master a ON a.medicine_id = m.medicine_id 
-JOIN 
-  time_slots_master tm ON tm.medication_id = m.medication_id AND tm.taken_status = 0 AND tm.delete_flag = 0
-JOIN 
-  user_master um ON um.user_id = m.user_id 
-WHERE 
-  m.user_id IN (${userIdPlaceholders}) 
-  AND
-   m.delete_flag = 0 
-  AND DATE(m.createtime) BETWEEN ? AND ?
-ORDER BY 
-  m.medication_id DESC
-`
-
-      // SQL queries for each data type
-      // const fetchMedication = `SELECT 
-      //     m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
-      //     m.schedule, m.weekday, m.current_quantity, um.dob, m.remainder_quantity, m.pause_status, m.remaining_quantity, m.instruction, m.status, 
-      //     m.updatetime, m.createtime, a.medicine_name, a.description, 
-      //     um.name AS patient_name 
-      //   FROM 
-      //     medication_master m 
-      //   LEFT JOIN 
-      //     medicine_master a ON a.medicine_id = m.medicine_id 
-      //   LEFT JOIN 
-      //     user_master um ON um.user_id = m.user_id 
-
-      //   WHERE 
-      //     m.user_id IN (${userIdPlaceholders}) 
-      //     AND m.delete_flag = 0 
-      //     AND DATE(m.createtime) BETWEEN ? AND ? 
-      //   ORDER BY 
-      //     m.medication_id DESC`;
-
-
-
-
-
-      // const fetchAdverse = `
-      //   SELECT 
-      //     a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
-      //     mm.category_name, s.symptom_name, a.medication_start_date, 
-      //     a.reaction_date, a.createtime, 
-      //     um.name AS patient_name 
-      //   FROM 
-      //     adverse_reaction_master AS a 
-      //   JOIN 
-      //     medicine_master as m ON m.medicine_id = a.medicine_id
-      //   JOIN 
-      //     medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
-      //   JOIN 
-      //     symptoms_master as s ON s.symptom_id = a.symptom_id 
-      //   JOIN 
-      //     user_master um ON um.user_id = a.user_id 
-      //   WHERE 
-      //     a.user_id IN (${userIdPlaceholders})
-      //     AND DATE(a.createtime) BETWEEN ? AND ?`;
-
-     const fetchAdverse = `
-  SELECT 
-    a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
-    mm.category_name, s.symptom_name, a.medication_start_date, 
-    a.reaction_date, a.createtime, 
-    um.name AS patient_name 
-  FROM 
-    adverse_reaction_master AS a 
-  LEFT JOIN 
-    medicine_master as m ON m.medicine_id = a.medicine_id
-  LEFT JOIN 
-    medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
-  LEFT JOIN 
-    symptoms_master as s ON s.symptom_id = a.symptom_id 
-  LEFT JOIN 
-    user_master um ON um.user_id = a.user_id 
-  WHERE 
-    a.user_id IN (${userIdPlaceholders})
-    AND a.delete_flag = 0
-    AND (DATE(a.createtime) BETWEEN ? AND ? OR a.createtime IS NULL)`;
-      const fetchLabReport = `
-        SELECT 
-          mrm.medical_report_id, mrm.file, mrm.createtime, mrm.user_id,
-          rcm.category_name, um.name AS patient_name 
-        FROM 
-          medical_report_master mrm 
-        JOIN 
-          report_category rcm ON rcm.report_category_id = mrm.report_category_id 
-        JOIN 
-          user_master um ON um.user_id = mrm.user_id 
-        WHERE 
-          mrm.user_id IN (${userIdPlaceholders})
-          AND mrm.delete_flag = 0
-          AND DATE(mrm.createtime) BETWEEN ? AND ?  
-        ORDER BY 
-          mrm.createtime DESC`;
-
-      const fetchMeasurement = `
-        SELECT 
-          mm.type, mm.user_id, mm.measurement_id, mm.systolic_bp, 
-          mm.diastolic_bp, mm.pulse, mm.weight, mm.createtime, mm.symptom, mm.symptom_range,
-          DATE_FORMAT(mm.createtime, '%Y-%m-%d') AS date,
-          DATE_FORMAT(CONVERT_TZ(mm.createtime, '+00:00', '+05:30'), '%h:%i %p') AS time,
-         mm.fasting_glucose, mm.temperature, mm.ppbgs, 
-         um.name AS patient_name
-        FROM 
-          measurement_master mm 
-        JOIN 
-          user_master um ON mm.user_id = um.user_id
-        WHERE 
-          mm.user_id IN (${userIdPlaceholders})
-          AND mm.delete_flag = 0
-          AND DATE(mm.createtime) BETWEEN ? AND ?  
-        ORDER BY 
-          mm.createtime DESC`;
-
-      const fetchCompliance = `SELECT m.medication_id,m.user_id,m.medicine_id,m.dosage,m.type,m.schedule, m.schedule_date, m.pause_status, m.number_of_times, tm.taken_status, um.name, m.weekday,m.current_quantity, DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time,m.remainder_quantity,m.remaining_quantity,m.instruction,m.status,m.updatetime,a.medicine_name,a.description FROM medication_master m JOIN medicine_master a ON a.medicine_id = m.medicine_id JOIN user_master um ON um.user_id = m.user_id JOIN time_slots_master tm ON tm.medication_id = m.medication_id WHERE m.delete_flag = 0 AND m.user_id IN (${userIdPlaceholders}) AND DATE(m.createtime) BETWEEN ? AND ? ORDER BY m.medication_id desc`
-
-      // Execute all queries using promises
       try {
-        // Helper function to query database with a promise
         const queryPromise = (sql, params) => {
           return new Promise((resolve, reject) => {
             connection.query(sql, params, (error, results) => {
@@ -3407,19 +3486,131 @@ ORDER BY
           });
         };
 
-        // Query params for each query (user IDs + date range)
-        const queryParams = [...userIds, from_date, to_date];
+        // ---- NEW: figure out what each patient has actually shared with this doctor ----
+        const TYPE_MEDICATION = '1';
+        const TYPE_LAB_REPORT = '2';
+        const TYPE_MEASUREMENT = '3';
+        const TYPE_ADVERSE = '4';
 
-        // Execute all queries in parallel
-        const [medicationResults, adverseResults, labResults, measurementResults, complianceResults] = await Promise.all([
-          queryPromise(fetchMedication, queryParams),
-          queryPromise(fetchAdverse, queryParams),
-          queryPromise(fetchLabReport, queryParams),
-          queryPromise(fetchMeasurement, queryParams),
-          queryPromise(fetchCompliance, queryParams)
+        const fetchShareInfo = `
+          SELECT user_id, information_type, createtime
+          FROM report_share_master
+          WHERE doctor_id = ?
+            AND user_id IN (${userIdPlaceholders})
+            AND share_type = 0
+            AND delete_flag = 0
+          ORDER BY createtime DESC
+        `;
+        const shareRows = await queryPromise(fetchShareInfo, [doctor_id, ...userIds]);
+
+        // shareCutoff[user_id][typeCode] = latest createtime of a share entry containing that type
+        const shareCutoff = {};
+        shareRows.forEach(row => {
+          if (!row.information_type) return;
+          const uid = row.user_id;
+          if (!shareCutoff[uid]) shareCutoff[uid] = {};
+          row.information_type.split(',').map(t => t.trim()).forEach(t => {
+            // rows are ordered DESC by createtime, so the first hit per type is the latest one
+            if (!shareCutoff[uid][t]) shareCutoff[uid][t] = row.createtime;
+          });
+        });
+
+        const allowedUserIds = (typeCode) => userIds.filter(uid => shareCutoff[uid] && shareCutoff[uid][typeCode]);
+
+        const medicationUserIds = allowedUserIds(TYPE_MEDICATION);
+        const adverseUserIds = allowedUserIds(TYPE_ADVERSE);
+        const labReportUserIds = allowedUserIds(TYPE_LAB_REPORT);
+        const measurementUserIds = allowedUserIds(TYPE_MEASUREMENT);
+        const complianceUserIds = medicationUserIds; // compliance reads medication_master, same consent as medication
+
+        const runIfAllowed = (allowedIds, sqlBuilder) => {
+          if (allowedIds.length === 0) return Promise.resolve([]);
+          const placeholders = allowedIds.map(() => '?').join(',');
+          return queryPromise(sqlBuilder(placeholders), [...allowedIds, from_date, to_date]);
+        };
+
+        const filterByCutoff = (rows, typeCode) => {
+          return rows.filter(row => {
+            const cutoff = shareCutoff[row.user_id] && shareCutoff[row.user_id][typeCode];
+            return cutoff && new Date(row.createtime) <= new Date(cutoff);
+          });
+        };
+        // ---- END NEW ----
+
+        const buildMedicationSql = (ph) => `SELECT 
+  m.medication_id, m.user_id, m.medicine_id, m.dosage, m.type, 
+  m.schedule, m.weekday, m.current_quantity, m.remainder_quantity, 
+  m.pause_status, m.remaining_quantity, m.instruction, m.status, 
+  m.updatetime, m.createtime, a.medicine_name, a.description, 
+  um.name AS patient_name, um.dob,
+  DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time
+FROM medication_master m 
+JOIN medicine_master a ON a.medicine_id = m.medicine_id 
+JOIN time_slots_master tm ON tm.medication_id = m.medication_id AND tm.taken_status = 0 AND tm.delete_flag = 0
+JOIN user_master um ON um.user_id = m.user_id 
+WHERE m.user_id IN (${ph}) 
+  AND m.delete_flag = 0 
+  AND DATE(m.createtime) BETWEEN ? AND ?
+ORDER BY m.medication_id DESC`;
+
+        const buildAdverseSql = (ph) => `
+  SELECT 
+    a.adverse_reaction_id, a.user_id, m.medicine_name, a.dosage, 
+    mm.category_name, s.symptom_name, a.medication_start_date, 
+    a.reaction_date, a.createtime, 
+    um.name AS patient_name 
+  FROM adverse_reaction_master AS a 
+  LEFT JOIN medicine_master as m ON m.medicine_id = a.medicine_id
+  LEFT JOIN medicine_category_master as mm ON mm.medicine_category_id = a.medicine_category_id 
+  LEFT JOIN symptoms_master as s ON s.symptom_id = a.symptom_id 
+  LEFT JOIN user_master um ON um.user_id = a.user_id 
+  WHERE a.user_id IN (${ph})
+    AND a.delete_flag = 0
+    AND (DATE(a.createtime) BETWEEN ? AND ? OR a.createtime IS NULL)`;
+
+        const buildLabReportSql = (ph) => `
+        SELECT 
+          mrm.medical_report_id, mrm.file, mrm.createtime, mrm.user_id,
+          rcm.category_name, um.name AS patient_name 
+        FROM medical_report_master mrm 
+        JOIN report_category rcm ON rcm.report_category_id = mrm.report_category_id 
+        JOIN user_master um ON um.user_id = mrm.user_id 
+        WHERE mrm.user_id IN (${ph})
+          AND mrm.delete_flag = 0
+          AND DATE(mrm.createtime) BETWEEN ? AND ?  
+        ORDER BY mrm.createtime DESC`;
+
+        const buildMeasurementSql = (ph) => `
+        SELECT 
+          mm.type, mm.user_id, mm.measurement_id, mm.systolic_bp, 
+          mm.diastolic_bp, mm.pulse, mm.weight, mm.createtime, mm.symptom, mm.symptom_range,
+          DATE_FORMAT(mm.createtime, '%Y-%m-%d') AS date,
+          DATE_FORMAT(CONVERT_TZ(mm.createtime, '+00:00', '+05:30'), '%h:%i %p') AS time,
+         mm.fasting_glucose, mm.temperature, mm.ppbgs, 
+         um.name AS patient_name
+        FROM measurement_master mm 
+        JOIN user_master um ON mm.user_id = um.user_id
+        WHERE mm.user_id IN (${ph})
+          AND mm.delete_flag = 0
+          AND DATE(mm.createtime) BETWEEN ? AND ?  
+        ORDER BY mm.createtime DESC`;
+
+        const buildComplianceSql = (ph) => `SELECT m.medication_id,m.user_id,m.medicine_id,m.dosage,m.type,m.schedule, m.schedule_date, m.pause_status, m.number_of_times, tm.taken_status, um.name, m.weekday,m.current_quantity, DATE_FORMAT(CONVERT_TZ(CONCAT('2024-01-01 ', tm.time), '+00:00', '+05:30'), '%h:%i %p') AS time,m.remainder_quantity,m.remaining_quantity,m.instruction,m.status,m.updatetime,a.medicine_name,a.description FROM medication_master m JOIN medicine_master a ON a.medicine_id = m.medicine_id JOIN user_master um ON um.user_id = m.user_id JOIN time_slots_master tm ON tm.medication_id = m.medication_id WHERE m.delete_flag = 0 AND m.user_id IN (${ph}) AND DATE(m.createtime) BETWEEN ? AND ? ORDER BY m.medication_id desc`;
+
+        const [rawMedication, rawAdverse, rawLabReport, rawMeasurement, rawCompliance] = await Promise.all([
+          runIfAllowed(medicationUserIds, buildMedicationSql),
+          runIfAllowed(adverseUserIds, buildAdverseSql),
+          runIfAllowed(labReportUserIds, buildLabReportSql),
+          runIfAllowed(measurementUserIds, buildMeasurementSql),
+          runIfAllowed(complianceUserIds, buildComplianceSql),
         ]);
 
-        // Return all data in structured format
+        const medicationResults = filterByCutoff(rawMedication, TYPE_MEDICATION);
+        const adverseResults = filterByCutoff(rawAdverse, TYPE_ADVERSE);
+        const labResults = filterByCutoff(rawLabReport, TYPE_LAB_REPORT);
+        const measurementResults = filterByCutoff(rawMeasurement, TYPE_MEASUREMENT);
+        const complianceResults = filterByCutoff(rawCompliance, TYPE_MEDICATION);
+
         return res.status(200).json({
           success: true,
           userIdPlaceholders: userIdPlaceholders,
@@ -3432,23 +3623,14 @@ ORDER BY
         });
 
       } catch (queryError) {
-        return res.status(200).json({
-          success: false,
-          msg: languageMessages.internalServerError,
-          error: queryError.message
-        });
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, error: queryError.message });
       }
     });
 
   } catch (error) {
-    return res.status(200).json({
-      success: false,
-      msg: languageMessages.internalServerError,
-      err: error.message,
-    });
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
   }
 };
-
 
 
 const deleteNote = async (req, res) => {
