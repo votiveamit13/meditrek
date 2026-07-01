@@ -5501,23 +5501,47 @@ AND NOT (
 
             // FIX 4: scan from the end to find the last past reminder
             //         (avoids fragile forward-break assumption)
-            let activeIndex = -1;
-            for (let i = allReminders.length - 1; i >= 0; i--) {
-              if (allReminders[i].time_moment.isSameOrBefore(now)) {
-                activeIndex = i;
-                break;
-              }
-            }
+            let activeStartIndex = -1;
+let activeEndIndex = -1;
 
-            // Rearrange: active → future → older past
-            let finalOrdered = [];
-            if (activeIndex !== -1) {
-              finalOrdered.push(allReminders[activeIndex]);           // active
-              finalOrdered.push(...allReminders.slice(activeIndex + 1)); // future
-              finalOrdered.push(...allReminders.slice(0, activeIndex));  // older past
-            } else {
-              finalOrdered = allReminders; // all future
-            }
+// Find the latest reminder <= now
+for (let i = allReminders.length - 1; i >= 0; i--) {
+  if (allReminders[i].time_moment.isSameOrBefore(now)) {
+    activeStartIndex = i;
+    activeEndIndex = i;
+
+    // Move backwards to include all reminders with the same time
+    while (
+      activeStartIndex > 0 &&
+      allReminders[activeStartIndex - 1].time_moment.isSame(
+        allReminders[i].time_moment
+      )
+    ) {
+      activeStartIndex--;
+    }
+
+    break;
+  }
+}
+
+// Rearrange: active(s) → future → older past
+let finalOrdered = [];
+
+if (activeStartIndex !== -1) {
+  finalOrdered.push(
+    ...allReminders.slice(activeStartIndex, activeEndIndex + 1)
+  ); // all active reminders
+
+  finalOrdered.push(
+    ...allReminders.slice(activeEndIndex + 1)
+  ); // future reminders
+
+  finalOrdered.push(
+    ...allReminders.slice(0, activeStartIndex)
+  ); // older reminders
+} else {
+  finalOrdered = allReminders;
+}
 
             // FIX 5: include the active reminder in upcoming count
             //         (diff >= 0 catches exact-now; active item is diff ~ 0)
