@@ -1004,134 +1004,108 @@ const medicationDashboard = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
       }
 
-      // const query = `
-      //   SELECT COUNT(mm.medication_id) AS totalMedication
-      //   FROM patient_master AS pm
-      //   LEFT JOIN medication_master AS mm ON pm.user_id = mm.user_id AND mm.delete_flag = 0 AND pm.delete_flag = 0
-      //   WHERE pm.doctor_id = ?
-      // `;
-
-      // connection.query(query, [doctor_id], async (err, result) => {
-      //   if (err) {
-      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-      //   }
-
-      //   return res.status(200).json({
-      //     success: true,
-      //     msg: languageMessages.msgDataFound,
-      //     totalMedication: result[0].totalMedication
-      //   });
-      // });
       // ================= TOTAL =================
-        const totalSql = `
-          SELECT COUNT(mm.medication_id) AS totalMedication
+      // Only count medications that have been shared with this doctor
+      const totalSql = `
+        SELECT COUNT(DISTINCT mm.medication_id) AS totalMedication
+        FROM patient_master pm
+        JOIN medication_master mm 
+          ON pm.user_id = mm.user_id 
+          AND mm.delete_flag = 0
+        JOIN report_share_master rsm
+          ON rsm.user_id = pm.user_id
+          AND rsm.doctor_id = pm.doctor_id
+          AND rsm.share_type = 0
+          AND rsm.delete_flag = 0
+          AND FIND_IN_SET('1', rsm.information_type) > 0
+          AND mm.createtime <= rsm.createtime
+        WHERE pm.doctor_id = ? 
+        AND pm.delete_flag = 0
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+        }
+
+        const totalMedication = totalRes[0].totalMedication || 0;
+
+        // ================= CURRENT WEEK =================
+        // Only count medications shared with this doctor in the current week
+        const currentWeekSql = `
+          SELECT COUNT(DISTINCT mm.medication_id) AS currentWeek
           FROM patient_master pm
-          LEFT JOIN medication_master mm 
+          JOIN medication_master mm 
             ON pm.user_id = mm.user_id 
             AND mm.delete_flag = 0
-          WHERE pm.doctor_id = ? 
+            AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          JOIN report_share_master rsm
+            ON rsm.user_id = pm.user_id
+            AND rsm.doctor_id = pm.doctor_id
+            AND rsm.share_type = 0
+            AND rsm.delete_flag = 0
+            AND FIND_IN_SET('1', rsm.information_type) > 0
+            AND mm.createtime <= rsm.createtime
+          WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
         `;
 
-        connection.query(totalSql, [doctor_id], (err, totalRes) => {
-
+        connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
           if (err) {
             return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
           }
 
-          const totalMedication = totalRes[0].totalMedication;
+          const currentWeek = currentRes[0].currentWeek || 0;
 
-          // ================= CURRENT WEEK =================
-          // const currentWeekSql = `
-          //   SELECT COUNT(mm.medication_id) AS currentWeek
-          //   FROM patient_master pm
-          //   LEFT JOIN medication_master mm 
-          //     ON pm.user_id = mm.user_id 
-          //     AND mm.delete_flag = 0
-          //   WHERE pm.doctor_id = ?
-          //   AND pm.delete_flag = 0
-          //   AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-          // `;
-          const currentWeekSql = `
-            SELECT COUNT(mm.medication_id) AS currentWeek
+          // ================= LAST WEEK =================
+          const lastWeekSql = `
+            SELECT COUNT(DISTINCT mm.medication_id) AS lastWeek
             FROM patient_master pm
-            LEFT JOIN medication_master mm 
+            JOIN medication_master mm 
               ON pm.user_id = mm.user_id 
               AND mm.delete_flag = 0
-              AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              AND mm.createtime BETWEEN 
+                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            JOIN report_share_master rsm
+              ON rsm.user_id = pm.user_id
+              AND rsm.doctor_id = pm.doctor_id
+              AND rsm.share_type = 0
+              AND rsm.delete_flag = 0
+              AND FIND_IN_SET('1', rsm.information_type) > 0
+              AND mm.createtime <= rsm.createtime
             WHERE pm.doctor_id = ?
             AND pm.delete_flag = 0
           `;
 
-          connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
-
+          connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
             if (err) {
               return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
             }
 
-            const currentWeek = currentRes[0].currentWeek;
+            const lastWeek = lastRes[0].lastWeek || 0;
 
-            // ================= LAST WEEK =================
-            // const lastWeekSql = `
-            //   SELECT COUNT(mm.medication_id) AS lastWeek
-            //   FROM patient_master pm
-            //   LEFT JOIN medication_master mm 
-            //     ON pm.user_id = mm.user_id 
-            //     AND mm.delete_flag = 0
-            //   WHERE pm.doctor_id = ?
-            //   AND pm.delete_flag = 0
-            //   AND mm.createtime BETWEEN 
-            //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-            //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            // `;
-            const lastWeekSql = `
-              SELECT COUNT(mm.medication_id) AS lastWeek
-              FROM patient_master pm
-              LEFT JOIN medication_master mm 
-                ON pm.user_id = mm.user_id 
-                AND mm.delete_flag = 0
-                AND mm.createtime BETWEEN 
-                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-              WHERE pm.doctor_id = ?
-              AND pm.delete_flag = 0
-            `;
-
-            connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
-
-              if (err) {
-                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-              }
-
-              const lastWeek = lastRes[0].lastWeek;
-
-              // ================= GROWTH =================
-              let growth = 0;
-
+            // ================= GROWTH =================
+            let growth = 0;
             if (lastWeek === 0) {
               growth = currentWeek > 0 ? 100 : 0;
             } else {
               growth = ((currentWeek - lastWeek) / lastWeek) * 100;
-                growth = Math.min(growth, 100);
+              growth = Math.min(growth, 100);
             }
-              
 
-              return res.status(200).json({
-                success: true,
-                msg: languageMessages.msgDataFound,
-                totalMedication: totalMedication,
-                currentWeekMedication: currentWeek,
-                lastWeekMedication: lastWeek,
-                medicationGrowth: growth.toFixed(2)
-              });
-
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              totalMedication: totalMedication,
+              currentWeekMedication: currentWeek,
+              lastWeekMedication: lastWeek,
+              medicationGrowth: growth.toFixed(2)
             });
-
           });
-
         });
+      });
     });
-
   } catch (error) {
     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
   }
@@ -1142,139 +1116,123 @@ const adverseDashboard = async (req, res) => {
   const doctor_id = req.doctor_id;
   try {
     if (!doctor_id) {
-      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id", doctor_id });
+      return res.status(200).json({ success: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
     }
-    const checksql = "SELECT doctor_id ,doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0 ";
+
+    const checksql = "SELECT doctor_id, doctor_name FROM doctor_master WHERE doctor_id = ? AND delete_flag = 0";
     connection.query(checksql, [doctor_id], async (err, check) => {
       if (err) {
-        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
+        return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
       }
       if (check.length <= 0) {
-        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
+        return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound });
       }
-      // const query = "SELECT adverse_reaction_id FROM adverse_reaction_master WHERE delete_flag = 0";
-      // const query = "SELECT COUNT(asm.adverse_reaction_id) AS adverse_count FROM patient_master AS pm LEFT JOIN adverse_reaction_master AS asm ON pm.user_id = asm.user_id WHERE pm.doctor_id = ? AND asm.delete_flag = 0 AND pm.delete_flag =0";
-      // connection.query(query, [doctor_id], async (err, result) => {
-      //   if (err) {
-      //     return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
-      //   }
-      //   return res.status(200).json({ success: true, msg: languageMessages.msgDataFound, totalAdverseReaction: result[0].adverse_count })
-      // })
-        // ================= TOTAL =================
-        const totalSql = `
-          SELECT COUNT(asm.adverse_reaction_id) AS totalAdverseReaction
+
+      // ================= TOTAL =================
+      // Only count adverse reactions that have been shared with this doctor
+      const totalSql = `
+        SELECT COUNT(DISTINCT asm.adverse_reaction_id) AS totalAdverseReaction
+        FROM patient_master pm
+        JOIN adverse_reaction_master asm 
+          ON pm.user_id = asm.user_id 
+          AND asm.delete_flag = 0
+        JOIN report_share_master rsm
+          ON rsm.user_id = pm.user_id
+          AND rsm.doctor_id = pm.doctor_id
+          AND rsm.share_type = 0
+          AND rsm.delete_flag = 0
+          AND FIND_IN_SET('4', rsm.information_type) > 0
+          AND asm.createtime <= rsm.createtime
+        WHERE pm.doctor_id = ? 
+        AND pm.delete_flag = 0
+      `;
+
+      connection.query(totalSql, [doctor_id], (err, totalRes) => {
+        if (err) {
+          return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
+        }
+
+        const totalAdverseReaction = totalRes[0].totalAdverseReaction || 0;
+
+        // ================= CURRENT WEEK =================
+        const currentWeekSql = `
+          SELECT COUNT(DISTINCT asm.adverse_reaction_id) AS currentWeek
           FROM patient_master pm
-          LEFT JOIN adverse_reaction_master asm 
+          JOIN adverse_reaction_master asm 
             ON pm.user_id = asm.user_id 
             AND asm.delete_flag = 0
-          WHERE pm.doctor_id = ? 
+            AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          JOIN report_share_master rsm
+            ON rsm.user_id = pm.user_id
+            AND rsm.doctor_id = pm.doctor_id
+            AND rsm.share_type = 0
+            AND rsm.delete_flag = 0
+            AND FIND_IN_SET('4', rsm.information_type) > 0
+            AND asm.createtime <= rsm.createtime
+          WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
         `;
 
-        connection.query(totalSql, [doctor_id], (err, totalRes) => {
-
+        connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
           if (err) {
             return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
           }
 
-          const totalAdverseReaction = totalRes[0].totalAdverseReaction;
+          const currentWeek = currentRes[0].currentWeek || 0;
 
-          // ================= CURRENT WEEK =================
-          // const currentWeekSql = `
-          //   SELECT COUNT(asm.adverse_reaction_id) AS currentWeek
-          //   FROM patient_master pm
-          //   LEFT JOIN adverse_reaction_master asm 
-          //     ON pm.user_id = asm.user_id 
-          //     AND asm.delete_flag = 0
-          //   WHERE pm.doctor_id = ?
-          //   AND pm.delete_flag = 0
-          //   AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-          // `;
-          const currentWeekSql = `
-            SELECT COUNT(asm.adverse_reaction_id) AS currentWeek
+          // ================= LAST WEEK =================
+          const lastWeekSql = `
+            SELECT COUNT(DISTINCT asm.adverse_reaction_id) AS lastWeek
             FROM patient_master pm
-            LEFT JOIN adverse_reaction_master asm 
+            JOIN adverse_reaction_master asm 
               ON pm.user_id = asm.user_id 
               AND asm.delete_flag = 0
-              AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              AND asm.createtime BETWEEN 
+                DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            JOIN report_share_master rsm
+              ON rsm.user_id = pm.user_id
+              AND rsm.doctor_id = pm.doctor_id
+              AND rsm.share_type = 0
+              AND rsm.delete_flag = 0
+              AND FIND_IN_SET('4', rsm.information_type) > 0
+              AND asm.createtime <= rsm.createtime
             WHERE pm.doctor_id = ?
             AND pm.delete_flag = 0
           `;
 
-          connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
-
+          connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
             if (err) {
               return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
             }
 
-            const currentWeek = currentRes[0].currentWeek;
+            const lastWeek = lastRes[0].lastWeek || 0;
 
-            // ================= LAST WEEK =================
-            // const lastWeekSql = `
-            //   SELECT COUNT(asm.adverse_reaction_id) AS lastWeek
-            //   FROM patient_master pm
-            //   LEFT JOIN adverse_reaction_master asm 
-            //     ON pm.user_id = asm.user_id 
-            //     AND asm.delete_flag = 0
-            //   WHERE pm.doctor_id = ?
-            //   AND pm.delete_flag = 0
-            //   AND asm.createtime BETWEEN 
-            //     DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-            //     AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            // `;
-            const lastWeekSql = `
-              SELECT COUNT(asm.adverse_reaction_id) AS lastWeek
-              FROM patient_master pm
-              LEFT JOIN adverse_reaction_master asm 
-                ON pm.user_id = asm.user_id 
-                AND asm.delete_flag = 0
-                AND asm.createtime BETWEEN 
-                  DATE_SUB(CURDATE(), INTERVAL 14 DAY)
-                  AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-              WHERE pm.doctor_id = ?
-              AND pm.delete_flag = 0
-            `;
+            // ================= GROWTH =================
+            let growth = 0;
+            if (lastWeek === 0) {
+              growth = currentWeek > 0 ? 100 : 0;
+            } else {
+              growth = ((currentWeek - lastWeek) / lastWeek) * 100;
+              growth = Math.min(growth, 100);
+            }
 
-            connection.query(lastWeekSql, [doctor_id], (err, lastRes) => {
-
-              if (err) {
-                return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message });
-              }
-
-              const lastWeek = lastRes[0].lastWeek;
-
-              // ================= GROWTH =================
-              let growth = 0;
-
-
-              if (lastWeek === 0) {
-                growth = currentWeek > 0 ? 100 : 0;
-              } else {
-                growth = ((currentWeek - lastWeek) / lastWeek) * 100;
-                  growth = Math.min(growth, 100);
-
-              }
-
-              return res.status(200).json({
-                success: true,
-                msg: languageMessages.msgDataFound,
-                totalAdverseReaction: totalAdverseReaction,
-                currentWeekAdverse: currentWeek,
-                lastWeekAdverse: lastWeek,
-                adverseGrowth: growth.toFixed(2)
-              });
-
+            return res.status(200).json({
+              success: true,
+              msg: languageMessages.msgDataFound,
+              totalAdverseReaction: totalAdverseReaction,
+              currentWeekAdverse: currentWeek,
+              lastWeekAdverse: lastWeek,
+              adverseGrowth: growth.toFixed(2)
             });
-
           });
-
         });
-    })
-
+      });
+    });
   } catch (error) {
-    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message, });
+    return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: error.message });
   }
-}
+};
 
 //lab report dashboard function
 const labReportDashboard = async (req, res) => {
