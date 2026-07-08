@@ -11276,220 +11276,273 @@ const getMedicationReportedHealth = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  const totalPatientsSql = `
-    SELECT COUNT(DISTINCT p.user_id) as total
-    FROM patient_master p
-    WHERE p.doctor_id = ? AND p.delete_flag = 0
+  // First, get the latest share time for each patient
+  const latestShareSql = `
+    SELECT 
+      user_id, 
+      MAX(createtime) as latest_share_time
+    FROM report_share_master
+    WHERE doctor_id = ? 
+      AND share_type = 0 
+      AND delete_flag = 0
+      AND FIND_IN_SET('4', information_type) > 0
+    GROUP BY user_id
   `;
 
-  connection.query(totalPatientsSql, [doctor_id], (err0, totalRes) => {
+  connection.query(latestShareSql, [doctor_id], (err0, shareResults) => {
     if (err0) return res.json({ success: false, error: err0.message });
 
-    const totalPatients = totalRes[0]?.total || 0;
+    // Create a map of user_id -> latest share time
+    const shareTimeMap = {};
+    shareResults.forEach(row => {
+      shareTimeMap[row.user_id] = row.latest_share_time;
+    });
 
-    const baseJoin = `
+    if (Object.keys(shareTimeMap).length === 0) {
+      return res.json({
+        success: true,
+        total_patients: 0,
+        total_medications: 0,
+        page: Number(page),
+        limit: Number(limit),
+        patient_page: Number(patient_page),
+        patient_limit: Number(patient_limit),
+        data: []
+      });
+    }
+
+    // Get total patients count (only those who have shared at least one adverse reaction)
+    const totalPatientsSql = `
+      SELECT COUNT(DISTINCT p.user_id) as total
       FROM patient_master p
-      JOIN user_master u 
-        ON u.user_id = p.user_id
-      JOIN report_share_master rsm
-        ON rsm.user_id = u.user_id
-        AND rsm.doctor_id = ?
-        AND rsm.information_type = '4'
-        AND rsm.delete_flag = 0
-      JOIN adverse_reaction_master arm 
-        ON arm.user_id = u.user_id 
-        AND arm.delete_flag = 0
-      JOIN medicine_master med 
-        ON med.medicine_id = arm.medicine_id
-      LEFT JOIN symptoms_master sm 
-        ON sm.symptom_id = arm.symptom_id 
-        AND sm.delete_flag = 0
+      WHERE p.doctor_id = ? 
+        AND p.delete_flag = 0
+        AND p.user_id IN (${Object.keys(shareTimeMap).map(() => '?').join(',')})
     `;
 
-    let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
-    let joinParams = [doctor_id];
-    let whereParams = [doctor_id];
+    const patientIds = Object.keys(shareTimeMap);
+    connection.query(totalPatientsSql, [doctor_id, ...patientIds], (err1, totalRes) => {
+      if (err1) return res.json({ success: false, error: err1.message });
 
-    if (age_group) {
-      if (age_group.includes("+")) {
-        const min = parseInt(age_group.replace("+", ""));
-        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`;
-        whereParams.push(min);
-      } else {
-        const [min, max] = age_group.split("-").map(Number);
-        where += ` AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`;
-        whereParams.push(min, max);
-      }
-    }
+      const totalPatients = totalRes[0]?.total || 0;
 
-    if (Array.isArray(medication) && medication.length > 0) {
-      const medCond = medication.map(() => `med.medicine_name LIKE ?`).join(" OR ");
-      where += ` AND (${medCond})`;
-      medication.forEach(m => whereParams.push(`%${m}%`));
-    }
+      // Build the main query with share time filter
+      let whereConditions = [];
+      let queryParams = [];
 
-    const allParams = [...joinParams, ...whereParams];
+      // Add doctor filter
+      whereConditions.push(`p.doctor_id = ?`);
+      queryParams.push(doctor_id);
 
-    // Main query — now includes medication_start_date and reaction_date
-    const sql = `
-      SELECT
-        arm.medicine_id,
-        med.medicine_name,
-        arm.user_id,
-        u.name,
-        TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
-        u.diseases,
-        sm.symptom_name,
-        arm.medication_start_date,
-        arm.reaction_date
-      ${baseJoin}
-      ${where}
-      ORDER BY med.medicine_name ASC
-    `;
+      // Add patient filter - only those who have shared
+      whereConditions.push(`p.user_id IN (${patientIds.map(() => '?').join(',')})`);
+      queryParams.push(...patientIds);
 
-    connection.query(sql, allParams, (err2, rows) => {
-      if (err2) return res.json({ success: false, error: err2.message });
-
-      // Collect all unique user_ids to fetch their full medication lists
-      const userIds = [...new Set(rows.map(r => r.user_id))];
-
-      if (userIds.length === 0) {
-        return res.json({
-          success: true,
-          total_patients: totalPatients,
-          total_medications: 0,
-          page: Number(page),
-          limit: Number(limit),
-          patient_page: Number(patient_page),
-          patient_limit: Number(patient_limit),
-          data: []
-        });
+      // Add age group filter if provided
+      if (age_group) {
+        if (age_group.includes("+")) {
+          const min = parseInt(age_group.replace("+", ""));
+          whereConditions.push(`TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?`);
+          queryParams.push(min);
+        } else {
+          const [min, max] = age_group.split("-").map(Number);
+          whereConditions.push(`TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) BETWEEN ? AND ?`);
+          queryParams.push(min, max);
+        }
       }
 
-      // Fetch all medications for these patients from medication_master
-      const allMedsSql = `
-        SELECT 
-          mm.user_id,
-          med2.medicine_id,
-          med2.medicine_name
-        FROM medication_master mm
-        JOIN medicine_master med2 ON med2.medicine_id = mm.medicine_id
-        WHERE mm.user_id IN (${userIds.map(() => '?').join(',')})
-          AND mm.delete_flag = 0
+      // Add medication filter if provided
+      if (Array.isArray(medication) && medication.length > 0) {
+        const medConditions = medication.map(() => `med.medicine_name LIKE ?`);
+        whereConditions.push(`(${medConditions.join(" OR ")})`);
+        medication.forEach(m => queryParams.push(`%${m}%`));
+      }
+
+      // Main query - join with share time filter
+      const sql = `
+        SELECT
+          arm.medicine_id,
+          med.medicine_name,
+          arm.user_id,
+          u.name,
+          TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) as age,
+          u.diseases,
+          sm.symptom_name,
+          arm.medication_start_date,
+          arm.reaction_date,
+          arm.createtime as reaction_createtime
+        FROM patient_master p
+        JOIN user_master u 
+          ON u.user_id = p.user_id
+          AND u.delete_flag = 0
+        JOIN adverse_reaction_master arm 
+          ON arm.user_id = u.user_id 
+          AND arm.delete_flag = 0
+        JOIN medicine_master med 
+          ON med.medicine_id = arm.medicine_id
+        LEFT JOIN symptoms_master sm 
+          ON sm.symptom_id = arm.symptom_id 
+          AND sm.delete_flag = 0
+        WHERE ${whereConditions.join(' AND ')}
+          AND p.delete_flag = 0
+          -- Critical: Only include reactions created BEFORE or AT the share time
+          AND EXISTS (
+            SELECT 1
+            FROM report_share_master rsm
+            WHERE rsm.user_id = arm.user_id
+              AND rsm.doctor_id = p.doctor_id
+              AND rsm.share_type = 0
+              AND rsm.delete_flag = 0
+              AND FIND_IN_SET('4', rsm.information_type) > 0
+              AND arm.createtime <= rsm.createtime
+          )
+        ORDER BY med.medicine_name ASC
       `;
 
-      connection.query(allMedsSql, userIds, (err3, medRows) => {
-        if (err3) return res.json({ success: false, error: err3.message });
+      connection.query(sql, queryParams, (err2, rows) => {
+        if (err2) return res.json({ success: false, error: err2.message });
 
-        // Build a map: user_id -> array of all their medications
-        const userMedsMap = {};
-        medRows.forEach(m => {
-          if (!userMedsMap[m.user_id]) {
-            userMedsMap[m.user_id] = [];
-          }
-          userMedsMap[m.user_id].push({
-            id: m.medicine_id,
-            name: m.medicine_name
-          });
-        });
+        // Collect all unique user_ids to fetch their full medication lists
+        const userIds = [...new Set(rows.map(r => r.user_id))];
 
-        let result = {};
-
-        rows.forEach(r => {
-          const med = r.medicine_name;
-
-          if (!result[med]) {
-            result[med] = {
-              medicine_id: r.medicine_id,
-              patients: new Set(),
-              symptoms: {},
-              patient_details: {}
-            };
-          }
-
-          result[med].patients.add(r.user_id);
-
-          if (r.symptom_name) {
-            if (!result[med].symptoms[r.symptom_name]) {
-              result[med].symptoms[r.symptom_name] = new Set();
-            }
-            result[med].symptoms[r.symptom_name].add(r.user_id);
-          }
-
-          if (!result[med].patient_details[r.user_id]) {
-            result[med].patient_details[r.user_id] = {
-              user_id: r.user_id,
-              name: r.name,
-              age: r.age,
-              diseases: r.diseases,
-              reacted_medication: {
-                id: r.medicine_id,
-                name: r.medicine_name
-              },
-              medication_start_date: r.medication_start_date,
-              reaction_date: r.reaction_date,
-              symptoms: new Set()
-            };
-          }
-
-          if (r.symptom_name) {
-            result[med].patient_details[r.user_id].symptoms.add(r.symptom_name);
-          }
-        });
-
-        let finalData = Object.keys(result).map(med => {
-          const patientCount = result[med].patients.size;
-          const percentage = totalPatients
-            ? ((patientCount / totalPatients) * 100).toFixed(1)
-            : "0.0";
-
-          let symptomData = Object.keys(result[med].symptoms).map(sym => {
-            const count = result[med].symptoms[sym].size;
-            const perc = patientCount
-              ? ((count / patientCount) * 100).toFixed(1)
-              : "0.0";
-            return { symptom: sym, count, percentage: perc + "%" };
-          });
-
-          let allPatients = Object.values(result[med].patient_details);
-          const patientOffset = (patient_page - 1) * patient_limit;
-          let patients = allPatients
-            .slice(patientOffset, patientOffset + Number(patient_limit))
-            .map(p => ({
-              user_id: p.user_id,
-              patient_name: p.name,
-              age: p.age,
-              diseases: p.diseases,
-              reacted_medication: p.reacted_medication,  // drug that caused reaction
-              all_medications: userMedsMap[p.user_id] || [], // all drugs patient is on
-              medication_start_date: p.medication_start_date,
-              reaction_date: p.reaction_date,
-              symptoms: Array.from(p.symptoms).join(", ")
-            }));
-
-          return {
-            medication: { id: result[med].medicine_id, name: med },
-            total_patients: patientCount,
-            percentage: percentage + "%",
-            symptoms: symptomData,
-            total_patients_in_medication: allPatients.length,
+        if (userIds.length === 0) {
+          return res.json({
+            success: true,
+            total_patients: totalPatients,
+            total_medications: 0,
+            page: Number(page),
+            limit: Number(limit),
             patient_page: Number(patient_page),
-            patients
-          };
-        });
+            patient_limit: Number(patient_limit),
+            data: []
+          });
+        }
 
-        const medOffset = (page - 1) * limit;
-        let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+        // Fetch all medications for these patients from medication_master
+        const allMedsSql = `
+          SELECT 
+            mm.user_id,
+            med2.medicine_id,
+            med2.medicine_name
+          FROM medication_master mm
+          JOIN medicine_master med2 ON med2.medicine_id = mm.medicine_id
+          WHERE mm.user_id IN (${userIds.map(() => '?').join(',')})
+            AND mm.delete_flag = 0
+        `;
 
-        return res.json({
-          success: true,
-          total_patients: totalPatients,
-          total_medications: finalData.length,
-          page: Number(page),
-          limit: Number(limit),
-          patient_page: Number(patient_page),
-          patient_limit: Number(patient_limit),
-          data: paginatedMedications
+        connection.query(allMedsSql, userIds, (err3, medRows) => {
+          if (err3) return res.json({ success: false, error: err3.message });
+
+          // Build a map: user_id -> array of all their medications
+          const userMedsMap = {};
+          medRows.forEach(m => {
+            if (!userMedsMap[m.user_id]) {
+              userMedsMap[m.user_id] = [];
+            }
+            userMedsMap[m.user_id].push({
+              id: m.medicine_id,
+              name: m.medicine_name
+            });
+          });
+
+          let result = {};
+
+          rows.forEach(r => {
+            const med = r.medicine_name;
+
+            if (!result[med]) {
+              result[med] = {
+                medicine_id: r.medicine_id,
+                patients: new Set(),
+                symptoms: {},
+                patient_details: {}
+              };
+            }
+
+            result[med].patients.add(r.user_id);
+
+            if (r.symptom_name) {
+              if (!result[med].symptoms[r.symptom_name]) {
+                result[med].symptoms[r.symptom_name] = new Set();
+              }
+              result[med].symptoms[r.symptom_name].add(r.user_id);
+            }
+
+            if (!result[med].patient_details[r.user_id]) {
+              result[med].patient_details[r.user_id] = {
+                user_id: r.user_id,
+                name: r.name,
+                age: r.age,
+                diseases: r.diseases,
+                reacted_medication: {
+                  id: r.medicine_id,
+                  name: r.medicine_name
+                },
+                medication_start_date: r.medication_start_date,
+                reaction_date: r.reaction_date,
+                symptoms: new Set()
+              };
+            }
+
+            if (r.symptom_name) {
+              result[med].patient_details[r.user_id].symptoms.add(r.symptom_name);
+            }
+          });
+
+          let finalData = Object.keys(result).map(med => {
+            const patientCount = result[med].patients.size;
+            const percentage = totalPatients
+              ? ((patientCount / totalPatients) * 100).toFixed(1)
+              : "0.0";
+
+            let symptomData = Object.keys(result[med].symptoms).map(sym => {
+              const count = result[med].symptoms[sym].size;
+              const perc = patientCount
+                ? ((count / patientCount) * 100).toFixed(1)
+                : "0.0";
+              return { symptom: sym, count, percentage: perc + "%" };
+            });
+
+            let allPatients = Object.values(result[med].patient_details);
+            const patientOffset = (patient_page - 1) * patient_limit;
+            let patients = allPatients
+              .slice(patientOffset, patientOffset + Number(patient_limit))
+              .map(p => ({
+                user_id: p.user_id,
+                patient_name: p.name,
+                age: p.age,
+                diseases: p.diseases,
+                reacted_medication: p.reacted_medication,
+                all_medications: userMedsMap[p.user_id] || [],
+                medication_start_date: p.medication_start_date,
+                reaction_date: p.reaction_date,
+                symptoms: Array.from(p.symptoms).join(", ")
+              }));
+
+            return {
+              medication: { id: result[med].medicine_id, name: med },
+              total_patients: patientCount,
+              percentage: percentage + "%",
+              symptoms: symptomData,
+              total_patients_in_medication: allPatients.length,
+              patient_page: Number(patient_page),
+              patients
+            };
+          });
+
+          const medOffset = (page - 1) * limit;
+          let paginatedMedications = finalData.slice(medOffset, medOffset + Number(limit));
+
+          return res.json({
+            success: true,
+            total_patients: totalPatients,
+            total_medications: finalData.length,
+            page: Number(page),
+            limit: Number(limit),
+            patient_page: Number(patient_page),
+            patient_limit: Number(patient_limit),
+            data: paginatedMedications
+          });
         });
       });
     });
