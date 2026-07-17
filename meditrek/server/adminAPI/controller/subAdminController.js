@@ -11711,43 +11711,48 @@ const getDoctorAllSymptoms = async (req, res) => {
 };
 
 const getAppContent = (req, res) => {
-  const { type } = req.query;
+  const { type, lang } = req.query;
+
+  const language_code = lang || "en";
 
   if (!type) {
     return res.status(200).json({
       success: false,
-      msg: "Content type is required"
+      msg: "Content type is required",
     });
   }
 
   const sql = `
-    SELECT content 
-    FROM content_master 
-    WHERE content_type = ? 
-    AND delete_flag = 0
+    SELECT ct.content
+    FROM content_master cm
+    JOIN content_translation ct
+      ON cm.content_id = ct.content_id
+    WHERE cm.content_type = ?
+      AND ct.language_code = ?
+      AND cm.delete_flag = 0
     LIMIT 1
   `;
 
-  connection.query(sql, [type], (err, result) => {
+  connection.query(sql, [type, language_code], (err, result) => {
     if (err) {
       return res.status(200).json({
         success: false,
         msg: "Database error",
-        error: err
+        error: err,
       });
     }
 
     if (result.length > 0) {
       return res.status(200).json({
         success: true,
-        data: result[0].content
-      });
-    } else {
-      return res.status(200).json({
-        success: false,
-        msg: "No content found"
+        data: result[0].content,
       });
     }
+
+    return res.status(200).json({
+      success: false,
+      msg: "No content found",
+    });
   });
 };
 
