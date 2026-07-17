@@ -144,13 +144,29 @@ module.exports = {
 
 
 
-    async getAllContent() {
+    async getAllContent(language_code = "en") {
 
         return new Promise((resolve, reject) => {
 
-            connection.query(
+const sql = `
+    SELECT
+        cm.content_id,
+        cm.content_type,
+        COALESCE(ct.content, ct_en.content) AS content,
+        cm.content_1,
+        cm.content_2,
+        cm.content_3
+    FROM content_master cm
+    LEFT JOIN content_translation ct
+        ON cm.content_id = ct.content_id
+        AND ct.language_code = ?
+    LEFT JOIN content_translation ct_en
+        ON cm.content_id = ct_en.content_id
+        AND ct_en.language_code = 'en'
+    WHERE cm.delete_flag = 0
+`;
 
-                "select content_id, content_type, content, content_1, content_2, content_3, delete_flag FROM content_master WHERE delete_flag = 0 ",
+connection.query(sql, [language_code],
 
 
 

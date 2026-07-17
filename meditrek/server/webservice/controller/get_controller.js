@@ -63,7 +63,9 @@ const getAllContent = async (request, response) => {
     }
   }
   try {
-    const content_arr = await commonModel.getAllContent();
+const language_code = data.language_code || "en";
+
+const content_arr = await commonModel.getAllContent(language_code);
     return response.json({
       success: true,
       msg: languageMessage.msgDataFound,
