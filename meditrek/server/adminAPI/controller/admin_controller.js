@@ -2193,7 +2193,7 @@ const deleteDoctor = async (request, response) => {
 };
 const editDoctorEmail = async (request, response) => {
   try {
-    const { doctor_id, email } = request.body;
+    const { doctor_id, doctor_name, email } = request.body;
 
     // 1. Validate input
     if (!doctor_id) {
@@ -2201,6 +2201,14 @@ const editDoctorEmail = async (request, response) => {
         success: false,
         msg: languageMessages.msg_empty_param,
         key: "doctor_id",
+      });
+    }
+
+    if (!doctor_name) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessages.msg_empty_param,
+        key: "doctor_name",
       });
     }
 
@@ -2212,44 +2220,49 @@ const editDoctorEmail = async (request, response) => {
       });
     }
 
-    // 2. Optional: email format check
+    // 2. Email format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!emailRegex.test(email)) {
       return response.status(200).json({
         success: false,
         msg: "Invalid email format",
+        key: "email",
       });
     }
 
-    // 3. Update only email
+    // 3. Update doctor name and email
     const sql = `
-      UPDATE doctor_master 
-      SET email = ?, updatetime = NOW() 
+      UPDATE doctor_master
+      SET doctor_name = ?, email = ?, updatetime = NOW()
       WHERE doctor_id = ? AND delete_flag = 0
     `;
 
-    connection.query(sql, [email, doctor_id], (err, result) => {
-      if (err) {
+    connection.query(
+      sql,
+      [doctor_name, email, doctor_id],
+      (err, result) => {
+        if (err) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.internalServerError,
+            error: err.message,
+          });
+        }
+
+        if (result.affectedRows === 0) {
+          return response.status(200).json({
+            success: false,
+            msg: languageMessages.msgDataNotFound,
+          });
+        }
+
         return response.status(200).json({
-          success: false,
-          msg: languageMessages.internalServerError,
-          error: err.message,
+          success: true,
+          msg: "Doctor name and email updated successfully",
         });
       }
-
-      if (result.affectedRows === 0) {
-        return response.status(200).json({
-          success: false,
-          msg: languageMessages.msgDataNotFound,
-        });
-      }
-
-      return response.status(200).json({
-        success: true,
-        msg: "Doctor email updated successfully",
-      });
-    });
-
+    );
   } catch (error) {
     return response.status(200).json({
       success: false,
