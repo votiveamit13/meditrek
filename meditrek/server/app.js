@@ -20,13 +20,22 @@ const i18n = require('i18n');
 const path = require('path');
 
 
+// i18n.configure({
+//   locales: ['en', 'fr', 'de', 'es', 'pt', 'ar', 'it'],
+//   directory: path.join(__dirname, 'locales'),
+//   defaultLocale: 'en',
+//   queryParameter: 'lang',
+//   autoReload: true,
+//   syncFiles: true
+// });
+
 i18n.configure({
   locales: ['en', 'fr', 'de', 'es', 'pt', 'ar', 'it'],
   directory: path.join(__dirname, 'locales'),
   defaultLocale: 'en',
   queryParameter: 'lang',
-  autoReload: true,
-  syncFiles: true
+  autoReload: false,
+  syncFiles: false
 });
 
 app.use(i18n.init);
@@ -39,12 +48,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-app.use('/meditrek/server/adminAPI', adminRouter);
+app.use('/app/meditrek/server/adminAPI', adminRouter);
 
-app.use('/meditrek/server/webservice', userRouter);
+app.use('/app/meditrek/server/webservice', userRouter);
 
 
-app.get('/meditrek/server',(req,res) => {
+app.get('/app/meditrek/server',(req,res) => {
     res.send('Server Is Running');
 })
 
@@ -73,9 +82,10 @@ app.listen(3009, () => {
 
 });
 
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
 
-
-
-
-
-
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
