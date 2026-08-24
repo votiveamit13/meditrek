@@ -880,13 +880,14 @@ const deleteAccount = async (request, response) => {
 
         // `;
 
-        const newUserQuery = `
-    DELETE FROM user_master
+const newUserQuery = `
+    UPDATE user_master 
+    SET delete_reason = ?, delete_flag = 1, updatetime = NOW()
     WHERE user_id = ?
 `;
 
             // connection.query(newUserQuery, [reason, user_id], async (err, result) => {
-            connection.query(newUserQuery, [user_id], async (err, result) => {
+            connection.query(newUserQuery, [reason, user_id], async (err, result) => {
 
                 if (err) {
 

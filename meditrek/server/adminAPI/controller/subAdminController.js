@@ -917,8 +917,9 @@ const subAdminDashboard = async (req, res) => {
       // })
       const totalSql = `
         SELECT COUNT(*) as totalPatients
-        FROM patient_master
-        WHERE doctor_id = ? AND delete_flag = 0
+        FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
+        WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0
         `;
 
         connection.query(totalSql, [doctor_id], (err, totalRes) => {
@@ -928,10 +929,12 @@ const subAdminDashboard = async (req, res) => {
           // CURRENT WEEK
           const currentWeekSql = `
           SELECT COUNT(*) as currentWeek
-          FROM patient_master
-          WHERE doctor_id = ?
-          AND delete_flag = 0
-          AND createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+          FROM patient_master p
+          JOIN user_master u ON u.user_id = p.user_id
+          WHERE p.doctor_id = ?
+          AND p.delete_flag = 0
+          AND u.delete_flag = 0
+          AND p.createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
           `;
 
           connection.query(currentWeekSql, [doctor_id], (err, currentRes) => {
@@ -941,10 +944,12 @@ const subAdminDashboard = async (req, res) => {
             // LAST WEEK
             const lastWeekSql = `
             SELECT COUNT(*) as lastWeek
-            FROM patient_master
-            WHERE doctor_id = ?
-            AND delete_flag = 0
-            AND createtime BETWEEN
+            FROM patient_master p
+            JOIN user_master u ON u.user_id = p.user_id
+            WHERE p.doctor_id = ?
+            AND p.delete_flag = 0
+            AND u.delete_flag = 0
+            AND p.createtime BETWEEN
             DATE_SUB(NOW(), INTERVAL 14 DAY)
             AND DATE_SUB(NOW(), INTERVAL 7 DAY)
             `;
@@ -1012,6 +1017,9 @@ const medicationDashboard = async (req, res) => {
         JOIN medication_master mm 
           ON pm.user_id = mm.user_id 
           AND mm.delete_flag = 0
+        JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
         JOIN report_share_master rsm
           ON rsm.user_id = pm.user_id
           AND rsm.doctor_id = pm.doctor_id
@@ -1039,6 +1047,9 @@ const medicationDashboard = async (req, res) => {
             ON pm.user_id = mm.user_id 
             AND mm.delete_flag = 0
             AND mm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
           JOIN report_share_master rsm
             ON rsm.user_id = pm.user_id
             AND rsm.doctor_id = pm.doctor_id
@@ -1067,6 +1078,9 @@ const medicationDashboard = async (req, res) => {
               AND mm.createtime BETWEEN 
                 DATE_SUB(CURDATE(), INTERVAL 14 DAY)
                 AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
             JOIN report_share_master rsm
               ON rsm.user_id = pm.user_id
               AND rsm.doctor_id = pm.doctor_id
@@ -1136,6 +1150,9 @@ const adverseDashboard = async (req, res) => {
         JOIN adverse_reaction_master asm 
           ON pm.user_id = asm.user_id 
           AND asm.delete_flag = 0
+        JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
         JOIN report_share_master rsm
           ON rsm.user_id = pm.user_id
           AND rsm.doctor_id = pm.doctor_id
@@ -1162,6 +1179,9 @@ const adverseDashboard = async (req, res) => {
             ON pm.user_id = asm.user_id 
             AND asm.delete_flag = 0
             AND asm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
           JOIN report_share_master rsm
             ON rsm.user_id = pm.user_id
             AND rsm.doctor_id = pm.doctor_id
@@ -1190,6 +1210,9 @@ const adverseDashboard = async (req, res) => {
               AND asm.createtime BETWEEN 
                 DATE_SUB(CURDATE(), INTERVAL 14 DAY)
                 AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            JOIN user_master u
+  ON u.user_id = pm.user_id
+  AND u.delete_flag = 0
             JOIN report_share_master rsm
               ON rsm.user_id = pm.user_id
               AND rsm.doctor_id = pm.doctor_id
@@ -1264,6 +1287,9 @@ const labReportDashboard = async (req, res) => {
         LEFT JOIN medical_report_master mrm 
           ON pm.user_id = mrm.user_id 
           AND mrm.delete_flag = 0
+        JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
         WHERE pm.doctor_id = ? 
         AND pm.delete_flag = 0
       `;
@@ -1294,6 +1320,9 @@ const labReportDashboard = async (req, res) => {
             ON pm.user_id = mrm.user_id 
             AND mrm.delete_flag = 0
             AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
           WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
         `;
@@ -1329,6 +1358,9 @@ const labReportDashboard = async (req, res) => {
                 AND mrm.createtime BETWEEN 
                   DATE_SUB(CURDATE(), INTERVAL 14 DAY)
                   AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
               WHERE pm.doctor_id = ?
               AND pm.delete_flag = 0
             `;
@@ -1402,6 +1434,9 @@ const measurementDashboard = async (req, res) => {
         LEFT JOIN measurement_master mrm 
           ON pm.user_id = mrm.user_id 
           AND mrm.delete_flag = 0
+        JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
         WHERE pm.doctor_id = ? 
         AND pm.delete_flag = 0
       `;
@@ -1432,6 +1467,9 @@ const measurementDashboard = async (req, res) => {
             ON pm.user_id = mrm.user_id 
             AND mrm.delete_flag = 0
             AND mrm.createtime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+          JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
           WHERE pm.doctor_id = ?
           AND pm.delete_flag = 0
         `;
@@ -1467,6 +1505,9 @@ const measurementDashboard = async (req, res) => {
                 AND mrm.createtime BETWEEN 
                   DATE_SUB(CURDATE(), INTERVAL 14 DAY)
                   AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+              JOIN user_master u
+          ON u.user_id = pm.user_id
+          AND u.delete_flag = 0
               WHERE pm.doctor_id = ?
               AND pm.delete_flag = 0
             `;
@@ -1527,7 +1568,7 @@ const getAllPatients = async (req, res) => {
         return res.status(200).json({ success: true, msg: languageMessages.msgDataNotFound })
       }
 
-      const patientsql = "SELECT p.patient_id ,p.doctor_id ,p.user_id,p.createtime,p.updatetime, u.user_unique_id, u.email,u.name,u.mobile,u.image FROM patient_master p JOIN user_master u ON u.user_id = p.user_id  WHERE p.doctor_id = ? AND p.delete_flag= 0 AND p.delete_flag =0 ORDER BY p.patient_id desc";
+      const patientsql = "SELECT p.patient_id ,p.doctor_id ,p.user_id,p.createtime,p.updatetime, u.user_unique_id, u.email,u.name,u.mobile,u.image FROM patient_master p JOIN user_master u ON u.user_id = p.user_id  WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 ORDER BY p.patient_id desc";
       connection.query(patientsql, [doctor_id], async (err, patient) => {
         if (err) {
           return res.status(200).json({ success: false, msg: languageMessages.internalServerError, err: err.message, });
@@ -1633,7 +1674,7 @@ const getPatientsDetails = async (req, res) => {
           um.user_id, um.email, um.user_unique_id, um.name, um.mobile, um.image, um.address, um.dob, um.weight, um.height, um.diseases,um.gender,
           um.createtime, um.updatetime, um.active_flag, rsm.information_type 
         FROM user_master AS um LEFT JOIN report_share_master AS rsm ON um.user_id = rsm.user_id
-        WHERE um.user_id = ?
+        WHERE um.user_id = ? AND um.delete_flag = 0
       `;
 
       connection.query(patientsql, [user_id], async (err, patientRes) => {
@@ -3420,7 +3461,7 @@ const getSharedTabular = async (req, res) => {
       return res.status(200).json({ status: false, msg: languageMessages.msg_empty_param, key: "doctor_id" });
     }
 
-    const fetchUserId = "SELECT user_id FROM patient_master WHERE doctor_id = ? AND delete_flag = 0";
+    const fetchUserId = "SELECT p.user_id FROM patient_master p JOIN user_master u ON u.user_id = p.user_id WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0";
 
     connection.query(fetchUserId, [doctor_id], async (userError, userResult) => {
       if (userError) {
@@ -5011,7 +5052,9 @@ const getAdverseofPatient = async (request, response) => {
           DATE_FORMAT(p.createtime,'%b') as month,
           COUNT(*) as total
         FROM patient_master p
+        JOIN user_master u ON u.user_id = p.user_id
         WHERE p.delete_flag = 0 
+        AND u.delete_flag = 0
         AND p.doctor_id = ?
         ${year ? "AND YEAR(p.createtime) = ?" : ""}
         GROUP BY MONTH(p.createtime)
@@ -5040,6 +5083,7 @@ const getAdverseofPatient = async (request, response) => {
         FROM patient_master p
         JOIN user_master u ON u.user_id = p.user_id
         WHERE p.delete_flag = 0
+        AND u.delete_flag = 0
         AND p.doctor_id = ?
         GROUP BY gender
       `;
@@ -5058,6 +5102,7 @@ const getAdverseofPatient = async (request, response) => {
         FROM patient_master p
         JOIN user_master u ON u.user_id = p.user_id
         WHERE p.delete_flag = 0
+        AND u.delete_flag = 0
         AND p.doctor_id = ?
         AND u.dob IS NOT NULL
         GROUP BY age_group
@@ -5262,9 +5307,11 @@ const sendNotificationAll = (req, res) => {
   const sql = `
     SELECT p.user_id, MAX(n.player_id) as player_id
     FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
     LEFT JOIN user_notification n ON p.user_id = n.user_id
     WHERE p.doctor_id = ?
     AND p.delete_flag = 0
+    AND u.delete_flag = 0
     GROUP BY p.user_id
   `;
 
@@ -5355,10 +5402,12 @@ const sendNotificationUsers = (req, res) => {
   const sql = `
     SELECT p.user_id, n.player_id
     FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
     LEFT JOIN user_notification n ON p.user_id = n.user_id
     WHERE p.doctor_id = ?
     AND p.user_id IN (?)
     AND p.delete_flag = 0
+    AND u.delete_flag = 0
   `;
 
   connection.query(sql, [doctor_id, user_ids], async (err, result) => {
@@ -6381,7 +6430,7 @@ const getPatientAnalyticsCustomTable = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let baseWhere = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+  let baseWhere = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0`;
   let baseParams = [doctor_id];
 
   let where = baseWhere;
@@ -6884,7 +6933,7 @@ const getPatientDemographics = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0`;
+  let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND um.delete_flag = 0`;
   let params = [doctor_id];
   const offset = (page - 1) * limit;
 
@@ -7058,6 +7107,7 @@ const getPatientDemographicsDetails = (req, res) => {
   let where = `
     WHERE pm.doctor_id = ?
     AND pm.delete_flag = 0
+    AND um.delete_flag = 0
     AND um.dob IS NOT NULL
     AND um.dob <= CURDATE()
   `;
@@ -7551,7 +7601,7 @@ const getDiseaseDashboard = (req, res) => {
 
   const offset = (page - 1) * limit;
   let params = [doctor_id];
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL`;
 
   if (gender !== undefined && gender !== "") {
     where += ` AND u.gender = ?`;
@@ -7592,7 +7642,9 @@ const getDiseaseDashboard = (req, res) => {
   };
 
   const totalSql = `SELECT COUNT(DISTINCT p.user_id) as total
-                    FROM patient_master p WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+                    FROM patient_master p 
+                    JOIN user_master u ON u.user_id = p.user_id
+                    WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0`;
 
   connection.query(totalSql, [doctor_id], (err, totalRes) => {
     if (err) return res.json({ success: false, msg: err.message });
@@ -7771,7 +7823,7 @@ const getDiseaseDashboard = (req, res) => {
 //     return res.json({ success: false, msg: "doctor_id required" });
 //   }
 
-//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
 //   let params = [doctor_id];
 //   if (gender !== undefined && gender !== null) {
 //     where += ` AND u.gender = ?`;
@@ -7852,7 +7904,7 @@ const getDiseaseDashboard = (req, res) => {
 //     return res.json({ success: false, msg: "doctor_id required" });
 //   }
 
-//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
 //   let params = [doctor_id];
 
 //   if (gender !== undefined && gender !== null && gender !== "") {
@@ -7989,7 +8041,7 @@ const getPatientDiseasesMedicineAnalytics = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
 
   if (gender !== undefined && gender !== null && gender !== "") {
@@ -8212,7 +8264,7 @@ const getPatientDiseasesMedicineList = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0`;
   let params = [doctor_id];
   const offset = (page - 1) * limit;
 
@@ -8365,7 +8417,7 @@ if (Array.isArray(diseases) && diseases.length > 0) {
 //       return res.json({ success: false, msg: "doctor_id required" });
 //     }
 
-//     let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//     let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
 //     let params = [doctor_id];
 //     const offset = (page - 1) * limit;
 //     if (gender !== undefined && gender !== null && gender !== "") {
@@ -8484,7 +8536,7 @@ if (Array.isArray(diseases) && diseases.length > 0) {
 //     return res.json({ success: false, msg: "doctor_id required" });
 //   }
 
-//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
 //   let params = [doctor_id];
 //   const offset = (page - 1) * limit;
 
@@ -8604,7 +8656,7 @@ if (Array.isArray(diseases) && diseases.length > 0) {
 //     return res.json({ success: false, msg: "doctor_id required" });
 //   }
 
-//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+//   let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
 //   let params = [doctor_id];
 //   const offset = (page - 1) * limit;
 
@@ -8779,7 +8831,7 @@ const getDiseaseMedicineSummary = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
   const offset = (page - 1) * limit;
 
@@ -8842,9 +8894,10 @@ const getDiseaseMedicineSummary = (req, res) => {
   }
 
   const totalAllSql = `
-    SELECT COUNT(DISTINCT user_id) as total
-    FROM patient_master
-    WHERE doctor_id = ? AND delete_flag = 0
+    SELECT COUNT(DISTINCT p.user_id) as total
+    FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
+    WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0
   `;
 
   const sql = `
@@ -8993,7 +9046,7 @@ const getDiseaseMedicineAnalyticsMerged = (req, res) => {
   const therapyOffset = (Number(therapy_page) - 1) * Number(therapy_limit);
   const drilldownOffset = (Number(drilldown_page) - 1) * Number(drilldown_limit);
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
 
   if (gender !== undefined && gender !== null && gender !== "") {
@@ -10022,7 +10075,7 @@ const getSubadminMedicationFull = (req, res) => {
     medication = [medicine_name];
   }
 
-  let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let where = `WHERE pm.doctor_id = ? AND pm.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [doctor_id];
 
   const summaryOffset = (Number(summary_page) - 1) * Number(summary_limit);
@@ -10647,7 +10700,7 @@ const getMedicationDiseaseDashboard = (req, res) => {
     return res.json({ success: false, msg: "doctor_id required" });
   }
 
-  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0`;
+  let where = `WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0`;
   let params = [doctor_id];
   const offset = (page - 1) * limit;
 
@@ -10669,9 +10722,10 @@ const getMedicationDiseaseDashboard = (req, res) => {
   }
 
   const totalSql = `
-    SELECT COUNT(DISTINCT user_id) as total
-    FROM patient_master
-    WHERE doctor_id = ? AND delete_flag = 0
+    SELECT COUNT(DISTINCT p.user_id) as total
+    FROM patient_master p
+    JOIN user_master u ON u.user_id = p.user_id
+    WHERE p.doctor_id = ? AND p.delete_flag = 0 AND u.delete_flag = 0
   `;
 
   connection.query(totalSql, [doctor_id], (err, totalRes) => {

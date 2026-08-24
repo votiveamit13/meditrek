@@ -9425,10 +9425,10 @@ const getAdminPatientDemographics = (req, res) => {
 
   // For counting patients linked to doctors
   // We need to get distinct user_ids from patient_master with doctor filter
-  let baseWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL`;
+  let baseWhere = `WHERE pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL`;
   let baseParams = [];
 
-  let matchWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL`;
+  let matchWhere = `WHERE pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL`;
   let matchParams = [];
 
   // Apply doctor filter - this is correct because patient_master stores doctor-patient links
@@ -9726,7 +9726,7 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
   const ph = hasDoctors ? doctor_ids.map(() => "?").join(", ") : null;
 
   // Base query for total patients - gets distinct patients linked to selected doctors
-  let totalWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL`;
+  let totalWhere = `WHERE pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL`;
   const totalParams = [];
 
   if (hasDoctors) {
@@ -9737,7 +9737,7 @@ const getPatientDemographicsDetailsAdmin = (req, res) => {
   // (implicitly handled by not adding doctor filter)
 
   // Match query with all filters
-  let matchWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL`;
+  let matchWhere = `WHERE pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL`;
   const matchParams = [];
 
   if (hasDoctors) {
@@ -9872,7 +9872,7 @@ const getDiseaseDashboardAdmin = (req, res) => {
   const diseaseOffset = (disease_page - 1) * disease_limit;
 
   let params = [];
-  let where = `WHERE p.delete_flag = 0 `;
+  let where = `WHERE p.delete_flag = 0 AND u.delete_flag = 0 `;
 
   const hasDoctors = Array.isArray(doctor_ids) && doctor_ids.length > 0;
 
@@ -10207,7 +10207,7 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
     combinedOnly = false,
   } = req.body;
 
-  let where = `WHERE p.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
+  let where = `WHERE p.delete_flag = 0 AND u.delete_flag = 0 AND u.dob IS NOT NULL AND u.dob <= CURDATE()`;
   let params = [];
 
   // Handle multiple doctors (updated)
@@ -10558,7 +10558,7 @@ const getPatientDiseasesMedicineListAdmin = (req, res) => {
     combinedOnly = false,
   } = req.body;
 
-  let where = `WHERE p.delete_flag = 0`;
+  let where = `WHERE p.delete_flag = 0 AND u.delete_flag = 0`;
   let params = [];
 
   // Handle multiple doctors (updated)
@@ -10958,6 +10958,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
 
   let where = `WHERE p.delete_flag = 0
                AND u.user_id IS NOT NULL
+               AND u.delete_flag = 0
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
 
@@ -11194,6 +11195,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
   let whereConditions = [];
 
   whereConditions.push(`p.delete_flag = 0`);
+  whereConditions.push(`u.delete_flag = 0`);
   whereConditions.push(`u.dob IS NOT NULL`);
   whereConditions.push(`u.dob <= CURDATE()`);
 
@@ -11840,9 +11842,10 @@ const getAdminMedicationFull = (req, res) => {
 
     let where = `WHERE pm.delete_flag = 0
                AND u.user_id IS NOT NULL
+               AND u.delete_flag = 0
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
-    let totalWhere = `WHERE pm.delete_flag = 0`;
+    let totalWhere = `WHERE pm.delete_flag = 0 AND u.delete_flag = 0`;
     if (hasDoctors) {
       totalWhere += ` AND pm.doctor_id IN (${ph})`;
       totalParams.push(...doctor_ids);
@@ -11888,6 +11891,7 @@ const getAdminMedicationFull = (req, res) => {
     const totalSql = `
   SELECT COUNT(DISTINCT pm.user_id) as total
   FROM patient_master pm
+  JOIN user_master u ON u.user_id = pm.user_id
   ${totalWhere}
 `;
     if (hasDoctors) {
@@ -12436,7 +12440,7 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
     includeExtra = false
   } = req.body;
 
-  let baseWhere = `WHERE p.delete_flag = 0`;
+  let baseWhere = `WHERE p.delete_flag = 0 AND u.delete_flag = 0`;
   let baseParams = [];
 
   if (Array.isArray(doctor_ids) && doctor_ids.length > 0) {
