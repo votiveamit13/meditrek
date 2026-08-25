@@ -2572,6 +2572,7 @@ const getTabularMedication = async (request, response) => {
 
         JOIN user_master um
           ON um.user_id = m.user_id
+          AND um.delete_flag = 0
 
         JOIN time_slots_master tm
           ON tm.medication_id = m.medication_id
@@ -2951,6 +2952,7 @@ const getTabularAdverse = async (request, response) => {
       LEFT JOIN symptoms_master AS s ON s.symptom_id = a.symptom_id 
       LEFT JOIN user_master AS um ON um.user_id = a.user_id 
       WHERE a.delete_flag = 0
+      AND (um.delete_flag = 0 OR um.delete_flag IS NULL)
       AND DATE(a.createtime) BETWEEN ? AND ?
       ORDER BY a.createtime DESC
     `;
@@ -3073,9 +3075,9 @@ const getTabularMeasurement = async (request, response) => {
                     mm.time,
                     um.name AS patient_name
                 FROM 
-                    measurement_master mm JOIN user_master um ON mm.user_id = um.user_id
+                    measurement_master mm JOIN user_master um ON mm.user_id = um.user_id AND um.delete_flag = 0
     WHERE mm.delete_flag = 0
-    AND DATE(mm.createtime) BETWEEN ? AND ?  
+    AND DATE(mm.createtime) BETWEEN ? AND ? 
     ORDER BY mm.createtime DESC`;
 
     connection.query(sqlSelect, [from_date, to_date], (err, result) => {
@@ -3155,7 +3157,7 @@ const getTabularLabreport = async (request, response) => {
     }
 
     const sqlSelect = `SELECT 
-                    mrm.medical_report_id, mrm.file, mrm.createtime, rcm.category_name, um.name AS patient_name FROM medical_report_master mrm JOIN report_category rcm ON rcm.report_category_id = mrm.report_category_id JOIN user_master um ON um.user_id = mrm.user_id WHERE mrm.delete_flag = 0
+                    mrm.medical_report_id, mrm.file, mrm.createtime, rcm.category_name, um.name AS patient_name FROM medical_report_master mrm JOIN report_category rcm ON rcm.report_category_id = mrm.report_category_id JOIN user_master um ON um.user_id = mrm.user_id AND um.delete_flag = 0 WHERE mrm.delete_flag = 0
     AND DATE(mrm.createtime) BETWEEN ? AND ?  
     ORDER BY mrm.createtime DESC`;
 

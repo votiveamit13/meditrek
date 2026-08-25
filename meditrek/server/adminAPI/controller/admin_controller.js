@@ -6666,7 +6666,7 @@ const fetchUsers = async (request, response) => {
 const fetchdoctorbyuser = async (request, response) => {
   const { user_id } = request.params;
   try {
-    const getDoctor = `SELECT d.doctor_id, d.user_id,d.image, d.doctor_name, d.mobile, d.email,d.createtime, dc.category_name FROM patient_master AS pm LEFT JOIN doctor_master AS d ON pm.doctor_id = d.doctor_id LEFT JOIN doctor_category AS dc ON d.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ?;`;
+    const getDoctor = `SELECT d.doctor_id, d.user_id,d.image, d.doctor_name, d.mobile, d.email,d.createtime, dc.category_name FROM patient_master AS pm LEFT JOIN doctor_master AS d ON pm.doctor_id = d.doctor_id LEFT JOIN doctor_category AS dc ON d.doctor_category_id = dc.doctor_category_id WHERE pm.user_id = ? AND pm.delete_flag = 0;`;
     connection.query(getDoctor, [user_id], async (err, rows) => {
       if (err) {
         return response.status(200).json({
@@ -6718,7 +6718,7 @@ const fetchdoctorbyuser = async (request, response) => {
 const getAdverseofUser = async (request, response) => {
   const { user_id } = request.params;
   try {
-    const getadverse = `SELECT a.adverse_reaction_id,a.type,a.user_id,m.medicine_name,a.dosage,mm.category_name,a.details,s.symptom_name,a.medication_start_date,a.reaction_date, a.createtime FROM adverse_reaction_master AS a LEFT JOIN medicine_master as m on m.medicine_id=a.medicine_id LEFT JOIN medicine_category_master as mm on mm.medicine_category_id=a.medicine_category_id LEFT JOIN symptoms_master as s on s.symptom_id=a.symptom_id WHERE a.user_id=?
+const getadverse = `SELECT a.adverse_reaction_id,a.type,a.user_id,m.medicine_name,a.dosage,mm.category_name,a.details,s.symptom_name,a.medication_start_date,a.reaction_date, a.createtime FROM adverse_reaction_master AS a LEFT JOIN medicine_master as m on m.medicine_id=a.medicine_id LEFT JOIN medicine_category_master as mm on mm.medicine_category_id=a.medicine_category_id LEFT JOIN symptoms_master as s on s.symptom_id=a.symptom_id WHERE a.user_id=? AND a.delete_flag = 0
 `;
     connection.query(getadverse, [user_id], async (err, rows) => {
       if (err) {
@@ -11533,6 +11533,7 @@ const getAdminMedicationFull = (req, res) => {
 
   let where = `WHERE pm.delete_flag = 0
                AND u.user_id IS NOT NULL
+               AND u.delete_flag = 0
                AND u.dob IS NOT NULL
                AND u.dob <= CURDATE()`;
 
@@ -12185,7 +12186,8 @@ const getAdminMedicationFull = (req, res) => {
     let totalPatientsSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
-    WHERE p.delete_flag = 0
+    JOIN user_master u ON u.user_id = p.user_id
+    WHERE p.delete_flag = 0 AND u.delete_flag = 0
   `;
     let totalParams = [];
 
@@ -12204,6 +12206,7 @@ const getAdminMedicationFull = (req, res) => {
       FROM patient_master p
       JOIN user_master u 
         ON u.user_id = p.user_id
+        AND u.delete_flag = 0
       JOIN report_share_master rsm
         ON rsm.user_id = u.user_id
         AND rsm.information_type = '4'
@@ -12834,22 +12837,22 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
       const globalStatsSql = `
       SELECT
         COUNT(DISTINCT CASE
-          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
           THEN pm.user_id END) AS total_patients,
         COUNT(DISTINCT CASE
-          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
           THEN pm.user_id END) AS new_patients_last_30,
         COUNT(DISTINCT CASE
-          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
           THEN pm.user_id END) AS new_patients_last_90,
         COUNT(DISTINCT CASE
-          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
           THEN pm.user_id END) AS new_patients_last_6_months,
         COUNT(DISTINCT CASE
-          WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+          WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
             AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
           THEN pm.user_id END) AS new_patients_last_year
       FROM doctor_master dm
@@ -12894,24 +12897,24 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
   SELECT
     dm.doctor_id,
     dm.doctor_name,
-    dm.last_login,                          -- ← ADD THIS
+    dm.last_login,                          
     COUNT(DISTINCT CASE
-      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
       THEN pm.user_id END) AS total_patients,
     COUNT(DISTINCT CASE
-      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
         AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
       THEN pm.user_id END) AS new_patients_last_30,
     COUNT(DISTINCT CASE
-      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
         AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 90 DAY)
       THEN pm.user_id END) AS new_patients_last_90,
     COUNT(DISTINCT CASE
-      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
         AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
       THEN pm.user_id END) AS new_patients_last_6_months,
     COUNT(DISTINCT CASE
-      WHEN pm.delete_flag = 0 AND um.dob IS NOT NULL
+      WHEN pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL
         AND pm.createtime >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
       THEN pm.user_id END) AS new_patients_last_year,
     MAX(pm.createtime) AS last_patient_added
@@ -12995,7 +12998,7 @@ const getPatientAnalyticsCustomTableAdmin = (req, res) => {
     };
 
     // Base WHERE clause for patients
-    let baseWhere = `WHERE pm.delete_flag = 0 AND um.dob IS NOT NULL AND um.dob <= CURDATE()`;
+    let baseWhere = `WHERE pm.delete_flag = 0 AND um.delete_flag = 0 AND um.dob IS NOT NULL AND um.dob <= CURDATE()`;
     let baseParams = [];
 
     // Doctor filter
