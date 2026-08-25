@@ -9961,6 +9961,7 @@ const getDiseaseDashboardAdmin = (req, res) => {
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
     WHERE p.delete_flag = 0
+    AND u.delete_flag = 0
     ${hasDoctors ? `AND p.doctor_id IN (${doctor_ids.map(() => "?").join(", ")})` : ""}
   `;
 
@@ -10280,12 +10281,12 @@ const getPatientDiseasesMedicineAnalyticsAdmin = (req, res) => {
     medication.forEach((m) => params.push(`%${m}%`));
   }
 
-  // Total patients (updated for multiple doctors)
   let totalSql = `
     SELECT COUNT(DISTINCT p.user_id) as total
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
     WHERE p.delete_flag = 0
+    AND u.delete_flag = 0
   `;
 
   if (hasDoctors) {
@@ -10997,6 +10998,7 @@ const getDiseaseMedicineSummaryAdmin = (req, res) => {
     JOIN user_master u ON u.user_id = p.user_id
     WHERE p.delete_flag = 0
       AND u.user_id IS NOT NULL
+      AND u.delete_flag = 0
   `;
 
   if (hasDoctors) {
@@ -11273,6 +11275,7 @@ const getPatientDiseasesMedicineDashboardAdmin = (req, res) => {
     FROM patient_master p
     JOIN user_master u ON u.user_id = p.user_id
     WHERE p.delete_flag = 0
+      AND u.delete_flag = 0
       AND u.dob IS NOT NULL
       AND u.dob <= CURDATE()
   `;
@@ -11575,6 +11578,7 @@ const getAdminMedicationFull = (req, res) => {
     JOIN user_master u ON u.user_id = pm.user_id
     WHERE pm.delete_flag = 0
       AND u.user_id IS NOT NULL
+      AND u.delete_flag = 0
   `;
   if (hasDoctors) totalSql += ` AND pm.doctor_id IN (${ph})`;
 
