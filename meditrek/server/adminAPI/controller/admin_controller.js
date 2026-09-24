@@ -9053,124 +9053,157 @@ const updateUserLanguage = (req, res) => {
     },
   );
 };
-// post api
+
+const parseDoctorIds = (doctor_ids) => {
+  if (!doctor_ids) return [];
+  if (Array.isArray(doctor_ids)) return doctor_ids.map((d) => Number(d)).filter(Boolean);
+  try {
+    const parsed = JSON.parse(doctor_ids);
+    return Array.isArray(parsed) ? parsed.map((d) => Number(d)).filter(Boolean) : [];
+  } catch (e) {
+    return [];
+  }
+};
 const getAllInsightsPosts = (req, res) => {
   try {
     const sql = `
-          SELECT * FROM newInsights_posts
-          ORDER BY id DESC
+          SELECT p.*, GROUP_CONCAT(v.doctor_id) AS doctor_ids
+          FROM newInsights_posts p
+          LEFT JOIN insights_doctor_visibility v ON v.post_id = p.id
+          GROUP BY p.id
+          ORDER BY p.id DESC
         `;
 
     connection.query(sql, (err, result) => {
       if (err) {
         console.error(err);
-        return res.json({
-          success: false,
-          msg: "DB Error",
-        });
+        return res.json({ success: false, msg: "DB Error" });
       }
 
-      return res.json({
-        success: true,
-        data: result,
-      });
+      const data = result.map((row) => ({
+        ...row,
+        doctor_ids: row.doctor_ids
+          ? row.doctor_ids.split(",").map((id) => Number(id))
+          : [],
+      }));
+
+      return res.json({ success: true, data });
     });
   } catch (error) {
     console.error(error);
-    return res.json({
-      success: false,
-      msg: "Server error",
-    });
+    return res.json({ success: false, msg: "Server error" });
   }
 };
 
 const createPost = (req, res) => {
   try {
-    const { admin_id, title, description, url, is_visible } = req.body;
+    const { admin_id, title, description, url, is_visible, visible_to_all, doctor_ids } = req.body;
 
     const image = req.file ? req.file.filename : null;
 
     if (!title || !description || !url) {
-      return res.json({
-        success: false,
-        msg: "All fields are required",
-      });
+      return res.json({ success: false, msg: "All fields are required" });
     }
+
+    const visibleToAll = visible_to_all === undefined || visible_to_all === null
+      ? 1
+      : (Number(visible_to_all) ? 1 : 0);
+    const doctorIdList = visibleToAll ? [] : parseDoctorIds(doctor_ids);
 
     const sql = `
         INSERT INTO newInsights_posts 
-        (admin_id, title, description, image, url, is_visible)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (admin_id, title, description, image, url, is_visible, visible_to_all)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
     connection.query(
       sql,
-      [admin_id, title, description, image, url, is_visible],
+      [admin_id, title, description, image, url, is_visible, visibleToAll],
       (err, result) => {
         if (err) {
           console.error(err);
-          return res.json({
-            success: false,
-            msg: "DB Error",
-          });
+          return res.json({ success: false, msg: "DB Error" });
         }
 
-        return res.json({
-          success: true,
-          msg: "Post created successfully",
-        });
+        const postId = result.insertId;
+
+        if (!visibleToAll && doctorIdList.length > 0) {
+          const rows = doctorIdList.map((docId) => [postId, docId]);
+          connection.query(
+            "INSERT INTO insights_doctor_visibility (post_id, doctor_id) VALUES ?",
+            [rows],
+            (err2) => {
+              if (err2) console.error(err2);
+              return res.json({ success: true, msg: "Post created successfully" });
+            },
+          );
+        } else {
+          return res.json({ success: true, msg: "Post created successfully" });
+        }
       },
     );
   } catch (error) {
     console.error(error);
-    return res.json({
-      success: false,
-      msg: "Server error",
-    });
+    return res.json({ success: false, msg: "Server error" });
   }
 };
 
-// get post api
+// get post api - used by both the doctor (sub-admin) panel and the app
+// pass ?doctor_id=<id> to also include posts targeted at that specific doctor
 const getInsightsPosts = (req, res) => {
-  const sql = `
-      SELECT * FROM newInsights_posts 
-      WHERE is_visible = 1 
-      ORDER BY id DESC
-    `;
+  const { doctor_id } = req.query;
 
-  connection.query(sql, (err, result) => {
+  let sql = `
+      SELECT DISTINCT p.* FROM newInsights_posts p
+      WHERE p.is_visible = 1
+        AND (
+          p.visible_to_all = 1
+  `;
+  const params = [];
+
+  if (doctor_id) {
+    sql += `
+          OR EXISTS (
+            SELECT 1 FROM insights_doctor_visibility v
+            WHERE v.post_id = p.id AND v.doctor_id = ?
+          )
+    `;
+    params.push(doctor_id);
+  }
+
+  sql += `) ORDER BY p.id DESC`;
+
+  connection.query(sql, params, (err, result) => {
     if (err) {
       return res.json({ success: false, msg: "DB Error" });
     }
 
-    return res.json({
-      success: true,
-      data: result,
-    });
+    return res.json({ success: true, data: result });
   });
 };
 
 const updateInsightsPost = (req, res) => {
   try {
-    const { id, admin_id, title, description, url, is_visible } = req.body;
+    const { id, admin_id, title, description, url, is_visible, visible_to_all, doctor_ids } = req.body;
 
     const image = req.file ? req.file.filename : null;
 
     if (!id) {
-      return res.json({
-        success: false,
-        msg: "Post id is required",
-      });
+      return res.json({ success: false, msg: "Post id is required" });
     }
+
+    const visibleToAll = visible_to_all === undefined || visible_to_all === null
+      ? 1
+      : (Number(visible_to_all) ? 1 : 0);
+    const doctorIdList = visibleToAll ? [] : parseDoctorIds(doctor_ids);
 
     let sql = `
         UPDATE newInsights_posts 
-        SET admin_id=?, title=?, description=?, url=?, is_visible=?
+        SET admin_id=?, title=?, description=?, url=?, is_visible=?, visible_to_all=?
       `;
 
-    let values = [admin_id, title, description, url, is_visible];
+    let values = [admin_id, title, description, url, is_visible, visibleToAll];
 
-    //
     if (image) {
       sql += `, image=?`;
       values.push(image);
@@ -9182,23 +9215,35 @@ const updateInsightsPost = (req, res) => {
     connection.query(sql, values, (err, result) => {
       if (err) {
         console.error(err);
-        return res.json({
-          success: false,
-          msg: "DB Error",
-        });
+        return res.json({ success: false, msg: "DB Error" });
       }
 
-      return res.json({
-        success: true,
-        msg: "Post updated successfully",
-      });
+      // reset the doctor visibility list, then re-insert the current selection
+      connection.query(
+        "DELETE FROM insights_doctor_visibility WHERE post_id=?",
+        [id],
+        (delErr) => {
+          if (delErr) console.error(delErr);
+
+          if (!visibleToAll && doctorIdList.length > 0) {
+            const rows = doctorIdList.map((docId) => [id, docId]);
+            connection.query(
+              "INSERT INTO insights_doctor_visibility (post_id, doctor_id) VALUES ?",
+              [rows],
+              (insErr) => {
+                if (insErr) console.error(insErr);
+                return res.json({ success: true, msg: "Post updated successfully" });
+              },
+            );
+          } else {
+            return res.json({ success: true, msg: "Post updated successfully" });
+          }
+        },
+      );
     });
   } catch (error) {
     console.error(error);
-    return res.json({
-      success: false,
-      msg: "Server error",
-    });
+    return res.json({ success: false, msg: "Server error" });
   }
 };
 
@@ -9207,10 +9252,7 @@ const deleteInsightsPost = (req, res) => {
     const { id } = req.body;
 
     if (!id) {
-      return res.json({
-        success: false,
-        msg: "Post id is required",
-      });
+      return res.json({ success: false, msg: "Post id is required" });
     }
 
     const sql = `DELETE FROM newInsights_posts WHERE id=?`;
@@ -9218,23 +9260,14 @@ const deleteInsightsPost = (req, res) => {
     connection.query(sql, [id], (err, result) => {
       if (err) {
         console.error(err);
-        return res.json({
-          success: false,
-          msg: "DB Error",
-        });
+        return res.json({ success: false, msg: "DB Error" });
       }
 
-      return res.json({
-        success: true,
-        msg: "Post deleted successfully",
-      });
+      return res.json({ success: true, msg: "Post deleted successfully" });
     });
   } catch (error) {
     console.error(error);
-    return res.json({
-      success: false,
-      msg: "Server error",
-    });
+    return res.json({ success: false, msg: "Server error" });
   }
 };
 const deleteMedicineBulk = (req, res) => {
