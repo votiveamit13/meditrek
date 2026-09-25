@@ -13552,6 +13552,87 @@ const updateSetting = async (request, response) => {
   }
 };
 
+const { clearMailConfigCache, MAIL_SETTING_KEYS } = require("../../shared/mailConfig");
+
+const MAIL_SETTING_LABELS = {
+  mail_host: "SMTP Host",
+  mail_port: "SMTP Port",
+  mail_username: "SMTP Username",
+  mail_password: "SMTP Password",
+  mail_from: "From Email",
+  mail_from_name: "From Name",
+  mail_secure: "Encryption (ssl/tls/none)",
+  app_base_url: "App Base URL",
+};
+
+const getMailSettings = async (request, response) => {
+  try {
+    const sql = "SELECT `key`, `value` FROM settings WHERE `key` IN (?)";
+    connection.query(sql, [MAIL_SETTING_KEYS], (err, result) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      const data = {};
+      MAIL_SETTING_KEYS.forEach((k) => (data[k] = ""));
+      result.forEach((row) => (data[row.key] = row.value));
+
+      data.mail_password_set = !!data.mail_password;
+      delete data.mail_password;
+
+      return response.status(200).json({ success: true, data, labels: MAIL_SETTING_LABELS });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
+const updateMailSettings = async (request, response) => {
+  try {
+    const payload = request.body || {};
+    const entries = MAIL_SETTING_KEYS.filter((k) => {
+      if (k === "mail_password" && (payload[k] === undefined || payload[k] === "")) return false;
+      return payload[k] !== undefined;
+    }).map((k) => [k, payload[k]]);
+
+    if (entries.length === 0) {
+      return response.status(200).json({ success: false, msg: "No settings provided" });
+    }
+
+    const sql =
+      "INSERT INTO settings (`key`, `value`) VALUES ? " +
+      "ON DUPLICATE KEY UPDATE value = VALUES(value)";
+
+    connection.query(sql, [entries], (err) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          err: err.message,
+        });
+      }
+
+      clearMailConfigCache();
+
+      return response.status(200).json({ success: true, msg: "Email settings updated successfully" });
+    });
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessages.internalServerError,
+      err: error.message,
+    });
+  }
+};
+
   module.exports = {
     // abhich
 
@@ -13708,5 +13789,7 @@ const updateSetting = async (request, response) => {
     deleteDiseaseBulk,
     deleteSymptomsBulk,
     getSettings,
-    updateSetting
+    updateSetting,
+    getMailSettings,
+    updateMailSettings
   };
