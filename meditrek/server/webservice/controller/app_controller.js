@@ -2,6 +2,18 @@ const commonModel = require("./common_modules");
 
 const connection = require("../connection");
 
+let isBeforeSlotsRunning = false;
+
+const getBeforeSlotsConnection = () =>
+  new Promise((resolve, reject) => {
+    connection.getConnection((err, conn) => (err ? reject(err) : resolve(conn)));
+  });
+
+const beforeSlotsQuery = (conn, sql, params = []) =>
+  new Promise((resolve, reject) => {
+    conn.query(sql, params, (err, res) => (err ? reject(err) : resolve(res)));
+  });
+
 const languageMessage = require("../shared functions/languageMessage");
 
 const { getUserDetails } = require("../shared functions/functions");
@@ -368,10 +380,10 @@ const MedicationMarkASTaken = async (request, response) => {
           }
           // 2. Update taken_status in time_slots_master
           const updateSlotQuery =
-            "UPDATE time_slots_master SET taken_status = 1,updatetime = ? WHERE time_slots_id = ? AND delete_flag = 0";
-          connection.query(
-            updateSlotQuery,
-            [formattedDate, time_slots_id],
+"UPDATE time_slots_master SET taken_status = 1, updatetime = NOW() WHERE time_slots_id = ? AND delete_flag = 0";
+connection.query(
+  updateSlotQuery,
+  [time_slots_id],
             (err, updateResult) => {
               if (err) {
                 return response.status(200).json({
@@ -3215,91 +3227,90 @@ const clearSingleNotifications = async (request, response) => {
 // };
 
 const getBeforeTimeSlots = async (request, response) => {
+  if (isBeforeSlotsRunning) {
+    return response.status(200).json({
+      success: true,
+      msg: ["Previous run still in progress, skipped"],
+      data: [],
+    });
+  }
+  isBeforeSlotsRunning = true;
+
+  let conn;
   try {
-    //     const getsql = `
-    //   SELECT t.time_slots_id, t.medication_id, t.time, t.taken_status, t.updatetime ,m.medicine_id,m.user_id
-    //   FROM time_slots_master t JOIN medication_master m ON m.medication_id = t.medication_id
-    //   WHERE t.updatetime < ? - INTERVAL 24 HOUR
-    // `;
+    conn = await getBeforeSlotsConnection();
+    await beforeSlotsQuery(conn, "START TRANSACTION");
 
-    // updated query to reset status 0 as the next arrives
-    const getsql = `
-    SELECT t.time_slots_id, t.medication_id, t.time, t.taken_status, t.updatetime ,m.medicine_id,m.user_id
-    FROM time_slots_master t JOIN medication_master m ON m.medication_id = t.medication_id
-    WHERE t.updatetime <  CURDATE() 
-  `;
+    // Lock the slots that still need today's processing. An overlapping run waits here,
+    // then finds updatetime = NOW() and selects nothing, so duplicates are impossible.
+    const data = await beforeSlotsQuery(
+      conn,
+      `SELECT time_slots_id, medication_id, time, taken_status, updatetime
+       FROM time_slots_master
+       WHERE delete_flag = 0 AND updatetime < CURDATE()
+       FOR UPDATE`,
+    );
 
-    connection.query(getsql, [], async (err, data) => {
-      if (err) {
-        return response.status(200).json({
-          success: false,
-          msg: languageMessage.internalServerError,
-          key: err.message,
-        });
-      }
+    if (data.length === 0) {
+      await beforeSlotsQuery(conn, "COMMIT");
+      return response.status(200).json({
+        success: true,
+        msg: languageMessage.msgDataNotFound,
+        data: [],
+      });
+    }
 
-      if (data.length === 0) {
-        return response.status(200).json({
-          success: true,
-          msg: languageMessage.msgDataNotFound,
-          data: [],
-        });
-      }
+    const timeSlotIds = data.map((item) => item.time_slots_id);
+    const missedSlotIds = data
+      .filter((item) => item.taken_status != 1)
+      .map((item) => item.time_slots_id);
 
-      const timeSlotIds = data.map((item) => item.time_slots_id);
-      const result = data.filter((item) => item.taken_status != 1);
-
-      const averageSql = `
-      INSERT INTO medicine_average_master (status, medicine_id, user_id, createtime, updatetime)
-      VALUES (?, ?, ?, NOW(), NOW())
-    `;
-      const insertData = Promise.all(
-        result.map((item) => {
-          return new Promise((resolve, reject) => {
-            const params = [2, item.medicine_id, item.user_id];
-            connection.query(averageSql, params, (error, results) => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve(results);
-              }
-            });
-          });
-        }),
+    // Same row format as before (time_slots_id stays at its default 0)
+    const CHUNK = 500;
+    for (let i = 0; i < missedSlotIds.length; i += CHUNK) {
+      await beforeSlotsQuery(
+        conn,
+        `INSERT INTO medicine_average_master
+           (status, medicine_id, user_id, createtime, updatetime)
+         SELECT 2, m.medicine_id, m.user_id, NOW(), NOW()
+         FROM time_slots_master t
+         JOIN medication_master m ON m.medication_id = t.medication_id
+         WHERE t.time_slots_id IN (?)`,
+        [missedSlotIds.slice(i, i + CHUNK)],
       );
+    }
 
-      const updatesql = `
-        UPDATE time_slots_master 
-        SET taken_status = 0, updatetime = ? 
-        WHERE delete_flag = 0 AND time_slots_id IN (?)`;
+    // Only after the inserts finish: mark the slots as processed and re-arm reminders
+    await beforeSlotsQuery(
+      conn,
+      `UPDATE time_slots_master
+       SET taken_status = 0, updatetime = NOW()
+       WHERE time_slots_id IN (?)`,
+      [timeSlotIds],
+    );
 
-      connection.query(
-        updatesql,
-        [formattedDate, timeSlotIds],
-        async (updateErr) => {
-          if (updateErr) {
-            return response.status(200).json({
-              success: false,
-              msg: languageMessage.internalServerError,
-              key: updateErr.message,
-            });
-          }
+    await beforeSlotsQuery(conn, "COMMIT");
 
-          return response.status(200).json({
-            success: true,
-            msg: ["Timeslots updated successfully"],
-            data,
-            updated_ids: timeSlotIds,
-          });
-        },
-      );
+    return response.status(200).json({
+      success: true,
+      msg: ["Timeslots updated successfully"],
+      data,
+      updated_ids: timeSlotIds,
     });
   } catch (error) {
+    if (conn) {
+      try {
+        await beforeSlotsQuery(conn, "ROLLBACK");
+      } catch (_) {}
+    }
     return response.status(200).json({
       success: false,
       msg: languageMessage.internalServerError,
       key: error.message,
     });
+  } finally {
+    if (conn) conn.release();
+    isBeforeSlotsRunning = false;
   }
 };
 
