@@ -15,7 +15,7 @@
  */
 const connection = require("../connection");
 
-const CLEANUP_KEY = "12345";
+const CLEANUP_KEY = "9B0CE326631DB162";
 
 const T = "medicine_average_master";
 const NEW = "medicine_average_master_new";
