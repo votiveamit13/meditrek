@@ -1,7 +1,8 @@
 const connection = require("../connection/connection");
-const { sendMail: coreSendMail, wrapEmailHtml, getBaseUrl } = require("../../shared/mailer");
+const { sendMail: coreSendMail, wrapEmailHtml, getBaseUrl, getAppName } = require("../../shared/mailer");
 
 async function mailer(adminEmail, app_name, title, adminName, app_logo, user_id) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const baseUrl = await getBaseUrl(connection);
   const reset_url = `${baseUrl}/meditrek/admin/staging/reset-password?user_id=${user_id}`;
 
@@ -36,6 +37,7 @@ async function mailer(adminEmail, app_name, title, adminName, app_logo, user_id)
 }
 
 async function ActivateDeactivatemailer(email, app_name, title, userName, app_logo, newStatusMsg) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const baseUrl = await getBaseUrl(connection);
   const reset_url = `${baseUrl}/meditrek/admin/staging/reset-password`;
 
@@ -63,17 +65,18 @@ async function ActivateDeactivatemailer(email, app_name, title, userName, app_lo
 }
 
 async function contactUsMailer(postData) {
+  const appName = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="margin-top:0;">${postData.mailContent}</p>
     <p style="margin-top:20px;">Regards,</p>
-    <p style="margin-top:5px; font-weight:bold;">${postData.fromName}</p>
+    <p style="margin-top:5px; font-weight:bold;">${appName}</p>
   `;
   try {
     const info = await coreSendMail(connection, {
       to: postData.userEmail,
       subject: "Contact us reply",
-      html: wrapEmailHtml({ appName: postData.fromName, headerTitle: "Contact Us", appLogoUrl: postData.app_logo, bodyHtml: body }),
-      fromNameOverride: postData.app_name,
+      html: wrapEmailHtml({ appName, headerTitle: "Contact Us", appLogoUrl: postData.app_logo, bodyHtml: body }),
+      fromNameOverride: appName,
     });
     console.log("Message sent: %s", info.messageId);
     return { status: "yes" };
@@ -84,6 +87,7 @@ async function contactUsMailer(postData) {
 }
 
 async function sendEmailUser(userEmail, app_name, title, message, app_logo) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0"><b>Dear : </b>${userEmail}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0"><b>Message : </b>${message}</p>
@@ -111,7 +115,7 @@ function mailBodySubadminData(postData) {
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:black; margin-top:0">Hello ${postData.name}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">${postData.mailContent}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">Regards,</p>
-    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">${postData.fromName}</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0">${appName}</p>
   `;
   return wrapEmailHtml({
     appName: postData.fromName,
@@ -132,6 +136,7 @@ async function sendMail(email, subject, mailBody) {
 }
 
 async function mailerApproveDoctor(adminEmail, app_name, title, doctor_name, email, password, doctor_category_id, app_logo) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const baseUrl = await getBaseUrl(connection);
   const loginUrl = `${baseUrl}/meditrek/HCP_Panel/meditrek/Access/login/Meditrek_access/`;
 
@@ -164,6 +169,7 @@ async function mailerApproveDoctor(adminEmail, app_name, title, doctor_name, ema
 }
 
 async function mailerRejectDoctorByAdmin(adminEmail, app_name, title, doctor_name, email, app_logo) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p>Dear <b>${doctor_name}</b>,</p>
     <p>We regret to inform you that your account on <b>${app_name}</b> has been rejected by the admin.</p>
@@ -186,17 +192,18 @@ async function mailerRejectDoctorByAdmin(adminEmail, app_name, title, doctor_nam
 }
 
 async function contactUsMailerDoctor(postData) {
+  const appName = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0;">${postData.mailContent}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0;">Regards,</p>
-    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0;">${postData.fromName}</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0;">${appName}</p>
   `;
   try {
     const info = await coreSendMail(connection, {
       to: postData.userEmail,
       subject: "Contact Us",
-      html: wrapEmailHtml({ appName: postData.fromName, headerTitle: "Contact Us", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
-      fromNameOverride: postData.app_name,
+      html: wrapEmailHtml({ appName, headerTitle: "Contact Us", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
+      fromNameOverride: appName,
     });
     console.log("Message sent: %s", info.messageId);
     return { status: "yes" };
@@ -207,7 +214,7 @@ async function contactUsMailerDoctor(postData) {
 }
 
 async function sendDoctorEmail(toEmail, doctorName, password) {
-  const app_name = "Meditrek";
+  const app_name = await getAppName(connection);
   const baseUrl = await getBaseUrl(connection);
   const app_logo = `${baseUrl}/meditrek/server/uploads/td_logo.png`;
   const loginUrl = `${baseUrl}/meditrek/HCP_Panel/meditrek/Access/login/Meditrek_access`;
@@ -233,7 +240,7 @@ async function sendDoctorEmail(toEmail, doctorName, password) {
 }
 
 async function sendOtpEmail(toEmail, userName, otp) {
-  const app_name = "Meditrek";
+  const app_name = await getAppName(connection);
   const baseUrl = await getBaseUrl(connection);
   const app_logo = `${baseUrl}/meditrek/server/uploads/meditrek_logo.png`;
 

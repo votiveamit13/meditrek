@@ -22,6 +22,11 @@ async function getTransporter(connection) {
   });
 }
 
+async function getAppName(connection) {
+  const cfg = await getMailConfig(connection);
+  return cfg.mail_from_name || "Meditrek";
+}
+
 async function getBaseUrl(connection) {
   const cfg = await getMailConfig(connection);
   return (cfg.app_base_url || "").replace(/\/+$/, "");
@@ -78,7 +83,8 @@ function wrapEmailHtml({ appName, headerTitle, headerColor = "#1ddec4", appLogoU
 async function sendMail(connection, { to, subject, html, fromNameOverride }) {
   const cfg = await getMailConfig(connection);
   const transporter = await getTransporter(connection);
-  const fromName = fromNameOverride || cfg.mail_from_name || "Meditrek";
+  // Admin panel "From Name" always wins; override is only a fallback
+  const fromName = cfg.mail_from_name || fromNameOverride || "Meditrek";
 
   const info = await transporter.sendMail({
     from: `"${fromName}" <${cfg.mail_from}>`,
@@ -89,4 +95,4 @@ async function sendMail(connection, { to, subject, html, fromNameOverride }) {
   return info;
 }
 
-module.exports = { getTransporter, getBaseUrl, wrapEmailHtml, sendMail };
+module.exports = { getTransporter, getBaseUrl, getAppName, wrapEmailHtml, sendMail };
