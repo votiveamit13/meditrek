@@ -12,7 +12,7 @@ const { signUp, userOtpVerify,verifyUserLoginOtp, userResendOtp, deleteAccount, 
     updateMeasurementReminderStatus} = require('../controller/user_controller');
 
 const { sendContactUs, pauseMedication, MedicationMarkASTaken, insertMedicine, AddMedication, editMedication, DeleteMedication, addMedicalReport, deleteMedicalReport, getLaboratoryReportCounts, addBPData, addFastingGlucose, addPPBGS, addWeightMeasurement, addTemperature, addCustomMeasure, editCustomMeasure, deleteCustomMeasure, addAdverseReaction, editAdverseReaction, deleteAdverseReaction, addDoctors, clearAllNotifications, clearSingleNotifications,getBeforeTimeSlots, AddMedicationn, editNewMedication, getTodayMedication , shareReportToDoctor, homepage, checkReportsAddedStatus, getNotificationStatus, DeleteMedicationFromHistory, cronJobFunction, removePlayerId, homepage1, AddMeasurementReminder, GetMeasurementReminderList, EditMeasurementReminder, pauseMeasurementReminder, DeleteMeasurementReminder} = require('../controller/app_controller');
-
+const { cleanupStats, cleanupStart, cleanupStatus, cleanupStop, cleanupFinish } = require('../controller/cleanup_medicine_average');
 
 const router = express.Router();
 var cron = require('node-cron');
@@ -118,6 +118,12 @@ router.post('/ge_home_page_status', upload.none(), getHomePageStatus);
 router.post('/delete_history_medication', upload.none(), DeleteMedicationFromHistory);
 
 router.get('/get_homepage1', upload.none(), homepage1);
+
+router.get("/cleanup_avg/stats", cleanupStats);
+router.get("/cleanup_avg/start", cleanupStart);
+router.get("/cleanup_avg/status", cleanupStatus);
+router.get("/cleanup_avg/stop", cleanupStop);
+router.get("/cleanup_avg/finish", cleanupFinish);
 
 router.post('/delete_measurment',deleteMeasurement);
 router.get('/user-languages', getUserLanguages);

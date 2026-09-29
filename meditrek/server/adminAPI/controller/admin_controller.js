@@ -9064,15 +9064,54 @@ const parseDoctorIds = (doctor_ids) => {
     return [];
   }
 };
+const parseIdList = (ids) => parseDoctorIds(ids); // same parsing logic, reused for category ids
+
+// saves doctor-wise / category-wise visibility rows for a post
+const saveVisibility = (postId, visibleToAll, doctorIdList, categoryIdList, done) => {
+  const insertCategories = () => {
+    if (!visibleToAll && categoryIdList.length > 0) {
+      const rows = categoryIdList.map((cid) => [postId, cid]);
+      connection.query(
+        "INSERT INTO insights_category_visibility (post_id, doctor_category_id) VALUES ?",
+        [rows],
+        (err) => {
+          if (err) console.error(err);
+          done();
+        },
+      );
+    } else {
+      done();
+    }
+  };
+
+  if (!visibleToAll && doctorIdList.length > 0) {
+    const rows = doctorIdList.map((docId) => [postId, docId]);
+    connection.query(
+      "INSERT INTO insights_doctor_visibility (post_id, doctor_id) VALUES ?",
+      [rows],
+      (err) => {
+        if (err) console.error(err);
+        insertCategories();
+      },
+    );
+  } else {
+    insertCategories();
+  }
+};
+
 const getAllInsightsPosts = (req, res) => {
   try {
     const sql = `
-          SELECT p.*, GROUP_CONCAT(v.doctor_id) AS doctor_ids
-          FROM newInsights_posts p
-          LEFT JOIN insights_doctor_visibility v ON v.post_id = p.id
-          GROUP BY p.id
-          ORDER BY p.id DESC
-        `;
+      SELECT p.*,
+        (SELECT GROUP_CONCAT(v.doctor_id)
+           FROM insights_doctor_visibility v
+          WHERE v.post_id = p.id) AS doctor_ids,
+        (SELECT GROUP_CONCAT(c.doctor_category_id)
+           FROM insights_category_visibility c
+          WHERE c.post_id = p.id) AS category_ids
+      FROM newInsights_posts p
+      ORDER BY p.id DESC
+    `;
 
     connection.query(sql, (err, result) => {
       if (err) {
@@ -9084,6 +9123,9 @@ const getAllInsightsPosts = (req, res) => {
         ...row,
         doctor_ids: row.doctor_ids
           ? row.doctor_ids.split(",").map((id) => Number(id))
+          : [],
+        category_ids: row.category_ids
+          ? row.category_ids.split(",").map((id) => Number(id))
           : [],
       }));
 
@@ -9097,11 +9139,11 @@ const getAllInsightsPosts = (req, res) => {
 
 const createPost = (req, res) => {
   try {
-    const { admin_id, title, description, url, is_visible, visible_to_all, doctor_ids } = req.body;
+    const { admin_id, title, description, url, is_visible, visible_to_all, doctor_ids, category_ids } = req.body;
 
     const image = req.file ? req.file.filename : null;
 
-    if (!title || !description || !url) {
+    if (!title || !url) {
       return res.json({ success: false, msg: "All fields are required" });
     }
 
@@ -9109,6 +9151,7 @@ const createPost = (req, res) => {
       ? 1
       : (Number(visible_to_all) ? 1 : 0);
     const doctorIdList = visibleToAll ? [] : parseDoctorIds(doctor_ids);
+    const categoryIdList = visibleToAll ? [] : parseIdList(category_ids);
 
     const sql = `
         INSERT INTO newInsights_posts 
@@ -9125,21 +9168,9 @@ const createPost = (req, res) => {
           return res.json({ success: false, msg: "DB Error" });
         }
 
-        const postId = result.insertId;
-
-        if (!visibleToAll && doctorIdList.length > 0) {
-          const rows = doctorIdList.map((docId) => [postId, docId]);
-          connection.query(
-            "INSERT INTO insights_doctor_visibility (post_id, doctor_id) VALUES ?",
-            [rows],
-            (err2) => {
-              if (err2) console.error(err2);
-              return res.json({ success: true, msg: "Post created successfully" });
-            },
-          );
-        } else {
-          return res.json({ success: true, msg: "Post created successfully" });
-        }
+        saveVisibility(result.insertId, visibleToAll, doctorIdList, categoryIdList, () =>
+          res.json({ success: true, msg: "Post created successfully" }),
+        );
       },
     );
   } catch (error) {
@@ -9149,7 +9180,8 @@ const createPost = (req, res) => {
 };
 
 // get post api - used by both the doctor (sub-admin) panel and the app
-// pass ?doctor_id=<id> to also include posts targeted at that specific doctor
+// pass ?doctor_id=<id> to also include posts targeted at that doctor
+// (either directly, or through the doctor's category)
 const getInsightsPosts = (req, res) => {
   const { doctor_id } = req.query;
 
@@ -9167,8 +9199,13 @@ const getInsightsPosts = (req, res) => {
             SELECT 1 FROM insights_doctor_visibility v
             WHERE v.post_id = p.id AND v.doctor_id = ?
           )
+          OR EXISTS (
+            SELECT 1 FROM insights_category_visibility cv
+            JOIN doctor_master d ON d.doctor_category_id = cv.doctor_category_id
+            WHERE cv.post_id = p.id AND d.doctor_id = ?
+          )
     `;
-    params.push(doctor_id);
+    params.push(doctor_id, doctor_id);
   }
 
   sql += `) ORDER BY p.id DESC`;
@@ -9184,7 +9221,7 @@ const getInsightsPosts = (req, res) => {
 
 const updateInsightsPost = (req, res) => {
   try {
-    const { id, admin_id, title, description, url, is_visible, visible_to_all, doctor_ids } = req.body;
+    const { id, admin_id, title, description, url, is_visible, visible_to_all, doctor_ids, category_ids } = req.body;
 
     const image = req.file ? req.file.filename : null;
 
@@ -9196,6 +9233,7 @@ const updateInsightsPost = (req, res) => {
       ? 1
       : (Number(visible_to_all) ? 1 : 0);
     const doctorIdList = visibleToAll ? [] : parseDoctorIds(doctor_ids);
+    const categoryIdList = visibleToAll ? [] : parseIdList(category_ids);
 
     let sql = `
         UPDATE newInsights_posts 
@@ -9212,34 +9250,24 @@ const updateInsightsPost = (req, res) => {
     sql += ` WHERE id=?`;
     values.push(id);
 
-    connection.query(sql, values, (err, result) => {
+    connection.query(sql, values, (err) => {
       if (err) {
         console.error(err);
         return res.json({ success: false, msg: "DB Error" });
       }
 
-      // reset the doctor visibility list, then re-insert the current selection
-      connection.query(
-        "DELETE FROM insights_doctor_visibility WHERE post_id=?",
-        [id],
-        (delErr) => {
-          if (delErr) console.error(delErr);
+      // reset both visibility lists, then re-insert the current selection
+      connection.query("DELETE FROM insights_doctor_visibility WHERE post_id=?", [id], (delErr) => {
+        if (delErr) console.error(delErr);
 
-          if (!visibleToAll && doctorIdList.length > 0) {
-            const rows = doctorIdList.map((docId) => [id, docId]);
-            connection.query(
-              "INSERT INTO insights_doctor_visibility (post_id, doctor_id) VALUES ?",
-              [rows],
-              (insErr) => {
-                if (insErr) console.error(insErr);
-                return res.json({ success: true, msg: "Post updated successfully" });
-              },
-            );
-          } else {
-            return res.json({ success: true, msg: "Post updated successfully" });
-          }
-        },
-      );
+        connection.query("DELETE FROM insights_category_visibility WHERE post_id=?", [id], (delErr2) => {
+          if (delErr2) console.error(delErr2);
+
+          saveVisibility(id, visibleToAll, doctorIdList, categoryIdList, () =>
+            res.json({ success: true, msg: "Post updated successfully" }),
+          );
+        });
+      });
     });
   } catch (error) {
     console.error(error);
@@ -9255,16 +9283,40 @@ const deleteInsightsPost = (req, res) => {
       return res.json({ success: false, msg: "Post id is required" });
     }
 
-    const sql = `DELETE FROM newInsights_posts WHERE id=?`;
+    // 1. remove doctor-wise visibility rows
+    connection.query(
+      "DELETE FROM insights_doctor_visibility WHERE post_id=?",
+      [id],
+      (err1) => {
+        if (err1) console.error(err1);
 
-    connection.query(sql, [id], (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.json({ success: false, msg: "DB Error" });
-      }
+        // 2. remove category-wise visibility rows
+        connection.query(
+          "DELETE FROM insights_category_visibility WHERE post_id=?",
+          [id],
+          (err2) => {
+            if (err2) console.error(err2);
 
-      return res.json({ success: true, msg: "Post deleted successfully" });
-    });
+            // 3. remove the post itself
+            connection.query(
+              "DELETE FROM newInsights_posts WHERE id=?",
+              [id],
+              (err3) => {
+                if (err3) {
+                  console.error(err3);
+                  return res.json({ success: false, msg: "DB Error" });
+                }
+
+                return res.json({
+                  success: true,
+                  msg: "Post deleted successfully",
+                });
+              },
+            );
+          },
+        );
+      },
+    );
   } catch (error) {
     console.error(error);
     return res.json({ success: false, msg: "Server error" });
