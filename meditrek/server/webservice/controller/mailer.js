@@ -1,7 +1,8 @@
 const connection = require("../connection");
-const { sendMail: coreSendMail, wrapEmailHtml, getBaseUrl } = require("../../shared/mailer");
+const { sendMail: coreSendMail, wrapEmailHtml, getBaseUrl, getAppName } = require("../../shared/mailer");
 
 async function mailer(userEmail, app_name, title, userName, app_logo, otp) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-size:15px; color:#333333;">Dear <b>${userName}</b>,</p>
     <p style="font-size:15px; color:#333333;">Thank you for signing up with <b>${app_name}</b>.</p>
@@ -33,6 +34,7 @@ async function mailer(userEmail, app_name, title, userName, app_logo, otp) {
 }
 
 async function ActivateDeactivatemailer(email, app_name, title, userName, app_logo, newStatusMsg) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const baseUrl = await getBaseUrl(connection);
   const reset_url = `${baseUrl}/meditrek/admin/meditrek/admin/reset-password`;
 
@@ -60,17 +62,18 @@ async function ActivateDeactivatemailer(email, app_name, title, userName, app_lo
 }
 
 async function contactUsMailer(postData) {
+  const appName = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${postData.mailContent}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">Regards,</p>
-    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${postData.fromName}</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${appName}</p>
   `;
   try {
     const info = await coreSendMail(connection, {
       to: postData.userEmail,
       subject: "Contact us reply",
-      html: wrapEmailHtml({ appName: postData.fromName, headerTitle: "Contact Us Reply", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
-      fromNameOverride: postData.app_name,
+      html: wrapEmailHtml({ appName, headerTitle: "Contact Us Reply", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
+      fromNameOverride: appName,
     });
     console.log("Message sent: %s", info.messageId);
     return { status: "yes" };
@@ -81,6 +84,7 @@ async function contactUsMailer(postData) {
 }
 
 async function sendEmailUser(userEmail, app_name, title, message, app_logo) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0"><b>Dear : </b>${userEmail}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0"><b>Message : </b>${message}</p>
@@ -129,6 +133,7 @@ async function sendMail(email, subject, mailBody) {
 }
 
 async function mailerApproveDoctor(adminEmail, app_name, title, doctor_name, email, password, doctor_category_id, app_logo) {
+  app_name = await getAppName(connection); // dynamic from admin settings
   const baseUrl = await getBaseUrl(connection);
   const loginUrl = `${baseUrl}/meditrek/sub_admin/meditrek/sub_admin/login`;
 
@@ -161,17 +166,18 @@ async function mailerApproveDoctor(adminEmail, app_name, title, doctor_name, ema
 }
 
 async function contactUsMailerDoctor(postData) {
+  const appName = await getAppName(connection); // dynamic from admin settings
   const body = `
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${postData.mailContent}</p>
     <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">Regards,</p>
-    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${postData.fromName}</p>
+    <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#060b48; margin-top:0">${appName}</p>
   `;
   try {
     const info = await coreSendMail(connection, {
       to: postData.userEmail,
       subject: "Contact Us",
-      html: wrapEmailHtml({ appName: postData.fromName, headerTitle: "Contact Us", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
-      fromNameOverride: postData.app_name,
+      html: wrapEmailHtml({ appName, headerTitle: "Contact Us", headerColor: "#1DDEC4", appLogoUrl: postData.app_logo, bodyHtml: body }),
+      fromNameOverride: appName,
     });
     console.log("Message sent: %s", info.messageId);
     return { status: "yes" };
