@@ -39,6 +39,10 @@ const {
   oneSignalNotificationSendCall,
 } = require("./notification");
 
+const {
+  getNotificationArrSingle: getNotificationArrSingleFCM,
+} = require("../../webservice/shared functions/functions");
+
 //-------------------------------------
 
 const adminLogin = async (request, response) => {
@@ -5551,8 +5555,9 @@ Please review this query and respond at your earliest convenience.</pre>`,
 };
 
 const sendBroadcastMessageAllUser = async (request, response) => {
-  const { title_user, message_user, userType, select_arr } = request.body;
-
+  const { title_user, message_user, userType } = request.body;
+  let { select_arr } = request.body;
+ 
   try {
     if (!title_user) {
       return response.status(200).json({
@@ -5561,7 +5566,6 @@ const sendBroadcastMessageAllUser = async (request, response) => {
         key: "title_user",
       });
     }
-
     if (!message_user) {
       return response.status(200).json({
         status: false,
@@ -5569,7 +5573,6 @@ const sendBroadcastMessageAllUser = async (request, response) => {
         key: "message_user",
       });
     }
-
     if (!userType) {
       return response.status(200).json({
         status: false,
@@ -5577,7 +5580,33 @@ const sendBroadcastMessageAllUser = async (request, response) => {
         key: "userType",
       });
     }
-
+ 
+    // Send in-app notification + FCM push to ONE user (sequential, FCM based)
+    const sendToUser = (userId) =>
+      new Promise((resolve) => {
+        const action_data = {
+          user_id: 1,
+          other_user_id: userId,
+          action_id: userId,
+          action: "Broadcast",
+        };
+ 
+        getNotificationArrSingleFCM(
+          1, // sender (admin)
+          userId, // receiver
+          "Broadcast",
+          userId,
+          title_user, title_user, title_user, title_user, title_user,
+          message_user, message_user, message_user, message_user, message_user,
+          {}, // action_json_lang_data
+          {}, // title_json_lang_data
+          {}, // message_json_lang_data
+          action_data,
+          (notification_arr) => resolve(notification_arr)
+        );
+      });
+ 
+    // ---------- Selected users ----------
     if (userType == "user") {
       if (!select_arr) {
         return response.status(200).json({
@@ -5586,203 +5615,86 @@ const sendBroadcastMessageAllUser = async (request, response) => {
           key: "select_arr",
         });
       }
-    }
-
-    if (userType == "user") {
-      if (select_arr.length > 0) {
-        for (var user_id of select_arr) {
-          const user_id_notification = 1;
-
-          const other_user_id_notification = user_id;
-
-          const action = "Broadcast";
-
-          const action_id = user_id;
-
-          const title = title_user;
-
-          const title_2 = title_user;
-
-          const title_3 = title_user;
-
-          const title_4 = title_user;
-
-          const title_5 = title_user;
-
-          const messages = message_user;
-
-          const message_2 = message_user;
-
-          const message_3 = message_user;
-
-          const message_4 = message_user;
-
-          const message_5 = message_user;
-
-          const action_data = {
-            user_id: user_id_notification,
-            other_user_id: other_user_id_notification,
-            action_id: action_id,
-            action: action,
-          };
-
-          getNotificationArrSingle(
-            user_id_notification,
-            other_user_id_notification,
-            action,
-            action_id,
-            title,
-            title_2,
-            title_3,
-            title_4,
-            title_5,
-            messages,
-            message_2,
-            message_3,
-            message_4,
-            message_5,
-            action_data,
-            async (notification_arr_check) => {
-              let notification_arr_check_new = [notification_arr_check];
-              if (
-                notification_arr_check_new &&
-                notification_arr_check_new.length !== 0
-              ) {
-                const notiSendStatus = await oneSignalNotificationSendCall(
-                  notification_arr_check_new,
-                );
-
-                return response.status(200).json({
-                  success: true,
-                  msg: "Broadcast Message Sent Successfully",
-                  notiSendStatus: notiSendStatus,
-                  notification_arr_check_new: notification_arr_check_new,
-                });
-              }
-            },
-          );
-
-          // send notification end
+ 
+      // select_arr can arrive as array, JSON string, "1,2,3" or a single id
+      if (typeof select_arr === "string") {
+        try {
+          const parsed = JSON.parse(select_arr);
+          select_arr = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          select_arr = select_arr.split(",").map((s) => s.trim()).filter(Boolean);
         }
-      } else {
+      }
+      if (!Array.isArray(select_arr)) select_arr = [select_arr];
+ 
+      if (select_arr.length === 0) {
         return response.status(200).json({
           success: true,
           msg: "Broadcast Message Sent Successfully",
-          key: select_arr,
           key: "user",
         });
       }
-    } else {
-      var sqlSeletUser =
-        "SELECT user_id FROM user_master WHERE delete_flag = 0 AND profile_complete = 1 AND user_type = 1 AND otp_verify = 1 order by user_id desc";
-
-      connection.query(sqlSeletUser, async (error, resultUser) => {
-        if (error) {
-          return response.status(200).json({
-            success: false,
-            msg: languageMessages.internalServerError,
-            error: error.message,
-          });
-        }
-
-        if (resultUser.length > 0) {
-          for (var data of resultUser) {
-            const user_id_notification = 1;
-
-            const other_user_id_notification = data.user_id;
-
-            const action = "Broadcast";
-
-            const action_id = data.user_id;
-
-            const title = title_user;
-
-            const title_2 = title_user;
-
-            const title_3 = title_user;
-
-            const title_4 = title_user;
-
-            const title_5 = title_user;
-
-            const messages = message_user;
-
-            const message_2 = message_user;
-
-            const message_3 = message_user;
-
-            const message_4 = message_user;
-
-            const message_5 = message_user;
-
-            const action_data = {
-              user_id: user_id_notification,
-              other_user_id: other_user_id_notification,
-              action_id: action_id,
-              action: action,
-            };
-
-            getNotificationArrSingle(
-              user_id_notification,
-              other_user_id_notification,
-              action,
-              action_id,
-              title,
-              title_2,
-              title_3,
-              title_4,
-              title_5,
-              messages,
-              message_2,
-              message_3,
-              message_4,
-              message_5,
-              action_data,
-              async (notification_arr_check) => {
-                let notification_arr_check_new = [notification_arr_check];
-
-                if (
-                  notification_arr_check_new &&
-                  notification_arr_check_new.length !== 0
-                ) {
-                  const notiSendStatus = await oneSignalNotificationSendCall(
-                    notification_arr_check_new,
-                  );
-
-                  return response.status(200).json({
-                    success: true,
-                    msg: "Broadcast Message Sent Successfully",
-                    notification_arr_check_new: notification_arr_check_new,
-                  });
-                }
-
-                return response.status(200).json({
-                  success: true,
-                  msg: "Broadcast Message Sent Successfully...!!",
-                });
-              },
-            );
-
-            // send notification end
-          }
-        } else {
-          return response.status(200).json({
-            success: true,
-            msg: "Broadcast Message Sent Successfully",
-            key: "all",
-          });
-        }
+ 
+      let pushed = 0;
+      for (const user_id of select_arr) {
+        const result = await sendToUser(user_id);
+        if (result && result.player_id) pushed++;
+      }
+ 
+      return response.status(200).json({
+        success: true,
+        msg: "Broadcast Message Sent Successfully",
+        total_users: select_arr.length,
+        push_attempted: pushed, // users who had a device token + notifications ON
       });
     }
+ 
+    // ---------- All users ----------
+    const sqlSeletUser =
+      "SELECT user_id FROM user_master WHERE delete_flag = 0 AND profile_complete = 1 AND user_type = 1 AND otp_verify = 1 ORDER BY user_id DESC";
+ 
+    connection.query(sqlSeletUser, (error, resultUser) => {
+      if (error) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessages.internalServerError,
+          error: error.message,
+        });
+      }
+ 
+      if (!resultUser || resultUser.length === 0) {
+        return response.status(200).json({
+          success: true,
+          msg: "Broadcast Message Sent Successfully",
+          key: "all",
+        });
+      }
+ 
+      // Reply right away; keep sending in the background so the request
+      // does not time out when there are many users.
+      response.status(200).json({
+        success: true,
+        msg: "Broadcast Message Sent Successfully",
+        total_users: resultUser.length,
+      });
+ 
+      (async () => {
+        for (const row of resultUser) {
+          try {
+            await sendToUser(row.user_id);
+          } catch (e) {
+            console.error("Broadcast error for user", row.user_id, e.message);
+          }
+        }
+        console.log("Broadcast finished for", resultUser.length, "users");
+      })();
+    });
   } catch (error) {
-    const record = {
+    return response.status(200).json({
       success: false,
       msg: languageMessages.internalServerError,
-      key: error,
-    };
-    s;
-
-    return res.json(record);
+      key: error.message,
+    });
   }
 };
 
